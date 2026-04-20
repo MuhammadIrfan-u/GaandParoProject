@@ -12,11 +12,6 @@ https://www.figma.com/design/7o6SfGwI3nKWIcZk8IXT2z/Verified-Neighbourhood-Commu
 
 Follow these steps to run the project locally:
 
-### Install Dependencies
-
-npm install
-
-
 
 
 ## DESIGN BY
