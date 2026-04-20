@@ -10,7 +10,7 @@
   Run `npm run dev` to start the development server.
 
 
-  ## TOP COLLABORATORS
+  ## DESIGN BY
 
 
   <img src="./details/AJ.jfif" alt="AJ Image" width="120" />  
