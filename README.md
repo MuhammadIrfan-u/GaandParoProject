@@ -13,4 +13,4 @@
   ## TOP COLLABORATORS
 
 
-![AJ Image](./details/AJ.jfif)
+  <img src="./details/AJ.jfif" alt="AJ Image" width="120" />  
