@@ -1,16 +1,24 @@
 
-  # Verified Neighbourhood Community
+# Verified Neighbourhood Community
 
-  This is a code bundle for Verified Neighbourhood Community. The original project is available at https://www.figma.com/design/7o6SfGwI3nKWIcZk8IXT2z/Verified-Neighbourhood-Community.
+A modern community platform for verified neighbourhood interaction, built from a Figma design system.
 
-  ## Running the code
+🔗 **Figma Design**  
+https://www.figma.com/design/7o6SfGwI3nKWIcZk8IXT2z/Verified-Neighbourhood-Community
 
-  Run `npm i` to install the dependencies.
+---
 
-  Run `npm run dev` to start the development server.
+## Getting Started
+
+Follow these steps to run the project locally:
+
+### Install Dependencies
+
+npm install
 
 
-  ## DESIGN BY
 
 
-  <img src="./details/AJ.jfif" alt="AJ Image" width="120" />  
+## DESIGN BY
+
+<p align="left"> <img src="./details/AJ.jfif" alt="AJ Image" width="120" style="border-radius: 12px;" /> </p>
