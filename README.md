@@ -13,4 +13,4 @@
   ## TOP COLLABORATORS
 
 
-  ![AJ Image](details/images/AJ.jfif)
+![AJ Image](./details/AJ.jfif)
