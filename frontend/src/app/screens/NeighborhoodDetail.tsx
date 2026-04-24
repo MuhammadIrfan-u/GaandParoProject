@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router";
 import { ArrowLeft, MapPin, Users, Calendar, Shield, Settings as SettingsIcon } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { neighborhoodsService, authService } from "../services/storage";
-import { Neighborhood } from "../services/mockData";
+import { Neighborhood } from "../services/types";
 import { toast } from "sonner";
 
 export default function NeighborhoodDetail() {

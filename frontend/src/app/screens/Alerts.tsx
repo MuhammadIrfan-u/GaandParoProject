@@ -4,7 +4,7 @@ import { Plus, AlertTriangle, Check } from "lucide-react";
 import { BottomNav } from "../components/BottomNav";
 import { Button } from "../components/ui/button";
 import { alertsService } from "../services/storage";
-import { Alert } from "../services/mockData";
+import { Alert } from "../services/types";
 import { toast } from "sonner";
 
 export default function Alerts() {

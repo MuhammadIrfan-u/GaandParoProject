@@ -4,7 +4,7 @@ import { Search } from "lucide-react";
 import { BottomNav } from "../components/BottomNav";
 import { Input } from "../components/ui/input";
 import { messagesService } from "../services/storage";
-import { Conversation } from "../services/mockData";
+import { Conversation } from "../services/types";
 import { toast } from "sonner";
 
 export default function Messages() {

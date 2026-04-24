@@ -3,7 +3,7 @@ import { Link } from "react-router";
 import { Search, MapPin, Users, Shield, Home as HomeIcon } from "lucide-react";
 import { Input } from "../components/ui/input";
 import { neighborhoodsService } from "../services/storage";
-import { Neighborhood } from "../services/mockData";
+import { Neighborhood } from "../services/types";
 import { toast } from "sonner";
 
 export default function BrowseNeighborhoods() {

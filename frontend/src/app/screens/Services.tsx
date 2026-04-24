@@ -4,7 +4,7 @@ import { Search, Star, Wrench, Home, Dog, Zap, Scissors, Car } from "lucide-reac
 import { BottomNav } from "../components/BottomNav";
 import { Input } from "../components/ui/input";
 import { servicesService } from "../services/storage";
-import { Service } from "../services/mockData";
+import { Service } from "../services/types";
 import { toast } from "sonner";
 
 export default function Services() {

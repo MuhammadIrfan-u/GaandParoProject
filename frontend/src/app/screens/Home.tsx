@@ -3,7 +3,7 @@ import { Link } from "react-router";
 import { Bell, Plus, Heart, MessageCircle, Share2, MoreVertical, AlertCircle, Calendar, ShoppingBag, MapPin, TrendingUp } from "lucide-react";
 import { BottomNav } from "../components/BottomNav";
 import { postsService } from "../services/storage";
-import { Post } from "../services/mockData";
+import { Post } from "../services/types";
 import { toast } from "sonner";
 
 export default function Home() {
