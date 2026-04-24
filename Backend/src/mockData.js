@@ -1,216 +1,24 @@
 // Mock Data Service for NeighborHub
 // This simulates backend API calls with demo data
 
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  address: string;
-  avatar: string;
-  verified: boolean;
-  reputation: number;
-  joinedDate: string;
-  bio?: string;
-  isAdmin?: boolean;
-}
 
-export interface Post {
-  id: string;
-  authorId: string;
-  author: string;
-  avatar: string;
-  verified: boolean;
-  time: string;
-  content: string;
-  image?: string;
-  likes: number;
-  comments: Comment[];
-  category: string;
-  categoryColor: string;
-  likedBy: string[];
-}
 
-export interface Comment {
-  id: string;
-  authorId: string;
-  author: string;
-  avatar: string;
-  content: string;
-  time: string;
-}
 
-export interface MarketplaceItem {
-  id: string;
-  sellerId: string;
-  seller: string;
-  sellerAvatar: string;
-  verified: boolean;
-  title: string;
-  description: string;
-  price: number;
-  condition: 'new' | 'used' | 'like-new';
-  category: string;
-  image?: string;
-  postedDate: string;
-  status: 'available' | 'sold' | 'pending';
-}
 
-export interface Service {
-  id: string;
-  providerId: string;
-  provider: string;
-  providerAvatar: string;
-  verified: boolean;
-  category: string;
-  title: string;
-  description: string;
-  rating: number;
-  reviewCount: number;
-  price: string;
-  availability: string;
-}
 
-export interface ServiceRequest {
-  id: string;
-  userId: string;
-  serviceId: string;
-  serviceName: string;
-  provider: string;
-  status: 'pending' | 'accepted' | 'completed' | 'cancelled';
-  requestDate: string;
-  scheduledDate?: string;
-  description: string;
-}
 
-export interface Event {
-  id: string;
-  organizerId: string;
-  organizer: string;
-  organizerAvatar: string;
-  title: string;
-  description: string;
-  date: string;
-  time: string;
-  location: string;
-  category: string;
-  attendees: string[];
-  maxAttendees?: number;
-  image?: string;
-}
 
-export interface Alert {
-  id: string;
-  authorId: string;
-  author: string;
-  type: 'security' | 'emergency' | 'lost-found' | 'announcement';
-  title: string;
-  description: string;
-  timestamp: string;
-  severity: 'low' | 'medium' | 'high' | 'critical';
-  resolved: boolean;
-}
 
-export interface Message {
-  id: string;
-  conversationId: string;
-  senderId: string;
-  sender: string;
-  senderAvatar: string;
-  content: string;
-  timestamp: string;
-  read: boolean;
-}
 
-export interface Conversation {
-  id: string;
-  participantIds: string[];
-  participants: string[];
-  participantAvatars: string[];
-  lastMessage: string;
-  lastMessageTime: string;
-  unreadCount: number;
-  isGroup: boolean;
-  groupName?: string;
-}
 
-export interface Report {
-  id: string;
-  reporterId: string;
-  reportedItemId: string;
-  reportedItemType: 'post' | 'user' | 'message' | 'marketplace';
-  reason: string;
-  description: string;
-  status: 'pending' | 'reviewing' | 'resolved' | 'dismissed';
-  timestamp: string;
-}
 
-export interface Review {
-  id: string;
-  reviewerId: string;
-  reviewer: string;
-  reviewerAvatar: string;
-  targetId: string;
-  targetType: 'user' | 'service';
-  rating: number;
-  comment: string;
-  timestamp: string;
-}
 
-export interface Notification {
-  id: string;
-  userId: string;
-  type: string;
-  title: string;
-  message: string;
-  timestamp: string;
-  read: boolean;
-  actionUrl?: string;
-}
 
-export interface Neighborhood {
-  id: string;
-  name: string;
-  city: string;
-  state: string;
-  description: string;
-  population: number;
-  primaryLandmark: string;
-  leadId: string;
-  leadName: string;
-  verified: boolean;
-  createdDate: string;
-  coverPhoto?: string;
-  settings: NeighborhoodSettings;
-  guidelines: string;
-}
 
-export interface NeighborhoodSettings {
-  enableMarketplace: boolean;
-  enableResourceExchange: boolean;
-  enablePublicAlerts: boolean;
-  enableEvents: boolean;
-  enableServices: boolean;
-  requireVerification: boolean;
-}
 
-export interface NeighborhoodProposal {
-  id: string;
-  proposerId: string;
-  proposerName: string;
-  name: string;
-  city: string;
-  state: string;
-  description: string;
-  primaryLandmark: string;
-  status: 'pending' | 'approved' | 'rejected';
-  submittedDate: string;
-  reviewedDate?: string;
-  reviewNotes?: string;
-}
 
 // Current user (simulated logged-in user)
-export const currentUser: User = {
+const currentUser = {
   id: 'user-1',
   name: 'Alex Thompson',
   email: 'alex.thompson@email.com',
@@ -225,7 +33,7 @@ export const currentUser: User = {
 };
 
 // Users
-export const users: User[] = [
+const users = [
   currentUser,
   {
     id: 'user-2',
@@ -274,7 +82,7 @@ export const users: User[] = [
 ];
 
 // Posts
-export const posts: Post[] = [
+const posts = [
   {
     id: 'post-1',
     authorId: 'user-2',
@@ -320,7 +128,7 @@ export const posts: Post[] = [
 ];
 
 // Marketplace Items
-export const marketplaceItems: MarketplaceItem[] = [
+const marketplaceItems = [
   {
     id: 'market-1',
     sellerId: 'user-2',
@@ -380,7 +188,7 @@ export const marketplaceItems: MarketplaceItem[] = [
 ];
 
 // Services
-export const services: Service[] = [
+const services = [
   {
     id: 'service-1',
     providerId: 'user-2',
@@ -440,7 +248,7 @@ export const services: Service[] = [
 ];
 
 // Events
-export const events: Event[] = [
+const events = [
   {
     id: 'event-1',
     organizerId: 'user-3',
@@ -486,7 +294,7 @@ export const events: Event[] = [
 ];
 
 // Alerts
-export const alerts: Alert[] = [
+const alerts = [
   {
     id: 'alert-1',
     authorId: 'user-1',
@@ -523,7 +331,7 @@ export const alerts: Alert[] = [
 ];
 
 // Conversations
-export const conversations: Conversation[] = [
+const conversations = [
   {
     id: 'conv-1',
     participantIds: ['user-1', 'user-2'],
@@ -558,7 +366,7 @@ export const conversations: Conversation[] = [
 ];
 
 // Messages
-export const messages: { [conversationId: string]: Message[] } = {
+const messages = {
   'conv-1': [
     {
       id: 'msg-1',
@@ -636,7 +444,7 @@ export const messages: { [conversationId: string]: Message[] } = {
 };
 
 // Notifications
-export const notifications: Notification[] = [
+const notifications = [
   {
     id: 'notif-1',
     userId: 'user-1',
@@ -679,7 +487,7 @@ export const notifications: Notification[] = [
 ];
 
 // Reviews
-export const reviews: Review[] = [
+const reviews = [
   {
     id: 'review-1',
     reviewerId: 'user-1',
@@ -705,7 +513,7 @@ export const reviews: Review[] = [
 ];
 
 // Analytics Data
-export const analyticsData = {
+const analyticsData = {
   userGrowth: [
     { month: 'Jan', users: 150 },
     { month: 'Feb', users: 180 },
@@ -735,7 +543,7 @@ export const analyticsData = {
 };
 
 // Mock Service Requests
-export const serviceRequests: ServiceRequest[] = [
+const serviceRequests = [
   {
     id: 'req-1',
     userId: 'user-1',
@@ -760,7 +568,7 @@ export const serviceRequests: ServiceRequest[] = [
 ];
 
 // Neighborhoods
-export const neighborhoods: Neighborhood[] = [
+const neighborhoods = [
   {
     id: 'neighborhood-1',
     name: 'Oak Valley Community',
@@ -819,7 +627,7 @@ Together, we make Oak Valley a great place to live!`,
 ];
 
 // Neighborhood Proposals
-export const neighborhoodProposals: NeighborhoodProposal[] = [
+const neighborhoodProposals = [
   {
     id: 'proposal-1',
     proposerId: 'user-3',
@@ -835,7 +643,26 @@ export const neighborhoodProposals: NeighborhoodProposal[] = [
 ];
 
 // Simulated current location
-export const currentLocation = {
+const currentLocation = {
   lat: 40.7135,
   lng: -74.0040,
+};
+
+module.exports = {
+  currentUser,
+  users,
+  posts,
+  marketplaceItems,
+  services,
+  events,
+  alerts,
+  conversations,
+  messages,
+  notifications,
+  reviews,
+  neighborhoods,
+  neighborhoodProposals,
+  serviceRequests,
+  analyticsData,
+  currentLocation,
 };

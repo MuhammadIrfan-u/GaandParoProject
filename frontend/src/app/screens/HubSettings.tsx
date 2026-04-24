@@ -5,7 +5,7 @@ import { Button } from "../components/ui/button";
 import { Textarea } from "../components/ui/textarea";
 import { Switch } from "../components/ui/switch";
 import { neighborhoodsService, authService } from "../services/storage";
-import { Neighborhood, NeighborhoodSettings } from "../services/mockData";
+import { Neighborhood, NeighborhoodSettings } from "../services/types";
 import { toast } from "sonner";
 
 export default function HubSettings() {

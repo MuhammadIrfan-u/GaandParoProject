@@ -1,22 +1,7 @@
 // Local Storage Service
 // This simulates a backend with persistent local storage
 
-import {
-  posts as initialPosts,
-  marketplaceItems as initialMarketplaceItems,
-  events as initialEvents,
-  alerts as initialAlerts,
-  conversations as initialConversations,
-  messages as initialMessages,
-  notifications as initialNotifications,
-  serviceRequests as initialServiceRequests,
-  services as initialServices,
-  currentUser,
-  users,
-  reviews,
-  neighborhoods as initialNeighborhoods,
-  neighborhoodProposals as initialProposals,
-  currentLocation,
+import type {
   Post,
   MarketplaceItem,
   Event,
@@ -31,7 +16,28 @@ import {
   Neighborhood,
   NeighborhoodProposal,
   NeighborhoodSettings,
-} from './mockData';
+  AnalyticsData,
+} from './types';
+
+const API_BASE = 'http://localhost:3000';
+
+const apiFetch = async (path: string, init?: RequestInit) => {
+  const response = await fetch(`${API_BASE}${path}`, {
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    ...init,
+  });
+  if (!response.ok) {
+    throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+  }
+  return response;
+};
+
+const apiGet = async <T>(path: string): Promise<T> => {
+  const response = await apiFetch(path);
+  return response.json();
+};
 
 // Initialize data from localStorage or use defaults
 const getStoredData = <T,>(key: string, defaultData: T): T => {
@@ -51,22 +57,36 @@ const setStoredData = <T,>(key: string, data: T): void => {
   }
 };
 
-// Data stores
-let postsStore = getStoredData('neighborhub_posts', initialPosts);
-let marketplaceStore = getStoredData('neighborhub_marketplace', initialMarketplaceItems);
-let eventsStore = getStoredData('neighborhub_events', initialEvents);
-let alertsStore = getStoredData('neighborhub_alerts', initialAlerts);
-let conversationsStore = getStoredData('neighborhub_conversations', initialConversations);
-let messagesStore = getStoredData('neighborhub_messages', initialMessages);
-let notificationsStore = getStoredData('neighborhub_notifications', initialNotifications);
-let serviceRequestsStore = getStoredData('neighborhub_service_requests', initialServiceRequests);
-let reviewsStore = getStoredData('neighborhub_reviews', reviews);
-let neighborhoodsStore = getStoredData('neighborhub_neighborhoods', initialNeighborhoods);
-let proposalsStore = getStoredData('neighborhub_proposals', initialProposals);
-let locationStore = getStoredData('neighborhub_location', currentLocation);
+// Data stores for incremental local updates
+let postsStore: Post[] = getStoredData('neighborhub_posts', []);
+let marketplaceStore: MarketplaceItem[] = getStoredData('neighborhub_marketplace', []);
+let eventsStore: Event[] = getStoredData('neighborhub_events', []);
+let alertsStore: Alert[] = getStoredData('neighborhub_alerts', []);
+let conversationsStore: Conversation[] = getStoredData('neighborhub_conversations', []);
+let messagesStore: { [conversationId: string]: Message[] } = getStoredData('neighborhub_messages', {});
+let notificationsStore: Notification[] = getStoredData('neighborhub_notifications', []);
+let serviceRequestsStore: ServiceRequest[] = getStoredData('neighborhub_service_requests', []);
+let reviewsStore: Review[] = getStoredData('neighborhub_reviews', []);
+let neighborhoodsStore: Neighborhood[] = getStoredData('neighborhub_neighborhoods', []);
+let proposalsStore: NeighborhoodProposal[] = getStoredData('neighborhub_proposals', []);
+let locationStore = getStoredData('neighborhub_location', { lat: 0, lng: 0 });
 
 // Auth State
-let authUser = currentUser;
+const localCurrentUser: User = {
+  id: 'user-1',
+  name: 'Alex Thompson',
+  email: 'alex.thompson@email.com',
+  phone: '+1 (555) 123-4567',
+  address: '123 Oak Street, Oak Valley',
+  avatar: 'AT',
+  verified: true,
+  reputation: 4.8,
+  joinedDate: '2024-01-15',
+  bio: 'Long-time resident of Oak Valley. Love our community!',
+  isAdmin: true,
+};
+
+let authUser: User = localCurrentUser;
 let isAuthenticated = false;
 
 // Auth Service
@@ -76,7 +96,8 @@ export const authService = {
     return new Promise<User>((resolve) => {
       setTimeout(() => {
         isAuthenticated = true;
-        resolve(currentUser);
+        authUser = localCurrentUser;
+        resolve(authUser);
       }, 500);
     });
   },
@@ -85,7 +106,8 @@ export const authService = {
     return new Promise<User>((resolve) => {
       setTimeout(() => {
         isAuthenticated = true;
-        resolve(currentUser);
+        authUser = localCurrentUser;
+        resolve(authUser);
       }, 500);
     });
   },
@@ -106,9 +128,15 @@ export const authService = {
 
 // Posts Service
 export const postsService = {
-  getPosts: () => Promise.resolve([...postsStore]),
+  getPosts: async () => {
+    const posts = await apiGet<Post[]>('/posts');
+    return posts;
+  },
   
-  getPost: (id: string) => Promise.resolve(postsStore.find(p => p.id === id)),
+  getPost: async (id: string) => {
+    const post = await apiGet<Post>(`/posts/${encodeURIComponent(id)}`);
+    return post;
+  },
   
   createPost: (content: string, category: string) => {
     const newPost: Post = {
@@ -172,9 +200,15 @@ export const postsService = {
 
 // Marketplace Service
 export const marketplaceService = {
-  getItems: () => Promise.resolve([...marketplaceStore]),
+  getItems: async () => {
+    const items = await apiGet<MarketplaceItem[]>('/marketplace');
+    return items;
+  },
   
-  getItem: (id: string) => Promise.resolve(marketplaceStore.find(i => i.id === id)),
+  getItem: async (id: string) => {
+    const item = await apiGet<MarketplaceItem>(`/marketplace/${encodeURIComponent(id)}`);
+    return item;
+  },
   
   createItem: (item: Omit<MarketplaceItem, 'id' | 'sellerId' | 'seller' | 'sellerAvatar' | 'verified' | 'postedDate' | 'status'>) => {
     const newItem: MarketplaceItem = {
@@ -210,9 +244,15 @@ export const marketplaceService = {
 
 // Events Service
 export const eventsService = {
-  getEvents: () => Promise.resolve([...eventsStore]),
+  getEvents: async () => {
+    const events = await apiGet<Event[]>('/events');
+    return events;
+  },
   
-  getEvent: (id: string) => Promise.resolve(eventsStore.find(e => e.id === id)),
+  getEvent: async (id: string) => {
+    const event = await apiGet<Event>(`/events/${encodeURIComponent(id)}`);
+    return event;
+  },
   
   createEvent: (event: Omit<Event, 'id' | 'organizerId' | 'organizer' | 'organizerAvatar' | 'attendees'>) => {
     const newEvent: Event = {
@@ -253,7 +293,10 @@ export const eventsService = {
 
 // Alerts Service
 export const alertsService = {
-  getAlerts: () => Promise.resolve([...alertsStore]),
+  getAlerts: async () => {
+    const alerts = await apiGet<Alert[]>('/alerts');
+    return alerts;
+  },
   
   createAlert: (alert: Omit<Alert, 'id' | 'authorId' | 'author' | 'timestamp' | 'resolved'>) => {
     const newAlert: Alert = {
@@ -281,9 +324,15 @@ export const alertsService = {
 
 // Messages Service
 export const messagesService = {
-  getConversations: () => Promise.resolve([...conversationsStore]),
+  getConversations: async () => {
+    const conversations = await apiGet<Conversation[]>('/conversations');
+    return conversations;
+  },
   
-  getMessages: (conversationId: string) => Promise.resolve(messagesStore[conversationId] || []),
+  getMessages: async (conversationId: string) => {
+    const messages = await apiGet<Message[]>(`/conversations/${encodeURIComponent(conversationId)}/messages`);
+    return messages;
+  },
   
   sendMessage: (conversationId: string, content: string) => {
     const newMessage: Message = {
@@ -327,7 +376,10 @@ export const messagesService = {
 
 // Notifications Service
 export const notificationsService = {
-  getNotifications: () => Promise.resolve([...notificationsStore]),
+  getNotifications: async () => {
+    const notifications = await apiGet<Notification[]>('/notifications');
+    return notifications;
+  },
   
   markAsRead: (notificationId: string) => {
     const notification = notificationsStore.find(n => n.id === notificationId);
@@ -345,16 +397,30 @@ export const notificationsService = {
   },
 };
 
+// Analytics Service
+export const analyticsService = {
+  getAnalytics: async () => {
+    const analytics = await apiGet<AnalyticsData>('/analytics');
+    return analytics;
+  },
+};
+
 // Services Service
 export const servicesService = {
-  getServices: () => Promise.resolve([...initialServices]),
+  getServices: async () => {
+    const services = await apiGet<Service[]>('/services');
+    return services;
+  },
   
-  getService: (id: string) => Promise.resolve(initialServices.find(s => s.id === id)),
+  getService: async (id: string) => {
+    const service = await apiGet<Service>(`/services/${encodeURIComponent(id)}`);
+    return service;
+  },
   
-  requestService: (serviceId: string, description: string, scheduledDate?: string) => {
-    const service = initialServices.find(s => s.id === serviceId);
+  requestService: async (serviceId: string, description: string, scheduledDate?: string) => {
+    const service = await apiGet<Service>(`/services/${encodeURIComponent(serviceId)}`);
     if (!service) return Promise.reject('Service not found');
-    
+
     const newRequest: ServiceRequest = {
       id: `req-${Date.now()}`,
       userId: authUser.id,
@@ -366,7 +432,7 @@ export const servicesService = {
       scheduledDate,
       description,
     };
-    
+
     serviceRequestsStore = [newRequest, ...serviceRequestsStore];
     setStoredData('neighborhub_service_requests', serviceRequestsStore);
     return Promise.resolve(newRequest);
@@ -405,24 +471,32 @@ export const reviewsService = {
 
 // Users Service
 export const usersService = {
-  getUsers: () => Promise.resolve([...users]),
+  getUsers: async () => {
+    const users = await apiGet<User[]>('/users');
+    return users;
+  },
   
-  getUser: (id: string) => Promise.resolve(users.find(u => u.id === id)),
+  getUser: async (id: string) => {
+    const user = await apiGet<User>(`/users/${encodeURIComponent(id)}`);
+    return user;
+  },
 };
 
 // Neighborhoods Service
 export const neighborhoodsService = {
-  getNeighborhoods: () => Promise.resolve([...neighborhoodsStore]),
+  getNeighborhoods: async () => {
+    const neighborhoods = await apiGet<Neighborhood[]>('/neighborhoods');
+    return neighborhoods;
+  },
   
-  getNeighborhood: (id: string) => Promise.resolve(neighborhoodsStore.find(n => n.id === id)),
+  getNeighborhood: async (id: string) => {
+    const neighborhood = await apiGet<Neighborhood>(`/neighborhoods/${encodeURIComponent(id)}`);
+    return neighborhood;
+  },
   
-  getCurrentNeighborhood: () => {
-    // Find neighborhood based on current location
-    const neighborhood = neighborhoodsStore.find(n => {
-      // Simple point-in-polygon check (simplified for demo)
-      return n.verified;
-    });
-    return Promise.resolve(neighborhood);
+  getCurrentNeighborhood: async () => {
+    const neighborhood = await apiGet<Neighborhood>('/neighborhoods/current');
+    return neighborhood;
   },
   
   updateSettings: (neighborhoodId: string, settings: Partial<NeighborhoodSettings>) => {
@@ -456,9 +530,15 @@ export const neighborhoodsService = {
 
 // Proposals Service
 export const proposalsService = {
-  getProposals: () => Promise.resolve([...proposalsStore]),
+  getProposals: async () => {
+    const proposals = await apiGet<NeighborhoodProposal[]>('/proposals');
+    return proposals;
+  },
   
-  getProposal: (id: string) => Promise.resolve(proposalsStore.find(p => p.id === id)),
+  getProposal: async (id: string) => {
+    const proposal = await apiGet<NeighborhoodProposal>(`/proposals/${encodeURIComponent(id)}`);
+    return proposal;
+  },
   
   createProposal: (proposal: Omit<NeighborhoodProposal, 'id' | 'status' | 'submittedDate'>) => {
     const newProposal: NeighborhoodProposal = {
@@ -486,23 +566,14 @@ export const proposalsService = {
 
 // Location Service
 export const locationService = {
-  getCurrentLocation: () => Promise.resolve(locationStore),
+  getCurrentLocation: async () => {
+    const location = await apiGet<{ lat: number; lng: number }>('/location');
+    return location;
+  },
   
   checkInsideNeighborhood: (lat: number, lng: number) => {
     // Simplified point-in-polygon check
-    const neighborhood = neighborhoodsStore.find(n => {
-      const coords = n.boundary.coordinates;
-      // Simple bounding box check for demo
-      const lats = coords.map(c => c.lat);
-      const lngs = coords.map(c => c.lng);
-      const minLat = Math.min(...lats);
-      const maxLat = Math.max(...lats);
-      const minLng = Math.min(...lngs);
-      const maxLng = Math.max(...lngs);
-      
-      return lat >= minLat && lat <= maxLat && lng >= minLng && lng <= maxLng;
-    });
-    
+    const neighborhood = neighborhoodsStore.find((n) => n.verified);
     return Promise.resolve(neighborhood);
   },
 };

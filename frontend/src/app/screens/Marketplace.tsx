@@ -5,7 +5,7 @@ import { BottomNav } from "../components/BottomNav";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { marketplaceService } from "../services/storage";
-import { MarketplaceItem } from "../services/mockData";
+import { MarketplaceItem } from "../services/types";
 import { toast } from "sonner";
 
 export default function Marketplace() {

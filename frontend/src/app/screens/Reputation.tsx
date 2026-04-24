@@ -1,12 +1,17 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { ArrowLeft, Star } from "lucide-react";
-import { reviews } from "../services/mockData";
-import { authService } from "../services/storage";
+import type { Review } from "../services/types";
+import { authService, reviewsService } from "../services/storage";
 
 export default function Reputation() {
   const navigate = useNavigate();
   const currentUser = authService.getCurrentUser();
-  const userReviews = reviews.filter(r => r.targetId === currentUser.id);
+  const [userReviews, setUserReviews] = useState<Review[]>([]);
+
+  useEffect(() => {
+    reviewsService.getReviews(currentUser.id).then(setUserReviews).catch(console.error);
+  }, [currentUser.id]);
 
   return (
     <div className="min-h-screen bg-background">

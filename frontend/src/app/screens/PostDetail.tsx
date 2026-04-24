@@ -4,7 +4,7 @@ import { ArrowLeft, Heart, MessageCircle, Share2, Send } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Textarea } from "../components/ui/textarea";
 import { postsService, authService } from "../services/storage";
-import { Post } from "../services/mockData";
+import { Post } from "../services/types";
 import { toast } from "sonner";
 
 export default function PostDetail() {

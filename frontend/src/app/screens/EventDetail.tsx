@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router";
 import { ArrowLeft, Calendar, MapPin, Users, Check } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { eventsService, authService } from "../services/storage";
-import { Event } from "../services/mockData";
+import { Event } from "../services/types";
 import { toast } from "sonner";
 
 export default function EventDetail() {

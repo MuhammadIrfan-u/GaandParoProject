@@ -4,7 +4,7 @@ import { MapPin, Users, Shield, Search, Plus } from "lucide-react";
 import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
 import { neighborhoodsService } from "../services/storage";
-import { Neighborhood } from "../services/mockData";
+import { Neighborhood } from "../services/types";
 import { toast } from "sonner";
 
 export default function NeighborhoodDiscovery() {

@@ -4,7 +4,7 @@ import { ArrowLeft, Save, AlertTriangle, Trash2, Plus } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { neighborhoodsService } from "../services/storage";
-import { Neighborhood } from "../services/mockData";
+import { Neighborhood } from "../services/types";
 import { toast } from "sonner";
 
 export default function GeofenceEditor() {

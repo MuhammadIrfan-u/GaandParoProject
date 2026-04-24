@@ -4,10 +4,11 @@ import { toast } from "sonner";
 import { Button } from "../components/ui/button";
 import { BottomNav } from "../components/BottomNav";
 import { authService } from "../services/storage";
-import { currentUser } from "../services/mockData";
+
 
 export default function Profile() {
   const navigate = useNavigate();
+  const currentUser = authService.getCurrentUser();
 
   const handleLogout = () => {
     authService.logout();

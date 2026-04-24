@@ -1,11 +1,18 @@
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router";
 import { ArrowLeft, Users, TrendingUp, Calendar, ShoppingBag, AlertTriangle } from "lucide-react";
 import { BottomNav } from "../components/BottomNav";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
-import { analyticsData } from "../services/mockData";
+import type { AnalyticsData } from "../services/types";
+import { analyticsService } from "../services/storage";
 
 export default function Analytics() {
   const navigate = useNavigate();
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
+
+  useEffect(() => {
+    analyticsService.getAnalytics().then(setAnalyticsData).catch(console.error);
+  }, []);
 
   const stats = [
     { icon: Users, label: "Total Users", value: "248", color: "bg-blue-500", change: "+12%" },
@@ -42,7 +49,7 @@ export default function Analytics() {
         <div className="bg-white rounded-2xl p-4 border border-border mb-6">
           <h3 className="text-lg mb-4">User Growth</h3>
           <ResponsiveContainer width="100%" height={250}>
-            <LineChart data={analyticsData.userGrowth}>
+            <LineChart data={analyticsData?.userGrowth ?? []}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="month" />
               <YAxis />
@@ -55,7 +62,7 @@ export default function Analytics() {
         <div className="bg-white rounded-2xl p-4 border border-border mb-6">
           <h3 className="text-lg mb-4">Weekly Activity</h3>
           <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={analyticsData.engagement}>
+            <BarChart data={analyticsData?.engagement ?? []}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="day" />
               <YAxis />
@@ -70,7 +77,7 @@ export default function Analytics() {
           <div className="bg-white rounded-2xl p-4 border border-border">
             <h3 className="text-lg mb-4">Top Categories</h3>
             <div className="space-y-3">
-              {analyticsData.topCategories.map((category) => (
+              {(analyticsData?.topCategories ?? []).map((category) => (
                 <div key={category.category}>
                   <div className="flex items-center justify-between mb-1 text-sm">
                     <span>{category.category}</span>
@@ -92,19 +99,19 @@ export default function Analytics() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Total Posts</span>
-                <span className="text-lg">{analyticsData.activityStats.totalPosts}</span>
+                <span className="text-lg">{analyticsData?.activityStats.totalPosts ?? 0}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Total Events</span>
-                <span className="text-lg">{analyticsData.activityStats.totalEvents}</span>
+                <span className="text-lg">{analyticsData?.activityStats.totalEvents ?? 0}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Marketplace Items</span>
-                <span className="text-lg">{analyticsData.activityStats.totalMarketplace}</span>
+                <span className="text-lg">{analyticsData?.activityStats.totalMarketplace ?? 0}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Services Listed</span>
-                <span className="text-lg">{analyticsData.activityStats.totalServices}</span>
+                <span className="text-lg">{analyticsData?.activityStats.totalServices ?? 0}</span>
               </div>
             </div>
           </div>
