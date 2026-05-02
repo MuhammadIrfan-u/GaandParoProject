@@ -27,8 +27,8 @@ export default function Login() {
       await authService.login(email, password);
       toast.success("Welcome back!");
       navigate("/home");
-    } catch (error) {
-      toast.error("Login failed. Please try again.");
+    } catch (error: any) {
+      toast.error(error?.message ?? "Login failed. Please try again.");
     } finally {
       setLoading(false);
     }

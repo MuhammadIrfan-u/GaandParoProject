@@ -1,10 +1,17 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
-import { Home as HomeIcon, Mail, Lock, User, Phone, MapPin, Eye, EyeOff } from "lucide-react";
+import { Home as HomeIcon, Mail, Lock, User, Phone, MapPin, Eye, EyeOff, Users } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { authService } from "../services/storage";
 import { toast } from "sonner";
+import type { UserRole } from "../services/types";
+
+const ROLE_OPTIONS: { value: UserRole; label: string; description: string }[] = [
+  { value: "resident",       label: "Resident",              description: "Standard community member" },
+  { value: "business_owner", label: "Local Business Owner",  description: "Showcase your local business" },
+  { value: "moderator",      label: "Community Moderator",   description: "Help manage the community" },
+];
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -15,6 +22,7 @@ export default function Signup() {
     address: "",
     password: "",
     confirmPassword: "",
+    role: "resident" as UserRole,
   });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -44,11 +52,18 @@ export default function Signup() {
     setLoading(true);
 
     try {
-      await authService.signup(formData.name, formData.email, formData.password, formData.phone, formData.address);
+      await authService.signup(
+        formData.name,
+        formData.email,
+        formData.password,
+        formData.phone,
+        formData.address,
+        formData.role,
+      );
       toast.success("Account created successfully!");
       navigate("/neighborhood-discovery");
-    } catch (error) {
-      toast.error("Signup failed. Please try again.");
+    } catch (error: any) {
+      toast.error(error?.message ?? "Signup failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -67,6 +82,8 @@ export default function Signup() {
 
         <div className="bg-white rounded-3xl p-6 shadow-2xl max-h-[85vh] overflow-y-auto">
           <form onSubmit={handleSignup} className="space-y-4">
+
+            {/* Full Name */}
             <div>
               <label className="block text-sm mb-2 text-muted-foreground">Full Name</label>
               <div className="relative">
@@ -81,6 +98,7 @@ export default function Signup() {
               </div>
             </div>
 
+            {/* Email */}
             <div>
               <label className="block text-sm mb-2 text-muted-foreground">Email</label>
               <div className="relative">
@@ -95,6 +113,7 @@ export default function Signup() {
               </div>
             </div>
 
+            {/* Phone */}
             <div>
               <label className="block text-sm mb-2 text-muted-foreground">Phone Number</label>
               <div className="relative">
@@ -109,6 +128,7 @@ export default function Signup() {
               </div>
             </div>
 
+            {/* Address */}
             <div>
               <label className="block text-sm mb-2 text-muted-foreground">Address</label>
               <div className="relative">
@@ -123,6 +143,43 @@ export default function Signup() {
               </div>
             </div>
 
+            {/* Role selector — REQ-5 */}
+            <div>
+              <label className="block text-sm mb-2 text-muted-foreground">
+                <Users className="inline w-4 h-4 mr-1 -mt-0.5" />
+                Account Type
+              </label>
+              <div className="space-y-2">
+                {ROLE_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => handleChange("role", option.value)}
+                    className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-colors ${
+                      formData.role === option.value
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:bg-muted/30"
+                    }`}
+                  >
+                    <div
+                      className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${
+                        formData.role === option.value
+                          ? "border-primary bg-primary"
+                          : "border-muted-foreground"
+                      }`}
+                    />
+                    <div>
+                      <div className={`text-sm ${formData.role === option.value ? "text-primary" : ""}`}>
+                        {option.label}
+                      </div>
+                      <div className="text-xs text-muted-foreground">{option.description}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Password */}
             <div>
               <label className="block text-sm mb-2 text-muted-foreground">Password</label>
               <div className="relative">
@@ -144,6 +201,7 @@ export default function Signup() {
               </div>
             </div>
 
+            {/* Confirm Password */}
             <div>
               <label className="block text-sm mb-2 text-muted-foreground">Confirm Password</label>
               <div className="relative">
@@ -158,8 +216,8 @@ export default function Signup() {
               </div>
             </div>
 
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               className="w-full bg-gradient-to-r from-primary to-indigo-600 hover:opacity-90"
               disabled={loading}
             >

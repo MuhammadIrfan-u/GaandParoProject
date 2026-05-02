@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { useNavigate, Link } from "react-router";
-import { ArrowLeft, Bell, Lock, Shield, Moon, Globe, HelpCircle, MapPin, Home as HomeIcon, Settings2 } from "lucide-react";
+import { ArrowLeft, Bell, Lock, Shield, Moon, Globe, HelpCircle, Home as HomeIcon, Settings2 } from "lucide-react";
 import { Switch } from "../components/ui/switch";
 import { authService } from "../services/storage";
 import { toast } from "sonner";
@@ -8,34 +9,57 @@ export default function Settings() {
   const navigate = useNavigate();
   const currentUser = authService.getCurrentUser();
 
-  const settingsSections = [
-    {
-      title: "Notifications",
-      items: [
-        { icon: Bell, label: "Push Notifications", value: true },
-        { icon: Bell, label: "Email Notifications", value: true },
-        { icon: Bell, label: "Community Alerts", value: true },
-      ],
-    },
-    {
-      title: "Privacy & Security",
-      items: [
-        { icon: Lock, label: "Two-Factor Authentication", value: false },
-        { icon: Shield, label: "Profile Visibility", value: true },
-        { icon: Lock, label: "Show Phone Number", value: false },
-      ],
-    },
-    {
-      title: "Preferences",
-      items: [
-        { icon: Moon, label: "Dark Mode", value: false },
-        { icon: Globe, label: "Language", value: "English" },
-      ],
-    },
-  ];
+  // Guard: if no user, redirect to login
+  if (!currentUser) {
+    navigate("/login");
+    return null;
+  }
+
+  // Local state mirrors the user's stored preferences — REQ-9
+  const [prefs, setPrefs] = useState({
+    pushNotifications:   currentUser.notifications?.push          ?? true,
+    emailNotifications:  currentUser.notifications?.email         ?? true,
+    communityAlerts:     currentUser.notifications?.communityAlerts ?? true,
+    profileVisible:      currentUser.privacy?.profileVisible      ?? true,
+    showPhone:           currentUser.privacy?.showPhone           ?? false,
+  });
+
+  const handleToggle = async (
+    key: keyof typeof prefs,
+    section: "notifications" | "privacy"
+  ) => {
+    const newValue = !prefs[key];
+    setPrefs((prev) => ({ ...prev, [key]: newValue }));
+
+    try {
+      if (section === "notifications") {
+        await authService.updateProfile({
+          notifications: {
+            push:             key === "pushNotifications"  ? newValue : prefs.pushNotifications,
+            email:            key === "emailNotifications" ? newValue : prefs.emailNotifications,
+            communityAlerts:  key === "communityAlerts"    ? newValue : prefs.communityAlerts,
+          },
+        });
+      } else {
+        await authService.updateProfile({
+          privacy: {
+            profileVisible: key === "profileVisible" ? newValue : prefs.profileVisible,
+            showPhone:      key === "showPhone"       ? newValue : prefs.showPhone,
+            showAddress:    currentUser.privacy?.showAddress ?? true,
+          },
+        });
+      }
+      toast.success(`${newValue ? "Enabled" : "Disabled"} successfully`);
+    } catch (error: any) {
+      // Revert on failure
+      setPrefs((prev) => ({ ...prev, [key]: !newValue }));
+      toast.error(error?.message ?? "Failed to save setting");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Sticky header */}
       <div className="bg-white border-b border-border sticky top-0 z-40">
         <div className="max-w-lg mx-auto px-4 py-4 flex items-center gap-4">
           <button onClick={() => navigate(-1)} className="p-2 hover:bg-muted rounded-full">
@@ -46,7 +70,8 @@ export default function Settings() {
       </div>
 
       <div className="max-w-lg mx-auto px-4 py-6">
-        {/* Super Admin Dashboard (for Super Admins) */}
+
+        {/* Super Admin Dashboard */}
         {currentUser.isAdmin && (
           <div className="mb-6">
             <Link
@@ -69,7 +94,7 @@ export default function Settings() {
           </div>
         )}
 
-        {/* Neighborhood Management (for Moderators/Admins) */}
+        {/* Neighborhood Management */}
         {currentUser.isAdmin && (
           <div className="mb-6">
             <h3 className="text-sm px-4 mb-2 text-muted-foreground">Neighborhood Management</h3>
@@ -87,7 +112,6 @@ export default function Settings() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </Link>
-
               <Link
                 to="/neighborhoods"
                 className="flex items-center gap-3 p-4 hover:bg-muted/30 transition-colors"
@@ -105,35 +129,86 @@ export default function Settings() {
           </div>
         )}
 
-        {settingsSections.map((section) => (
-          <div key={section.title} className="mb-6">
-            <h3 className="text-sm px-4 mb-2 text-muted-foreground">{section.title}</h3>
-            <div className="bg-white rounded-2xl border border-border overflow-hidden">
-              {section.items.map((item, index) => (
-                <div
-                  key={item.label}
-                  className={`flex items-center justify-between p-4 ${
-                    index < section.items.length - 1 ? 'border-b border-border' : ''
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <item.icon className="w-5 h-5 text-muted-foreground" />
-                    <span>{item.label}</span>
-                  </div>
-                  {typeof item.value === 'boolean' ? (
-                    <Switch
-                      checked={item.value}
-                      onCheckedChange={() => toast.success(`${item.label} ${item.value ? 'disabled' : 'enabled'}`)}
-                    />
-                  ) : (
-                    <span className="text-muted-foreground text-sm">{item.value}</span>
-                  )}
+        {/* Notifications — REQ-9 */}
+        <div className="mb-6">
+          <h3 className="text-sm px-4 mb-2 text-muted-foreground">Notifications</h3>
+          <div className="bg-white rounded-2xl border border-border overflow-hidden">
+            {[
+              { key: "pushNotifications"  as const, icon: Bell,   label: "Push Notifications" },
+              { key: "emailNotifications" as const, icon: Bell,   label: "Email Notifications" },
+              { key: "communityAlerts"    as const, icon: Bell,   label: "Community Alerts" },
+            ].map((item, index, arr) => (
+              <div
+                key={item.key}
+                className={`flex items-center justify-between p-4 ${
+                  index < arr.length - 1 ? "border-b border-border" : ""
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <item.icon className="w-5 h-5 text-muted-foreground" />
+                  <span>{item.label}</span>
                 </div>
-              ))}
+                <Switch
+                  checked={prefs[item.key]}
+                  onCheckedChange={() => handleToggle(item.key, "notifications")}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Privacy & Security — REQ-9 */}
+        <div className="mb-6">
+          <h3 className="text-sm px-4 mb-2 text-muted-foreground">Privacy & Security</h3>
+          <div className="bg-white rounded-2xl border border-border overflow-hidden">
+            {[
+              { key: "profileVisible" as const, icon: Shield, label: "Profile Visibility" },
+              { key: "showPhone"      as const, icon: Lock,   label: "Show Phone Number" },
+            ].map((item, index, arr) => (
+              <div
+                key={item.key}
+                className={`flex items-center justify-between p-4 ${
+                  index < arr.length - 1 ? "border-b border-border" : ""
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <item.icon className="w-5 h-5 text-muted-foreground" />
+                  <span>{item.label}</span>
+                </div>
+                <Switch
+                  checked={prefs[item.key]}
+                  onCheckedChange={() => handleToggle(item.key, "privacy")}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Preferences (static for now) */}
+        <div className="mb-6">
+          <h3 className="text-sm px-4 mb-2 text-muted-foreground">Preferences</h3>
+          <div className="bg-white rounded-2xl border border-border overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <div className="flex items-center gap-3">
+                <Moon className="w-5 h-5 text-muted-foreground" />
+                <span>Dark Mode</span>
+              </div>
+              <Switch
+                checked={false}
+                onCheckedChange={() => toast.info("Dark mode coming soon!")}
+              />
+            </div>
+            <div className="flex items-center justify-between p-4">
+              <div className="flex items-center gap-3">
+                <Globe className="w-5 h-5 text-muted-foreground" />
+                <span>Language</span>
+              </div>
+              <span className="text-muted-foreground text-sm">English</span>
             </div>
           </div>
-        ))}
+        </div>
 
+        {/* Help */}
         <div className="bg-white rounded-2xl border border-border overflow-hidden">
           <button
             onClick={() => toast.info("Help center coming soon!")}
