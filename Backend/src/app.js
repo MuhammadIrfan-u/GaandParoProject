@@ -2,7 +2,10 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const app = express();
+
 const mockDataRoutes = require('./routes/mockDataRoutes');
+const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes');
 
 app.use(express.json());
 
@@ -25,7 +28,13 @@ app.get('/', (req, res) => {
   res.send('Welcome to Verified Neighbourhood Community');
 });
 
-// Mock data routes (existing)
+// ── Auth & Profile routes (REQ-1 to REQ-13) ──────────────────────────────────
+app.use('/auth', authRoutes);
+
+// ── User lookup for inter-module use ─────────────────────────────────────────
+app.use('/api/users', userRoutes);
+
+// ── Mock data routes (existing, untouched) ───────────────────────────────────
 app.use('/', mockDataRoutes);
 
 module.exports = app;

@@ -1,0 +1,25 @@
+/**
+ * Role-based access control middleware.
+ * Usage: restrictTo('moderator', 'admin')
+ * Must be used AFTER the protect middleware.
+ */
+const restrictTo = (...roles) => {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Not authorized.' });
+    }
+
+    const hasRole =
+      roles.includes(req.user.role) || (roles.includes('admin') && req.user.isAdmin);
+
+    if (!hasRole) {
+      return res.status(403).json({
+        message: 'You do not have permission to perform this action.',
+      });
+    }
+
+    next();
+  };
+};
+
+module.exports = { restrictTo };
