@@ -34,6 +34,9 @@ import BrowseNeighborhoods from "./screens/BrowseNeighborhoods";
 import NeighborhoodProposalStatus from "./screens/NeighborhoodProposalStatus";
 import SuperAdminDashboard from "./screens/SuperAdminDashboard";
 import NeighborhoodDetail from "./screens/NeighborhoodDetail";
+import ForgotPassword from "./screens/ForgotPassword";
+import ResetPassword from "./screens/ResetPassword";
+import EditProfile from "./screens/EditProfile";
 
 export const router = createBrowserRouter([
   {
@@ -171,5 +174,17 @@ export const router = createBrowserRouter([
   {
     path: "/super-admin-dashboard",
     Component: SuperAdminDashboard,
+  },
+  {
+    path: "/forgot-password",
+    Component: ForgotPassword,
+  },
+  {
+    path: "/reset-password",
+    Component: ResetPassword,
+  },
+  {
+    path: "/edit-profile",
+    Component: EditProfile,
   },
 ]);
