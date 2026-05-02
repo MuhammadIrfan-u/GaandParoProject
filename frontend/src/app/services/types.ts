@@ -10,6 +10,7 @@ export interface User {
   joinedDate: string;
   bio?: string;
   isAdmin?: boolean;
+  neighborhoodId?: number;
 }
 
 export interface Post {
@@ -184,9 +185,11 @@ export interface Neighborhood {
   primaryLandmark: string;
   leadId: string;
   leadName: string;
+  adminId?: string;
   verified: boolean;
   createdDate: string;
   coverPhoto?: string;
+  logo?: string;
   settings: NeighborhoodSettings;
   guidelines: string;
 }
