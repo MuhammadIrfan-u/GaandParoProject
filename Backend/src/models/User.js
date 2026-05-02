@@ -121,7 +121,7 @@ userSchema.methods.toPublicProfile = function () {
     id: this._id,
     name: this.name,
     email: this.email,
-    phone: this.privacy.showPhone ? this.phone : undefined,
+    phone: this.phone,           // always returned to the owner
     address: this.address,
     avatar: this.avatar,
     bio: this.bio,

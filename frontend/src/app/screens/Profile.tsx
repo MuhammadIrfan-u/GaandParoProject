@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useNavigate, Link } from "react-router";
 import { Shield, Settings as SettingsIcon, TrendingUp, Star, User, Mail, Phone, MapPin, LogOut } from "lucide-react";
 import { toast } from "sonner";
@@ -10,11 +11,13 @@ export default function Profile() {
   const navigate = useNavigate();
   const currentUser = authService.getCurrentUser();
 
-  // Guard: if no user in state, redirect to login
-  if (!currentUser) {
-    navigate("/login");
-    return null;
-  }
+  useEffect(() => {
+    if (!currentUser) {
+      navigate("/login");
+    }
+  }, [currentUser, navigate]);
+
+  if (!currentUser) return null;
 
   const handleLogout = () => {
     authService.logout();

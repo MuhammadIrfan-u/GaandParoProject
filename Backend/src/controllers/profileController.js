@@ -21,6 +21,7 @@ const updateProfile = async (req, res) => {
       'address',
       'bio',
       'avatar',
+      'role',
       'privacy',
       'notifications',
     ];
@@ -33,7 +34,6 @@ const updateProfile = async (req, res) => {
     });
 
     // Prevent role/admin escalation through this endpoint
-    delete updates.role;
     delete updates.isAdmin;
     delete updates.verified;
     delete updates.reputation;

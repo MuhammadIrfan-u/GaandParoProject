@@ -141,10 +141,25 @@ const forgotPassword = async (req, res) => {
 
     const resetUrl = `${process.env.CLIENT_URL}/reset-password?token=${resetToken}`;
 
+    // In development (email not configured), return the reset URL directly
+    const emailConfigured =
+      process.env.EMAIL_USER &&
+      process.env.EMAIL_USER !== 'your_email@gmail.com' &&
+      process.env.EMAIL_PASS &&
+      process.env.EMAIL_PASS !== 'your_email_app_password';
+
+    if (!emailConfigured) {
+      console.log(`[DEV] Password reset URL for ${user.email}: ${resetUrl}`);
+      return res.status(200).json({
+        message: 'If an account with that email exists, a reset link has been sent.',
+        // Only exposed in dev when email not configured — remove before production
+        devResetUrl: resetUrl,
+      });
+    }
+
     try {
       const transporter = createTransporter();
-      await transporter.sendMail({
-        from: `"NeighborHub" <${process.env.EMAIL_USER}>`,
+      await transporter.sendMail({        from: `"NeighborHub" <${process.env.EMAIL_USER}>`,
         to: user.email,
         subject: 'Password Reset Request',
         html: `

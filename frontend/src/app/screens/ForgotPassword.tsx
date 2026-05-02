@@ -10,6 +10,7 @@ export default function ForgotPassword() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [devResetUrl, setDevResetUrl] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,7 +23,13 @@ export default function ForgotPassword() {
     setLoading(true);
 
     try {
-      await authService.forgotPassword(email);
+      const res = await fetch("http://localhost:3000/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (data.devResetUrl) setDevResetUrl(data.devResetUrl);
       setSubmitted(true);
     } catch (error) {
       toast.error("Something went wrong. Please try again.");
@@ -93,6 +100,17 @@ export default function ForgotPassword() {
                 reset link has been sent. Check your spam folder if you don't
                 see it.
               </p>
+              {devResetUrl && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-left">
+                  <p className="text-xs text-amber-700 mb-1">Dev mode — email not configured. Use this link to test:</p>
+                  <a
+                    href={devResetUrl}
+                    className="text-xs text-primary break-all hover:underline"
+                  >
+                    {devResetUrl}
+                  </a>
+                </div>
+              )}
               <Link to="/login">
                 <Button
                   variant="outline"

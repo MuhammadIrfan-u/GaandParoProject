@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router";
 import { ArrowLeft, Bell, Lock, Shield, Moon, Globe, HelpCircle, Home as HomeIcon, Settings2 } from "lucide-react";
 import { Switch } from "../components/ui/switch";
@@ -9,11 +9,16 @@ export default function Settings() {
   const navigate = useNavigate();
   const currentUser = authService.getCurrentUser();
 
-  // Guard: if no user, redirect to login
-  if (!currentUser) {
-    navigate("/login");
-    return null;
-  }
+  useEffect(() => {
+    if (!currentUser) {
+      navigate("/login");
+      return;
+    }
+    // Re-hydrate user from API to get latest prefs
+    authService.validateSession().catch(() => navigate("/login"));
+  }, []);
+
+  if (!currentUser) return null;
 
   // Local state mirrors the user's stored preferences — REQ-9
   const [prefs, setPrefs] = useState({
