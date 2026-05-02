@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import {
   ArrowLeft,
@@ -34,6 +34,23 @@ export default function EditProfile() {
     bio: currentUser?.bio ?? "",
     role: (currentUser?.role ?? "resident") as UserRole,
   });
+
+  // Re-hydrate from API on mount to get latest data
+  useEffect(() => {
+    authService.validateSession().then((user) => {
+      if (user) {
+        setFormData({
+          name: user.name ?? "",
+          phone: user.phone ?? "",
+          address: user.address ?? "",
+          bio: user.bio ?? "",
+          role: user.role ?? "resident",
+        });
+      } else {
+        navigate("/login");
+      }
+    }).catch(() => navigate("/login"));
+  }, []);
 
   // Change password section
   const [passwordData, setPasswordData] = useState({

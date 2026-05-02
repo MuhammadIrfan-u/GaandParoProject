@@ -1,21 +1,26 @@
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router";
 import { Shield, Settings as SettingsIcon, TrendingUp, Star, User, Mail, Phone, MapPin, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "../components/ui/button";
 import { BottomNav } from "../components/BottomNav";
 import { authService } from "../services/storage";
+import type { User as UserType } from "../services/types";
 
 
 export default function Profile() {
   const navigate = useNavigate();
-  const currentUser = authService.getCurrentUser();
+  const [currentUser, setCurrentUser] = useState<UserType | null>(authService.getCurrentUser());
 
   useEffect(() => {
-    if (!currentUser) {
-      navigate("/login");
-    }
-  }, [currentUser, navigate]);
+    // Re-hydrate from API to get latest profile data
+    authService.validateSession()
+      .then((user) => {
+        if (user) setCurrentUser(user);
+        else navigate("/login");
+      })
+      .catch(() => navigate("/login"));
+  }, []);
 
   if (!currentUser) return null;
 
