@@ -1,5 +1,5 @@
-// Local Storage Service
-// This simulates a backend with persistent local storage
+// Storage & API Service Layer
+// Auth calls hit the real backend; other services use mock data + localStorage
 
 import type {
   Post,
@@ -17,19 +17,35 @@ import type {
   NeighborhoodProposal,
   NeighborhoodSettings,
   AnalyticsData,
+  AuthResponse,
 } from './types';
 
 const API_BASE = 'http://localhost:3000';
 
+// ── JWT helpers ───────────────────────────────────────────────────────────────
+const TOKEN_KEY = 'neighborhub_token';
+const USER_KEY  = 'neighborhub_user';
+
+export const tokenStorage = {
+  get: (): string | null => localStorage.getItem(TOKEN_KEY),
+  set: (token: string): void => localStorage.setItem(TOKEN_KEY, token),
+  clear: (): void => localStorage.removeItem(TOKEN_KEY),
+};
+
+// ── Base fetch — attaches JWT when available ──────────────────────────────────
 const apiFetch = async (path: string, init?: RequestInit) => {
+  const token = tokenStorage.get();
   const response = await fetch(`${API_BASE}${path}`, {
+    ...init,
     headers: {
       'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(init?.headers ?? {}),
     },
-    ...init,
   });
   if (!response.ok) {
-    throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body.message ?? `Request failed: ${response.status}`);
   }
   return response;
 };
@@ -71,58 +87,116 @@ let neighborhoodsStore: Neighborhood[] = getStoredData('neighborhub_neighborhood
 let proposalsStore: NeighborhoodProposal[] = getStoredData('neighborhub_proposals', []);
 let locationStore = getStoredData('neighborhub_location', { lat: 0, lng: 0 });
 
-// Auth State
-const localCurrentUser: User = {
-  id: 'user-1',
-  name: 'Alex Thompson',
-  email: 'alex.thompson@email.com',
-  phone: '+1 (555) 123-4567',
-  address: '123 Oak Street, Oak Valley',
-  avatar: 'AT',
-  verified: true,
-  reputation: 4.8,
-  joinedDate: '2024-01-15',
-  bio: 'Long-time resident of Oak Valley. Love our community!',
-  isAdmin: true,
-};
+// ── Auth state (hydrated from localStorage on page load) ─────────────────────
+const storedUser = localStorage.getItem(USER_KEY);
+let authUser: User = storedUser ? JSON.parse(storedUser) : null;
+let isAuthenticated: boolean = !!tokenStorage.get() && !!authUser;
 
-let authUser: User = localCurrentUser;
-let isAuthenticated = false;
-
-// Auth Service
+// ── Auth Service — wired to real backend ─────────────────────────────────────
 export const authService = {
-  login: (email: string, password: string) => {
-    // Simulate login
-    return new Promise<User>((resolve) => {
-      setTimeout(() => {
-        isAuthenticated = true;
-        authUser = localCurrentUser;
-        resolve(authUser);
-      }, 500);
+  // REQ-3, REQ-4: login and receive JWT
+  login: async (email: string, password: string): Promise<User> => {
+    const res = await apiFetch('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
     });
+    const data: AuthResponse = await res.json();
+    tokenStorage.set(data.token);
+    localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+    authUser = data.user;
+    isAuthenticated = true;
+    return data.user;
   },
-  
-  signup: (name: string, email: string, password: string, phone: string, address: string) => {
-    return new Promise<User>((resolve) => {
-      setTimeout(() => {
-        isAuthenticated = true;
-        authUser = localCurrentUser;
-        resolve(authUser);
-      }, 500);
+
+  // REQ-1, REQ-2, REQ-5: register with role
+  signup: async (
+    name: string,
+    email: string,
+    password: string,
+    phone: string,
+    address: string,
+    role: string = 'resident'
+  ): Promise<User> => {
+    const res = await apiFetch('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ name, email, password, phone, address, role }),
     });
+    const data: AuthResponse = await res.json();
+    tokenStorage.set(data.token);
+    localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+    authUser = data.user;
+    isAuthenticated = true;
+    return data.user;
   },
-  
-  logout: () => {
+
+  // REQ-7, REQ-8: forgot password — sends reset email
+  forgotPassword: async (email: string): Promise<string> => {
+    const res = await apiFetch('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+    const data = await res.json();
+    return data.message;
+  },
+
+  // REQ-7, REQ-8: reset password with token from email link
+  resetPassword: async (token: string, password: string): Promise<User> => {
+    const res = await apiFetch('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, password }),
+    });
+    const data: AuthResponse = await res.json();
+    tokenStorage.set(data.token);
+    localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+    authUser = data.user;
+    isAuthenticated = true;
+    return data.user;
+  },
+
+  // REQ-13: validate session — verify token is still valid
+  validateSession: async (): Promise<User | null> => {
+    try {
+      const res = await apiFetch('/auth/me');
+      const data = await res.json();
+      authUser = data.user;
+      localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+      isAuthenticated = true;
+      return data.user;
+    } catch {
+      authService.logout();
+      return null;
+    }
+  },
+
+  logout: (): void => {
+    tokenStorage.clear();
+    localStorage.removeItem(USER_KEY);
+    authUser = null as unknown as User;
     isAuthenticated = false;
   },
-  
-  getCurrentUser: () => authUser,
-  
-  isAuthenticated: () => isAuthenticated,
-  
-  updateProfile: (updates: Partial<User>) => {
-    authUser = { ...authUser, ...updates };
-    return Promise.resolve(authUser);
+
+  getCurrentUser: (): User => authUser,
+
+  isAuthenticated: (): boolean => isAuthenticated,
+
+  // REQ-6.2, REQ-9: update profile and privacy settings
+  updateProfile: async (updates: Partial<User>): Promise<User> => {
+    const res = await apiFetch('/auth/profile', {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+    const data = await res.json();
+    authUser = data.user;
+    localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+    return data.user;
+  },
+
+  // Change password for authenticated user
+  changePassword: async (currentPassword: string, newPassword: string): Promise<void> => {
+    await apiFetch('/auth/change-password', {
+      method: 'PUT',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
   },
 };
 
