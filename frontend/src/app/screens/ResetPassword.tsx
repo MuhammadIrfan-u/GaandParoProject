@@ -4,6 +4,7 @@ import { Home as HomeIcon, Lock, Eye, EyeOff, AlertCircle } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { authService } from "../services/storage";
+import { validatePassword, getPasswordStrength } from "../services/validation";
 import { toast } from "sonner";
 
 export default function ResetPassword() {
@@ -32,10 +33,8 @@ export default function ResetPassword() {
       return;
     }
 
-    if (password.length < 6) {
-      toast.error("Password must be at least 6 characters");
-      return;
-    }
+    const passwordError = validatePassword(password);
+    if (passwordError) { toast.error(passwordError); return; }
 
     setLoading(true);
 
@@ -120,6 +119,22 @@ export default function ResetPassword() {
                   )}
                 </button>
               </div>
+              {password.length > 0 && (() => {
+                const strength = getPasswordStrength(password);
+                return (
+                  <div className="mt-2">
+                    <div className="flex gap-1 mb-1">
+                      {[1,2,3,4].map((i) => (
+                        <div key={i} className={`h-1 flex-1 rounded-full transition-colors ${i <= strength.score ? strength.color : "bg-muted"}`} />
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Strength: <span className="font-medium">{strength.label}</span>
+                      {" · "}min 8 chars, 1 letter, 1 number
+                    </p>
+                  </div>
+                );
+              })()}
             </div>
 
             <div>

@@ -14,6 +14,7 @@ import {
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { authService } from "../services/storage";
+import { validatePassword, validatePhone, getPasswordStrength } from "../services/validation";
 import { toast } from "sonner";
 import type { UserRole } from "../services/types";
 
@@ -78,6 +79,9 @@ export default function EditProfile() {
       return;
     }
 
+    const phoneError = validatePhone(formData.phone);
+    if (phoneError) { toast.error(phoneError); return; }
+
     setSavingProfile(true);
     try {
       await authService.updateProfile(formData);
@@ -103,10 +107,8 @@ export default function EditProfile() {
       return;
     }
 
-    if (passwordData.newPassword.length < 6) {
-      toast.error("New password must be at least 6 characters");
-      return;
-    }
+    const passwordError = validatePassword(passwordData.newPassword);
+    if (passwordError) { toast.error(passwordError); return; }
 
     setSavingPassword(true);
     try {
@@ -184,12 +186,13 @@ export default function EditProfile() {
                 <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
                   type="tel"
-                  placeholder="+1 (555) 123-4567"
+                  placeholder="+92 300 1234567"
                   value={formData.phone}
                   onChange={(e) => handleChange("phone", e.target.value)}
                   className="pl-10"
                 />
               </div>
+              <p className="text-xs text-muted-foreground mt-1">Include country code e.g. +92 for Pakistan, +1 for USA</p>
             </div>
 
             <div>
@@ -313,6 +316,22 @@ export default function EditProfile() {
                   className="pl-10"
                 />
               </div>
+              {passwordData.newPassword.length > 0 && (() => {
+                const strength = getPasswordStrength(passwordData.newPassword);
+                return (
+                  <div className="mt-2">
+                    <div className="flex gap-1 mb-1">
+                      {[1,2,3,4].map((i) => (
+                        <div key={i} className={`h-1 flex-1 rounded-full transition-colors ${i <= strength.score ? strength.color : "bg-muted"}`} />
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Strength: <span className="font-medium">{strength.label}</span>
+                      {" · "}min 8 chars, 1 letter, 1 number
+                    </p>
+                  </div>
+                );
+              })()}
             </div>
 
             <div>
