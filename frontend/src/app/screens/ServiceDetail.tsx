@@ -6,7 +6,7 @@ import { Button } from "../components/ui/button";
 import { Textarea } from "../components/ui/textarea";
 import { Input } from "../components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../components/ui/dialog";
-import { servicesService } from "../services/storage";
+import { servicesService, messagesService } from "../services/storage";
 import { Service } from "../services/types";
 import { toast } from "sonner";
 
@@ -36,19 +36,36 @@ export default function ServiceDetail() {
   };
 
   const handleRequestService = async () => {
-    if (!serviceId || !requestDescription.trim()) {
+    if (!service || !requestDescription.trim()) {
       toast.error("Please provide a description");
       return;
     }
 
     try {
-      await servicesService.requestService(serviceId, requestDescription, scheduledDate);
-      toast.success("Service request sent!");
+      // 1. Create the service request record in DB
+      await servicesService.requestService(serviceId!, requestDescription, scheduledDate);
+      
+      // 2. Start a conversation with the provider
+      const providerId = `provider-${service.provider.replace(/\s+/g, '-').toLowerCase()}`;
+      const conversation = await messagesService.getOrCreateConversation(
+        providerId,
+        service.provider,
+        service.providerAvatar
+      );
+      
+      // 3. Send the description as the initial message
+      await messagesService.sendMessage(conversation.id, `Service Request: ${service.title}\n\n${requestDescription}`);
+      
+      toast.success("Service request sent and message delivered!");
       setShowRequestDialog(false);
       setRequestDescription("");
       setScheduledDate("");
+      
+      // 4. Navigate to the chat page
+      navigate(`/chat/${conversation.id}`);
     } catch (error) {
-      toast.error("Failed to request service");
+      console.error("Failed to process request:", error);
+      toast.error("Failed to request service. Please check if the service exists in the database.");
     }
   };
 
@@ -164,7 +181,12 @@ export default function ServiceDetail() {
                   <div className="text-sm text-muted-foreground">Community Member</div>
                 </div>
               </div>
-              <Button variant="outline" size="sm" className="rounded-xl border-primary/20 text-primary">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="rounded-xl border-primary/20 text-primary"
+                onClick={() => navigate('/profile')}
+              >
                 View Profile
               </Button>
             </div>

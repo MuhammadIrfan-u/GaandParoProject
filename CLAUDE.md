@@ -1,86 +1,108 @@
-# CLAUDE.md
+# CLAUDE.md — Verified Neighbourhood Community Project
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides comprehensive context and guidance for AI assistants (Antigravity/Claude) working on this repository.
 
 ---
 
-## Repository Layout
+## 🚀 Repository Overview
 
-This is a monorepo with two independent apps:
+This is a monorepo containing a full-stack community platform designed for verified neighborhood interactions.
 
+### Architecture
 ```
 /
-├── frontend/     # React + Vite + TypeScript SPA
-└── Backend/      # Node.js + Express REST API (mock data + Supabase)
+├── frontend/     # React + Vite + TypeScript (SPA)
+└── Backend/      # Node.js + Express (Hybrid: Supabase + Mock Data)
 ```
 
-**Never commit directly to `main`. Branch off `dev` and open PRs only.**
+**Workflow Rule**: Never commit directly to `main`. Branch off `dev` and open PRs.
 
 ---
 
-## Commands
+## 🛠 Commands
 
-### Frontend (`cd frontend`)
+### Core Services
+*   **Frontend**: `cd frontend && pnpm dev` (Vite, default port 5173)
+*   **Backend**: `cd Backend && npm run dev` (Nodemon, default port 3000)
+*   **Build**: `cd frontend && pnpm build`
 
-```bash
-pnpm dev          # start Vite dev server → http://localhost:5173
-pnpm build        # production build
-```
-
-No test runner is currently configured.
-
-### Backend (`cd Backend`)
-
-```bash
-node src/server.js        # start → http://localhost:3000
-npm run dev               # start with nodemon (auto-reload)
-```
-
-Both servers must be running simultaneously for full functionality.
+### Environment
+*   **Frontend**: Requires `frontend/.env.local` with `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
+*   **Backend**: Requires `Backend/.env` with `SUPABASE_URL` and `SUPABASE_ANON_KEY`.
 
 ---
 
-## Architecture
+## 🏛 Technical Stack & Patterns
 
-### Frontend
+### Frontend (React + TS)
+- **Styling**: Tailwind CSS v4 (Utility-first, no inline styles).
+- **UI Components**: Shadcn/ui (Radix UI base). Location: `frontend/src/app/components/ui/`.
+- **Animations**: Framer Motion (imported as `motion`).
+- **Icons**: Lucide React.
+- **Routing**: React Router v7 (`createBrowserRouter`). Map in `frontend/src/app/routes.ts`.
+- **State & Data**:
+    - **Service Layer**: All data fetching MUST go through `frontend/src/app/services/storage.ts`.
+    - **Types**: Single source of truth in `frontend/src/app/services/types.ts`.
+    - **Fallback Pattern**: Most Supabase calls have `try/catch` with `localStorage` fallbacks to ensure the app works even without a live DB connection.
 
-- **Entry**: `frontend/src/main.tsx` → `frontend/src/app/App.tsx`
-- **Router**: `frontend/src/app/routes.ts` — flat `createBrowserRouter` list; all screens are in `frontend/src/app/screens/`
-- **UI primitives**: `frontend/src/app/components/ui/` — shadcn/ui components (Radix UI + Tailwind). Do not modify these files; extend by composing them.
-- **Shared types**: `frontend/src/app/services/types.ts` — single source of truth for all domain types (`User`, `Post`, `Neighborhood`, etc.)
-- **Service layer**: `frontend/src/app/services/storage.ts` — all API calls go through named service objects (`postsService`, `neighborhoodsService`, etc.). Screens must not call `fetch` directly.
-- **Supabase client** (frontend): `frontend/src/app/services/supabaseClient.ts` — reads `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` from `.env.local`.
-- **Path alias**: `@` resolves to `frontend/src/`
-- **Figma assets**: use the `figma:asset/<filename>` scheme (resolved by the custom Vite plugin in `vite.config.ts`).
-
-### Backend
-
-- **Entry**: `Backend/src/server.js` → `Backend/src/app.js`
-- **Route registration order matters**: Supabase routes (`supabaseNeighborhoodsRoutes`, `supabaseProposalsRoutes`) are mounted **before** mock data routes. Neighborhoods and proposals hit Supabase; everything else (posts, events, marketplace, messages, alerts, analytics, users, services) is served from in-memory mock data in `Backend/src/mockData.js`.
-- **Supabase client** (backend): `Backend/src/supabaseClient.js` — reads `SUPABASE_URL` and `SUPABASE_ANON_KEY` from `Backend/.env`.
-- **snake_case ↔ camelCase**: the backend transforms Supabase snake_case columns to camelCase before returning JSON. Frontend types use camelCase throughout.
-
-### Data flow
-
-```
-Screen → service function (storage.ts) → fetch → Backend (port 3000)
-                                                     ├── Supabase (neighborhoods, proposals)
-                                                     └── mockData.js (everything else)
-```
-
-The service layer has local-storage fallbacks for most Supabase-backed operations; new features should follow the same try/catch + fallback pattern.
-
-### Supabase tables
-
-Key tables: `neighborhoods`, `neighborhood_settings`, `neighborhood_members`, `neighborhood_proposals`. Settings are stored in a separate `neighborhood_settings` table and joined at query time.
+### Backend (Node + Express)
+- **Hybrid Data Flow**:
+    - **Supabase**: Handles `neighborhoods`, `proposals`, and `settings`.
+    - **Mock Data**: Everything else (posts, marketplace, events, etc.) is in `Backend/src/mockData.js`.
+- **Route Registration**: Registration order in `Backend/src/app.js` is critical. Supabase routes MUST be registered before mock data routes to avoid catch-all overrides.
+- **Data Transformation**: Backend converts Supabase `snake_case` columns to `camelCase` for frontend consumption.
 
 ---
 
-## Conventions
+## 📏 Coding Standards & Conventions
 
-- All screens live in `frontend/src/app/screens/` — one file per route.
-- New domain types go in `frontend/src/app/services/types.ts`.
-- New API endpoints go in `Backend/src/routes/` as a new route file, then register in `Backend/src/app.js`.
-- Tailwind v4 is used — utility classes only, no inline `style` props.
-- TypeScript strict mode is implied; never use `any`.
-- `@` alias for `frontend/src/` is available in all frontend files.
+### General Rules
+- **Strict TypeScript**: No `any`. Use interfaces from `types.ts`.
+- **Path Aliases**: Use `@/` for `frontend/src/`.
+- **Naming**: 
+    - Components: `PascalCase`
+    - Functions/Variables: `camelCase`
+    - Files: Match component name or `kebab-case` for utilities.
+- **Errors**: Always implement user-friendly error handling with `sonner` for notifications.
+
+### React Component Structure
+1.  Imports (React, Components, Services, Types).
+2.  Type definitions (if local).
+3.  Component definition.
+4.  Hooks (useNavigate, useParams, useState, useEffect).
+5.  Render logic with Tailwind classes.
+
+### Adding New Features
+1.  **Define Types**: Add to `frontend/src/app/services/types.ts`.
+2.  **Backend Route**: Create in `Backend/src/routes/` and register in `app.js`.
+3.  **Frontend Service**: Add methods to `storage.ts`.
+4.  **UI Screen**: Create in `frontend/src/app/screens/` and register in `routes.ts`.
+
+---
+
+## 🔑 Key Files & Paths
+
+- `frontend/src/main.tsx`: Entry point.
+- `frontend/src/app/App.tsx`: App wrapper with providers.
+- `frontend/src/app/routes.ts`: Central routing config.
+- `frontend/src/app/services/storage.ts`: Core data orchestration.
+- `Backend/src/server.js`: API entry point.
+- `Backend/src/mockData.js`: In-memory data store for non-Supabase features.
+
+---
+
+## 🗄 Database Schema (Supabase)
+
+Key tables used for neighborhood orchestration:
+- `neighborhoods`: Core metadata (name, city, branding, guidelines).
+- `neighborhood_settings`: Feature flags (marketplace, events, etc.).
+- `neighborhood_members`: Mapping users to neighborhoods with roles.
+- `neighborhood_proposals`: User submissions to create new neighborhoods.
+
+---
+
+## 🎨 Design System
+- **Colors**: Use the theme defined in `frontend/default_shadcn_theme.css`.
+- **Layout**: Mobile-first design but responsive for desktop.
+- **Feedback**: Use `sonner` for toast notifications on success/error.
+- **Loading**: Use skeletons or subtle spinners for async operations.

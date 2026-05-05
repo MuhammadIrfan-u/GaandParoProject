@@ -227,3 +227,14 @@ export interface Location {
   lat: number;
   lng: number;
 }
+
+export interface ProviderApplication {
+  id: string;
+  userId: string;
+  fullName: string;
+  experience: string;
+  category: string;
+  description: string;
+  status: 'pending' | 'approved' | 'rejected';
+  submittedDate: string;
+}

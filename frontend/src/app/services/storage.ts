@@ -17,6 +17,7 @@ import type {
   NeighborhoodProposal,
   NeighborhoodSettings,
   AnalyticsData,
+  ProviderApplication,
 } from './types';
 
 const API_BASE = 'http://localhost:3000';
@@ -72,6 +73,7 @@ let proposalsStore: NeighborhoodProposal[] = getStoredData('neighborhub_proposal
 let locationStore = getStoredData('neighborhub_location', { lat: 0, lng: 0 });
 let servicesStore: Service[] = getStoredData('neighborhub_services', []);
 let serviceOverridesStore: { [id: string]: Partial<Service> } = getStoredData('neighborhub_service_overrides', {});
+let providerApplicationsStore: ProviderApplication[] = getStoredData('neighborhub_provider_applications', []);
 
 // Auth State
 const localCurrentUser: User = {
@@ -87,6 +89,7 @@ const localCurrentUser: User = {
   bio: 'Long-time resident of Oak Valley. Love our community!',
   isAdmin: true,
   isProvider: true,
+  neighborhoodId: 3,
 };
 
 let authUser: User = localCurrentUser;
@@ -94,38 +97,53 @@ let isAuthenticated = false;
 
 // Auth Service
 export const authService = {
-  login: (email: string, password: string) => {
-    // Simulate login
-    return new Promise<User>((resolve) => {
-      setTimeout(() => {
-        isAuthenticated = true;
-        authUser = localCurrentUser;
-        resolve(authUser);
-      }, 500);
-    });
+  syncUser: async (user: User) => {
+    try {
+      const response = await apiFetch('/users/upsert', {
+        method: 'POST',
+        body: JSON.stringify(user)
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error syncing user:', error);
+      return user;
+    }
   },
-  
-  signup: (name: string, email: string, password: string, phone: string, address: string) => {
-    return new Promise<User>((resolve) => {
-      setTimeout(() => {
-        isAuthenticated = true;
-        authUser = localCurrentUser;
-        resolve(authUser);
-      }, 500);
-    });
+
+  login: async (email: string, password: string) => {
+    // Simulate login and sync
+    isAuthenticated = true;
+    authUser = localCurrentUser;
+    await authService.syncUser(authUser);
+    return authUser;
   },
-  
+
+  signup: async (name: string, email: string, password: string, phone: string, address: string) => {
+    isAuthenticated = true;
+    authUser = {
+      ...localCurrentUser,
+      name,
+      email,
+      phone,
+      address,
+      id: `user-${Date.now()}`
+    };
+    await authService.syncUser(authUser);
+    return authUser;
+  },
+
   logout: () => {
     isAuthenticated = false;
   },
-  
+
   getCurrentUser: () => authUser,
-  
+
   isAuthenticated: () => isAuthenticated,
-  
-  updateProfile: (updates: Partial<User>) => {
+
+  updateProfile: async (updates: Partial<User>) => {
     authUser = { ...authUser, ...updates };
-    return Promise.resolve(authUser);
+    await authService.syncUser(authUser);
+    return authUser;
   },
 };
 
@@ -135,32 +153,25 @@ export const postsService = {
     const posts = await apiGet<Post[]>('/posts');
     return posts;
   },
-  
+
   getPost: async (id: string) => {
     const post = await apiGet<Post>(`/posts/${encodeURIComponent(id)}`);
     return post;
   },
-  
-  createPost: (content: string, category: string) => {
-    const newPost: Post = {
-      id: `post-${Date.now()}`,
-      authorId: authUser.id,
-      author: authUser.name,
-      avatar: authUser.avatar,
-      verified: authUser.verified,
-      time: 'Just now',
-      content,
-      likes: 0,
-      comments: [],
-      category,
-      categoryColor: getCategoryColor(category),
-      likedBy: [],
-    };
-    postsStore = [newPost, ...postsStore];
-    setStoredData('neighborhub_posts', postsStore);
-    return Promise.resolve(newPost);
+
+  createPost: async (content: string, image?: string, category?: string) => {
+    const response = await apiFetch('/posts', {
+      method: 'POST',
+      body: JSON.stringify({
+        authorId: authUser.id,
+        content,
+        image,
+        category,
+      }),
+    });
+    return response.json();
   },
-  
+
   likePost: (postId: string) => {
     const post = postsStore.find(p => p.id === postId);
     if (post) {
@@ -176,7 +187,7 @@ export const postsService = {
     }
     return Promise.resolve(post);
   },
-  
+
   addComment: (postId: string, content: string) => {
     const post = postsStore.find(p => p.id === postId);
     if (post) {
@@ -193,7 +204,7 @@ export const postsService = {
     }
     return Promise.resolve(post);
   },
-  
+
   deletePost: (postId: string) => {
     postsStore = postsStore.filter(p => p.id !== postId);
     setStoredData('neighborhub_posts', postsStore);
@@ -207,28 +218,23 @@ export const marketplaceService = {
     const items = await apiGet<MarketplaceItem[]>('/marketplace');
     return items;
   },
-  
+
   getItem: async (id: string) => {
     const item = await apiGet<MarketplaceItem>(`/marketplace/${encodeURIComponent(id)}`);
     return item;
   },
-  
-  createItem: (item: Omit<MarketplaceItem, 'id' | 'sellerId' | 'seller' | 'sellerAvatar' | 'verified' | 'postedDate' | 'status'>) => {
-    const newItem: MarketplaceItem = {
-      ...item,
-      id: `market-${Date.now()}`,
-      sellerId: authUser.id,
-      seller: authUser.name,
-      sellerAvatar: authUser.avatar,
-      verified: authUser.verified,
-      postedDate: 'Just now',
-      status: 'available',
-    };
-    marketplaceStore = [newItem, ...marketplaceStore];
-    setStoredData('neighborhub_marketplace', marketplaceStore);
-    return Promise.resolve(newItem);
+
+  createItem: async (item: Omit<MarketplaceItem, 'id' | 'sellerId' | 'seller' | 'sellerAvatar' | 'verified' | 'postedDate' | 'status'>) => {
+    const response = await apiFetch('/marketplace', {
+      method: 'POST',
+      body: JSON.stringify({
+        ...item,
+        sellerId: authUser.id,
+      }),
+    });
+    return response.json();
   },
-  
+
   updateItemStatus: (itemId: string, status: MarketplaceItem['status']) => {
     const item = marketplaceStore.find(i => i.id === itemId);
     if (item) {
@@ -237,7 +243,7 @@ export const marketplaceService = {
     }
     return Promise.resolve(item);
   },
-  
+
   deleteItem: (itemId: string) => {
     marketplaceStore = marketplaceStore.filter(i => i.id !== itemId);
     setStoredData('neighborhub_marketplace', marketplaceStore);
@@ -251,26 +257,23 @@ export const eventsService = {
     const events = await apiGet<Event[]>('/events');
     return events;
   },
-  
+
   getEvent: async (id: string) => {
     const event = await apiGet<Event>(`/events/${encodeURIComponent(id)}`);
     return event;
   },
-  
-  createEvent: (event: Omit<Event, 'id' | 'organizerId' | 'organizer' | 'organizerAvatar' | 'attendees'>) => {
-    const newEvent: Event = {
-      ...event,
-      id: `event-${Date.now()}`,
-      organizerId: authUser.id,
-      organizer: authUser.name,
-      organizerAvatar: authUser.avatar,
-      attendees: [authUser.id],
-    };
-    eventsStore = [newEvent, ...eventsStore];
-    setStoredData('neighborhub_events', eventsStore);
-    return Promise.resolve(newEvent);
+
+  createEvent: async (event: Omit<Event, 'id' | 'organizerId' | 'organizer' | 'organizerAvatar' | 'attendees'>) => {
+    const response = await apiFetch('/events', {
+      method: 'POST',
+      body: JSON.stringify({
+        ...event,
+        organizerId: authUser.id,
+      }),
+    });
+    return response.json();
   },
-  
+
   rsvpEvent: (eventId: string) => {
     const event = eventsStore.find(e => e.id === eventId);
     if (event) {
@@ -286,7 +289,7 @@ export const eventsService = {
     }
     return Promise.resolve(event);
   },
-  
+
   deleteEvent: (eventId: string) => {
     eventsStore = eventsStore.filter(e => e.id !== eventId);
     setStoredData('neighborhub_events', eventsStore);
@@ -300,21 +303,18 @@ export const alertsService = {
     const alerts = await apiGet<Alert[]>('/alerts');
     return alerts;
   },
-  
-  createAlert: (alert: Omit<Alert, 'id' | 'authorId' | 'author' | 'timestamp' | 'resolved'>) => {
-    const newAlert: Alert = {
-      ...alert,
-      id: `alert-${Date.now()}`,
-      authorId: authUser.id,
-      author: authUser.name,
-      timestamp: new Date().toISOString(),
-      resolved: false,
-    };
-    alertsStore = [newAlert, ...alertsStore];
-    setStoredData('neighborhub_alerts', alertsStore);
-    return Promise.resolve(newAlert);
+
+  createAlert: async (alert: Omit<Alert, 'id' | 'authorId' | 'author' | 'timestamp' | 'resolved'>) => {
+    const response = await apiFetch('/alerts', {
+      method: 'POST',
+      body: JSON.stringify({
+        ...alert,
+        authorId: authUser.id,
+      }),
+    });
+    return response.json();
   },
-  
+
   resolveAlert: (alertId: string) => {
     const alert = alertsStore.find(a => a.id === alertId);
     if (alert) {
@@ -331,49 +331,36 @@ export const messagesService = {
     const conversations = await apiGet<Conversation[]>('/conversations');
     return conversations;
   },
-  
+
   getMessages: async (conversationId: string) => {
-    const messages = await apiGet<Message[]>(`/conversations/${encodeURIComponent(conversationId)}/messages`);
+    const messages = await apiGet<Message[]>(`/messages/${encodeURIComponent(conversationId)}`);
     return messages;
   },
-  
-  sendMessage: (conversationId: string, content: string) => {
-    const newMessage: Message = {
-      id: `msg-${Date.now()}`,
-      conversationId,
-      senderId: authUser.id,
-      sender: authUser.name,
-      senderAvatar: authUser.avatar,
-      content,
-      timestamp: new Date().toISOString(),
-      read: false,
-    };
-    
-    if (!messagesStore[conversationId]) {
-      messagesStore[conversationId] = [];
-    }
-    messagesStore[conversationId].push(newMessage);
-    
-    // Update conversation
-    const conversation = conversationsStore.find(c => c.id === conversationId);
-    if (conversation) {
-      conversation.lastMessage = content;
-      conversation.lastMessageTime = 'Just now';
-    }
-    
-    setStoredData('neighborhub_messages', messagesStore);
-    setStoredData('neighborhub_conversations', conversationsStore);
-    
-    return Promise.resolve(newMessage);
+
+  sendMessage: async (conversationId: string, content: string, image?: string) => {
+    const response = await apiFetch('/messages', {
+      method: 'POST',
+      body: JSON.stringify({ conversationId, content, image })
+    });
+    return response.json();
   },
-  
+
   markAsRead: (conversationId: string) => {
+    // Keeping local for now or can implement a patch endpoint
     const conversation = conversationsStore.find(c => c.id === conversationId);
     if (conversation) {
       conversation.unreadCount = 0;
       setStoredData('neighborhub_conversations', conversationsStore);
     }
     return Promise.resolve(true);
+  },
+
+  getOrCreateConversation: async (providerId: string, providerName: string, providerAvatar: string) => {
+    const response = await apiFetch('/conversations/get-or-create', {
+      method: 'POST',
+      body: JSON.stringify({ participantId: providerId })
+    });
+    return response.json();
   },
 };
 
@@ -383,7 +370,7 @@ export const notificationsService = {
     const notifications = await apiGet<Notification[]>('/notifications');
     return notifications;
   },
-  
+
   markAsRead: (notificationId: string) => {
     const notification = notificationsStore.find(n => n.id === notificationId);
     if (notification) {
@@ -392,7 +379,7 @@ export const notificationsService = {
     }
     return Promise.resolve(notification);
   },
-  
+
   markAllAsRead: () => {
     notificationsStore = notificationsStore.map(n => ({ ...n, read: true }));
     setStoredData('neighborhub_notifications', notificationsStore);
@@ -419,11 +406,11 @@ export const servicesService = {
     }));
     return [...servicesStore, ...mergedBackend];
   },
-  
+
   getService: async (id: string) => {
     // Check local store first
     let service = servicesStore.find(s => s.id === id);
-    
+
     if (!service) {
       try {
         service = await apiGet<Service>(`/services/${encodeURIComponent(id)}`);
@@ -436,33 +423,60 @@ export const servicesService = {
       // Apply overrides if any
       return { ...service, ...(serviceOverridesStore[id] || {}) };
     }
-    
+
     return null;
   },
-  
+
   requestService: async (serviceId: string, description: string, scheduledDate?: string) => {
-    const service = await apiGet<Service>(`/services/${encodeURIComponent(serviceId)}`);
-    if (!service) return Promise.reject('Service not found');
+    try {
+      const response = await apiFetch('/service-requests', {
+        method: 'POST',
+        body: JSON.stringify({ userId: authUser.id, serviceId, description, scheduledDate })
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error requesting service:', error);
+      const service = servicesStore.find(s => s.id === serviceId) || { title: 'Unknown', provider: 'Unknown' };
+      const newRequest: ServiceRequest = {
+        id: `req-${Date.now()}`,
+        userId: authUser.id,
+        serviceId,
+        serviceName: service.title,
+        provider: service.provider,
+        status: 'pending',
+        requestDate: new Date().toISOString().split('T')[0],
+        scheduledDate,
+        description,
+      };
 
-    const newRequest: ServiceRequest = {
-      id: `req-${Date.now()}`,
-      userId: authUser.id,
-      serviceId,
-      serviceName: service.title,
-      provider: service.provider,
-      status: 'pending',
-      requestDate: new Date().toISOString().split('T')[0],
-      scheduledDate,
-      description,
-    };
-
-    serviceRequestsStore = [newRequest, ...serviceRequestsStore];
-    setStoredData('neighborhub_service_requests', serviceRequestsStore);
-    return Promise.resolve(newRequest);
+      serviceRequestsStore = [newRequest, ...serviceRequestsStore];
+      setStoredData('neighborhub_service_requests', serviceRequestsStore);
+      return newRequest;
+    }
   },
-  
-  getMyRequests: () => Promise.resolve(serviceRequestsStore.filter(r => r.userId === authUser.id)),
-  
+
+  getMyRequests: async () => {
+    try {
+      return await apiGet<ServiceRequest[]>(`/service-requests?userId=${authUser.id}`);
+    } catch (error) {
+      return serviceRequestsStore.filter(r => r.userId === authUser.id);
+    }
+  },
+
+  getProviderRequests: async (providerName: string) => {
+    try {
+      const services = await servicesService.getServices();
+      const myServices = services.filter(s => s.provider === providerName);
+      const myServiceIds = myServices.map(s => s.id);
+
+      const allRequests = await apiGet<ServiceRequest[]>('/service-requests');
+      // For local fallback compatibility, handle string vs int IDs properly 
+      return allRequests.filter(r => myServiceIds.includes(String(r.serviceId)) || myServiceIds.includes(r.serviceId));
+    } catch (error) {
+      return serviceRequestsStore.filter(r => r.provider === providerName);
+    }
+  },
+
   updateRequestStatus: (requestId: string, status: ServiceRequest['status']) => {
     const request = serviceRequestsStore.find(r => r.id === requestId);
     if (request) {
@@ -472,50 +486,88 @@ export const servicesService = {
     return Promise.resolve(request);
   },
 
-  createService: async (service: Omit<Service, 'id' | 'provider' | 'providerAvatar' | 'verified' | 'rating' | 'reviews' | 'status'>) => {
-    const newService: Service = {
-      ...service,
-      id: `service-${Date.now()}`,
-      provider: authUser.name,
-      providerAvatar: authUser.avatar,
-      verified: authUser.verified,
-      rating: 5.0,
-      reviews: 0,
-      status: 'active',
-      price: `$${service.price}/hr`,
-    };
+  createService: async (service: any) => {
+    try {
+      const response = await apiFetch('/services', {
+        method: 'POST',
+        body: JSON.stringify({
+          ...service,
+          providerId: authUser.id,
+          neighborhoodId: authUser.neighborhoodId || 1,
+        })
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error creating service:', error);
+      const newService: Service = {
+        ...service,
+        id: `service-${Date.now()}`,
+        provider: authUser.name,
+        providerAvatar: authUser.avatar,
+        verified: authUser.verified,
+        rating: 5.0,
+        reviews: 0,
+        status: 'active',
+        price: typeof service.price === 'string' && service.price.startsWith('$') ? service.price : `$${service.price}/hr`,
+      };
+      servicesStore = [newService, ...servicesStore];
+      setStoredData('neighborhub_services', servicesStore);
+      return newService;
+    }
+  },
 
-    servicesStore = [newService, ...servicesStore];
-    setStoredData('neighborhub_services', servicesStore);
-    return Promise.resolve(newService);
+  updateService: async (id: string, serviceData: any) => {
+    try {
+      const response = await apiFetch(`/services/${encodeURIComponent(id)}`, {
+        method: 'PUT',
+        body: JSON.stringify(serviceData)
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error updating service:', error);
+      const service = servicesStore.find(s => s.id === id);
+      if (service) {
+        Object.assign(service, serviceData);
+        setStoredData('neighborhub_services', servicesStore);
+        return service;
+      }
+      return null;
+    }
   },
 
   deleteService: async (id: string) => {
-    servicesStore = servicesStore.filter(s => s.id !== id);
-    setStoredData('neighborhub_services', servicesStore);
-    return Promise.resolve(true);
+    try {
+      await apiFetch(`/services/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      return true;
+    } catch (error) {
+      console.error('Error deleting service:', error);
+      servicesStore = servicesStore.filter(s => s.id !== id);
+      setStoredData('neighborhub_services', servicesStore);
+      return true;
+    }
   },
 
   updateServiceStatus: async (id: string, status: 'active' | 'inactive') => {
-    // Try local store first
-    const service = servicesStore.find(s => s.id === id);
-    if (service) {
-      service.status = status;
-      setStoredData('neighborhub_services', servicesStore);
-      return Promise.resolve(service);
+    try {
+      return await servicesService.updateService(id, { status });
+    } catch (error) {
+      const service = servicesStore.find(s => s.id === id);
+      if (service) {
+        service.status = status;
+        setStoredData('neighborhub_services', servicesStore);
+        return service;
+      }
+      serviceOverridesStore[id] = { ...serviceOverridesStore[id], status };
+      setStoredData('neighborhub_service_overrides', serviceOverridesStore);
+      return { id, status } as any;
     }
-    
-    // Otherwise, store as an override for backend services
-    serviceOverridesStore[id] = { ...serviceOverridesStore[id], status };
-    setStoredData('neighborhub_service_overrides', serviceOverridesStore);
-    return Promise.resolve({ id, status } as any);
   },
 };
 
 // Reviews Service
 export const reviewsService = {
   getReviews: (targetId: string) => Promise.resolve(reviewsStore.filter(r => r.targetId === targetId)),
-  
+
   addReview: (review: Omit<Review, 'id' | 'reviewerId' | 'reviewer' | 'reviewerAvatar' | 'timestamp'>) => {
     const newReview: Review = {
       ...review,
@@ -537,7 +589,7 @@ export const usersService = {
     const users = await apiGet<User[]>('/users');
     return users;
   },
-  
+
   getUser: async (id: string) => {
     const user = await apiGet<User>(`/users/${encodeURIComponent(id)}`);
     return user;
@@ -556,7 +608,7 @@ export const neighborhoodsService = {
       return neighborhoodsStore;
     }
   },
-  
+
   getNeighborhood: async (id: string) => {
     try {
       const neighborhood = await apiGet<Neighborhood>(`/neighborhoods/${encodeURIComponent(id)}`);
@@ -566,7 +618,7 @@ export const neighborhoodsService = {
       return neighborhoodsStore.find(n => n.id === id);
     }
   },
-  
+
   getCurrentNeighborhood: async () => {
     try {
       const user = authService.getCurrentUser();
@@ -578,7 +630,7 @@ export const neighborhoodsService = {
       return neighborhoodsStore.find(n => n.leadId === user.id);
     }
   },
-  
+
   updateSettings: async (neighborhoodId: string | number, settings: Partial<NeighborhoodSettings>) => {
     try {
       // Map camelCase to snake_case for API - save all settings to neighborhood_settings table
@@ -590,7 +642,7 @@ export const neighborhoodsService = {
         enable_services: settings.enableServices,
         require_verification: settings.requireVerification,
       };
-      
+
       const response = await apiFetch(`/neighborhoods/${neighborhoodId}/hub-settings`, {
         method: 'PUT',
         body: JSON.stringify(apiPayload),
@@ -626,7 +678,7 @@ export const neighborhoodsService = {
       return neighborhood;
     }
   },
-  
+
   updateBranding: async (neighborhoodId: string, coverPhoto?: string, logo?: string) => {
     try {
       const response = await apiFetch(`/neighborhoods/${neighborhoodId}/branding`, {
@@ -646,7 +698,7 @@ export const neighborhoodsService = {
       return neighborhood;
     }
   },
-  
+
   deleteNeighborhood: async (neighborhoodId: string) => {
     try {
       await apiFetch(`/neighborhoods/${neighborhoodId}`, {
@@ -725,7 +777,7 @@ export const proposalsService = {
       return proposalsStore.filter(p => p.proposerId === user.id);
     }
   },
-  
+
   getProposal: async (id: string) => {
     try {
       const proposal = await apiGet<NeighborhoodProposal>(`/proposals/${encodeURIComponent(id)}`);
@@ -746,7 +798,7 @@ export const proposalsService = {
       return null;
     }
   },
-  
+
   createProposal: async (proposal: Omit<NeighborhoodProposal, 'id' | 'status' | 'submittedDate'>) => {
     try {
       const response = await apiFetch('/proposals', {
@@ -768,7 +820,7 @@ export const proposalsService = {
       return newProposal;
     }
   },
-  
+
   updateProposalStatus: async (proposalId: string, status: NeighborhoodProposal['status'], reviewNotes?: string) => {
     try {
       const user = authService.getCurrentUser();
@@ -798,12 +850,57 @@ export const locationService = {
     const location = await apiGet<{ lat: number; lng: number }>('/location');
     return location;
   },
-  
-  checkInsideNeighborhood: (lat: number, lng: number) => {
-    // Simplified point-in-polygon check
-    const neighborhood = neighborhoodsStore.find((n) => n.verified);
-    return Promise.resolve(neighborhood);
+};
+
+// Provider Applications Service
+export const providerApplicationsService = {
+  getApplications: async () => {
+    try {
+      const data = await apiGet<ProviderApplication[]>('/provider-applications');
+      return data;
+    } catch (error) {
+      console.error('Error fetching provider applications from Supabase:', error);
+      return providerApplicationsStore;
+    }
   },
+
+  submitApplication: async (application: Omit<ProviderApplication, 'id' | 'status' | 'submittedDate' | 'userId'>) => {
+    try {
+      const response = await apiFetch('/provider-applications', {
+        method: 'POST',
+        body: JSON.stringify({
+          userId: authUser.id,
+          fullName: application.fullName,
+          category: application.category,
+          experience: application.experience,
+          description: application.description,
+        }),
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error submitting provider application to Supabase:', error);
+      // Fallback to local store
+      const newApplication: ProviderApplication = {
+        ...application,
+        id: `app-${Date.now()}`,
+        userId: authUser.id,
+        status: 'pending',
+        submittedDate: new Date().toISOString().split('T')[0],
+      };
+      providerApplicationsStore = [newApplication, ...providerApplicationsStore];
+      setStoredData('neighborhub_provider_applications', providerApplicationsStore);
+      return newApplication;
+    }
+  },
+
+  updateApplicationStatus: (id: string, status: ProviderApplication['status']) => {
+    const application = providerApplicationsStore.find(a => a.id === id);
+    if (application) {
+      application.status = status;
+      setStoredData('neighborhub_provider_applications', providerApplicationsStore);
+    }
+    return Promise.resolve(application);
+  }
 };
 
 // Helper function

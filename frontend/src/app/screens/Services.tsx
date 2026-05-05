@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router";
-import { Search, Star, Wrench, Home, Dog, Zap, Scissors, Car, CheckCircle2 } from "lucide-react";
+import { Search, Star, Wrench, Home, Dog, Zap, Scissors, Car, CheckCircle2, ClipboardList } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { BottomNav } from "../components/BottomNav";
+import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { servicesService, authService } from "../services/storage";
 import { Service, User } from "../services/types";
@@ -16,6 +17,9 @@ export default function Services() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [isProviderMode, setIsProviderMode] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [minRating, setMinRating] = useState(0);
+  const [maxPrice, setMaxPrice] = useState(200);
 
   useEffect(() => {
     loadServices();
@@ -33,13 +37,24 @@ export default function Services() {
     }
   };
 
-  const filteredServices = services.filter(service =>
-    (service.status === undefined || service.status === 'active') &&
-    (service.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-     service.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-     service.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-     service.provider.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const categories = ["All", ...Array.from(new Set(services.map(s => s.category)))];
+
+  const filteredServices = services.filter(service => {
+    const matchesSearch = service.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      service.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      service.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      service.provider.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesCategory = selectedCategory === "All" || service.category === selectedCategory;
+    const matchesRating = (service.rating || 0) >= minRating;
+
+    // Parse price string like "$50/hr" to number
+    const priceNum = parseInt(String(service.price).replace(/[^\d]/g, '')) || 0;
+    const matchesPrice = priceNum <= maxPrice;
+
+    return (service.status === undefined || service.status === 'active') &&
+      matchesSearch && matchesCategory && matchesRating && matchesPrice;
+  });
 
   const getCategoryIcon = (category: string) => {
     const icons: { [key: string]: any } = {
@@ -70,43 +85,103 @@ export default function Services() {
       <header className="glass-header sticky top-0 z-40">
         <div className="max-w-lg mx-auto px-4 py-6">
           <div className="flex justify-between items-center mb-4">
-            <motion.h1 
+            <motion.h1
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               className="text-2xl font-bold bg-gradient-to-r from-primary to-indigo-600 bg-clip-text text-transparent"
             >
               {isProviderMode ? "Provider Hub" : "Local Services"}
             </motion.h1>
-            
-            {user?.isProvider && (
-              <div className="flex items-center gap-3 bg-white/40 backdrop-blur-sm px-3 py-1.5 rounded-2xl border border-white/20 shadow-sm">
-                <span className="text-[10px] font-bold uppercase text-muted-foreground tracking-tighter">
-                  {isProviderMode ? "Provider" : "Customer"}
-                </span>
-                <Switch 
-                  checked={isProviderMode} 
-                  onCheckedChange={setIsProviderMode}
-                  className="scale-90 data-[state=checked]:bg-primary"
-                />
-              </div>
-            )}
+
+            <div className="flex items-center gap-2">
+              <Link to="/service-requests">
+                <Button variant="outline" size="sm" className="rounded-xl border-primary/20 text-primary h-9">
+                  <ClipboardList className="w-4 h-4 mr-2" />
+                  Requests
+                </Button>
+              </Link>
+
+              {user?.isProvider ? (
+                <div className="flex items-center gap-3 bg-white/40 backdrop-blur-sm px-3 py-1.5 rounded-2xl border border-white/20 shadow-sm">
+                  <span className="text-[10px] font-bold uppercase text-muted-foreground tracking-tighter">
+                    {isProviderMode ? "Provider" : "Customer"}
+                  </span>
+                  <Switch
+                    checked={isProviderMode}
+                    onCheckedChange={setIsProviderMode}
+                    className="scale-90 data-[state=checked]:bg-primary"
+                  />
+                </div>
+              ) : (
+                <Link to="/apply-provider" className="mt-1">
+                  <button className="bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-xl text-sm font-semibold shadow-sm transition-colors cursor-pointer">
+                    Apply for Provider
+                  </button>
+                </Link>
+              )}
+            </div>
           </div>
 
           {!isProviderMode && (
-            <div className="relative group">
-              <motion.div
-                initial={{ scale: 0.95, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: 0.1 }}
-              >
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                <Input
-                  placeholder="Search services..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 bg-white/50 border-white/20 focus:ring-primary/20 transition-all duration-300"
-                />
-              </motion.div>
+            <div className="space-y-3">
+              <div className="relative group">
+                <motion.div
+                  initial={{ scale: 0.95, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.1 }}
+                >
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                  <Input
+                    placeholder="Search services..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 bg-white/50 border-white/20 focus:ring-primary/20 transition-all duration-300"
+                  />
+                </motion.div>
+              </div>
+
+              <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+                {categories.map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setSelectedCategory(cat)}
+                    className={`px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${selectedCategory === cat
+                      ? "bg-primary text-white shadow-md shadow-primary/20"
+                      : "bg-white/50 text-muted-foreground hover:bg-white/80"
+                      }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex items-center gap-4 text-[10px] uppercase font-bold text-muted-foreground/60 px-1">
+                <div className="flex items-center gap-2">
+                  <span>Rating:</span>
+                  <select
+                    value={minRating}
+                    onChange={(e) => setMinRating(Number(e.target.value))}
+                    className="bg-transparent border-none focus:ring-0 text-primary cursor-pointer"
+                  >
+                    <option value={0}>Any</option>
+                    <option value={4}>4+ Stars</option>
+                    <option value={4.5}>4.5+ Stars</option>
+                  </select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span>Price up to:</span>
+                  <select
+                    value={maxPrice}
+                    onChange={(e) => setMaxPrice(Number(e.target.value))}
+                    className="bg-transparent border-none focus:ring-0 text-primary cursor-pointer"
+                  >
+                    <option value={200}>$200</option>
+                    <option value={100}>$100</option>
+                    <option value={50}>$50</option>
+                    <option value={25}>$25</option>
+                  </select>
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -122,7 +197,7 @@ export default function Services() {
             {searchQuery ? "No services found matching your search" : "No services available"}
           </div>
         ) : (
-          <motion.div 
+          <motion.div
             layout
             className="space-y-4"
           >
@@ -136,7 +211,7 @@ export default function Services() {
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.9 }}
-                    transition={{ 
+                    transition={{
                       duration: 0.3,
                       delay: index * 0.05,
                       type: "spring",
@@ -162,7 +237,7 @@ export default function Services() {
                           <p className="text-sm text-muted-foreground mb-3 line-clamp-2 leading-relaxed">
                             {service.description}
                           </p>
-                          
+
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <div className="relative">

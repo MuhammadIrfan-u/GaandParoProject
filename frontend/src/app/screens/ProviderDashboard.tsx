@@ -7,6 +7,7 @@ import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Switch } from "../components/ui/switch";
 import { AddServiceDialog } from "../components/AddServiceDialog";
+import { EditServiceDialog } from "../components/EditServiceDialog";
 import { toast } from "sonner";
 
 const COLORS = ["#4f46e5", "#e2e8f0"];
@@ -16,6 +17,8 @@ export default function ProviderDashboard() {
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const [editingService, setEditingService] = useState<Service | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   useEffect(() => {
     loadMyServices();
@@ -190,7 +193,14 @@ export default function ProviderDashboard() {
                                 exit={{ opacity: 0, scale: 0.9, y: 10 }}
                                 className="absolute right-0 bottom-full mb-2 w-48 bg-white shadow-2xl rounded-2xl border border-border/50 p-2 z-50 overflow-hidden"
                               >
-                                <button className="w-full flex items-center gap-3 py-3 px-4 hover:bg-muted transition-colors rounded-xl text-left">
+                                <button 
+                                  onClick={() => {
+                                    setEditingService(service);
+                                    setIsEditDialogOpen(true);
+                                    setActiveMenuId(null);
+                                  }}
+                                  className="w-full flex items-center gap-3 py-3 px-4 hover:bg-muted transition-colors rounded-xl text-left"
+                                >
                                   <Edit2 className="w-4 h-4 text-muted-foreground" />
                                   <span className="font-semibold text-sm">Edit Service</span>
                                 </button>
@@ -216,6 +226,13 @@ export default function ProviderDashboard() {
       </div>
 
       <AddServiceDialog onServiceAdded={loadMyServices} disabled={myServices.length >= 5} />
+      
+      <EditServiceDialog 
+        service={editingService} 
+        open={isEditDialogOpen} 
+        onOpenChange={setIsEditDialogOpen} 
+        onServiceUpdated={loadMyServices} 
+      />
     </div>
   );
 }

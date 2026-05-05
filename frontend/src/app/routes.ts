@@ -34,6 +34,8 @@ import BrowseNeighborhoods from "./screens/BrowseNeighborhoods";
 import NeighborhoodProposalStatus from "./screens/NeighborhoodProposalStatus";
 import SuperAdminDashboard from "./screens/SuperAdminDashboard";
 import NeighborhoodDetail from "./screens/NeighborhoodDetail";
+import ApplyProvider from "./screens/ApplyProvider";
+import ServiceRequests from "./screens/ServiceRequests";
 
 export const router = createBrowserRouter([
   {
@@ -143,6 +145,14 @@ export const router = createBrowserRouter([
   {
     path: "/service/:serviceId",
     Component: ServiceDetail,
+  },
+  {
+    path: "/apply-provider",
+    Component: ApplyProvider,
+  },
+  {
+    path: "/service-requests",
+    Component: ServiceRequests,
   },
   {
     path: "/neighborhood-discovery",
