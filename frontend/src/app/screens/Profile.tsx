@@ -24,6 +24,13 @@ export default function Profile() {
 
   if (!currentUser) return null;
 
+  // Read privacy prefs from localStorage (REQ-9)
+  const storedPrefs = (() => {
+    try { return JSON.parse(localStorage.getItem("neighborhub_prefs") || "{}"); }
+    catch { return {}; }
+  })();
+  const showPhone = storedPrefs.showPhone ?? false;
+
   const handleLogout = () => {
     authService.logout();
     toast.success("Logged out successfully");
@@ -99,7 +106,9 @@ export default function Profile() {
               <Phone className="w-5 h-5 text-muted-foreground" />
               <div className="flex-1">
                 <div className="text-xs text-muted-foreground">Phone</div>
-                <div className="text-sm">{currentUser.phone}</div>
+                <div className="text-sm">
+                  {showPhone ? currentUser.phone || "Not set" : "Hidden — enable in Settings"}
+                </div>
               </div>
             </div>
             <div className="p-4 flex items-center gap-3">
