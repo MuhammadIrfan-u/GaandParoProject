@@ -1,28 +1,14 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import {
-  ArrowLeft,
-  User,
-  Phone,
-  MapPin,
-  FileText,
-  Lock,
-  Eye,
-  EyeOff,
-  Save,
+  ArrowLeft, User, Phone, MapPin, FileText,
+  Lock, Eye, EyeOff, Save, Briefcase,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { authService } from "../services/storage";
 import { validatePassword, validatePhone, getPasswordStrength } from "../services/validation";
 import { toast } from "sonner";
-import type { UserRole } from "../services/types";
-
-const ROLE_LABELS: Record<UserRole, string> = {
-  resident: "Resident",
-  business_owner: "Local Business Owner",
-  moderator: "Community Moderator",
-};
 
 export default function EditProfile() {
   const navigate = useNavigate();
@@ -33,7 +19,7 @@ export default function EditProfile() {
     phone: currentUser?.phone ?? "",
     address: currentUser?.address ?? "",
     bio: currentUser?.bio ?? "",
-    role: (currentUser?.role ?? "resident") as UserRole,
+    isServiceProvider: currentUser?.isServiceProvider ?? false,
   });
 
   // Re-hydrate from API on mount to get latest data
@@ -45,7 +31,7 @@ export default function EditProfile() {
           phone: user.phone ?? "",
           address: user.address ?? "",
           bio: user.bio ?? "",
-          role: user.role ?? "resident",
+          isServiceProvider: user.isServiceProvider ?? false,
         });
       } else {
         navigate("/login");
@@ -227,34 +213,22 @@ export default function EditProfile() {
               </div>
             </div>
 
-            {/* Role selector — REQ-5 */}
-            <div>
-              <label className="block text-sm mb-2 text-muted-foreground">
-                Account Type
-              </label>
-              <div className="grid grid-cols-1 gap-2">
-                {(Object.keys(ROLE_LABELS) as UserRole[]).map((role) => (
-                  <button
-                    key={role}
-                    type="button"
-                    onClick={() => handleChange("role", role)}
-                    className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-colors ${
-                      formData.role === role
-                        ? "border-primary bg-primary/5 text-primary"
-                        : "border-border hover:bg-muted/30"
-                    }`}
-                  >
-                    <div
-                      className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${
-                        formData.role === role
-                          ? "border-primary bg-primary"
-                          : "border-muted-foreground"
-                      }`}
-                    />
-                    <span className="text-sm">{ROLE_LABELS[role]}</span>
-                  </button>
-                ))}
+            {/* Service Provider toggle — maps to isServiceProvider in schema */}
+            <div className="flex items-center justify-between p-3 rounded-xl border border-border">
+              <div className="flex items-center gap-3">
+                <Briefcase className="w-5 h-5 text-muted-foreground" />
+                <div>
+                  <div className="text-sm">Local Business / Service Provider</div>
+                  <div className="text-xs text-muted-foreground">Enable to offer services in the community</div>
+                </div>
               </div>
+              <button
+                type="button"
+                onClick={() => setFormData(prev => ({ ...prev, isServiceProvider: !prev.isServiceProvider }))}
+                className={`w-11 h-6 rounded-full transition-colors flex-shrink-0 ${formData.isServiceProvider ? 'bg-primary' : 'bg-muted'}`}
+              >
+                <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform mx-0.5 ${formData.isServiceProvider ? 'translate-x-5' : 'translate-x-0'}`} />
+              </button>
             </div>
 
             <Button

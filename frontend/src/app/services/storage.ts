@@ -108,7 +108,7 @@ export const authService = {
     return data.user;
   },
 
-  // REQ-1, REQ-2, REQ-5: register with role
+  // REQ-1, REQ-2: register (isServiceProvider maps business owner role)
   signup: async (
     name: string,
     email: string,

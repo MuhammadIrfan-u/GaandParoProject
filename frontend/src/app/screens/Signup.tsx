@@ -1,18 +1,11 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
-import { Home as HomeIcon, Mail, Lock, User, Phone, MapPin, Eye, EyeOff, Users } from "lucide-react";
+import { Home as HomeIcon, Mail, Lock, User, Phone, MapPin, Eye, EyeOff, Briefcase } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { authService } from "../services/storage";
 import { validatePassword, validatePhone, getPasswordStrength } from "../services/validation";
 import { toast } from "sonner";
-import type { UserRole } from "../services/types";
-
-const ROLE_OPTIONS: { value: UserRole; label: string; description: string }[] = [
-  { value: "resident",       label: "Resident",              description: "Standard community member" },
-  { value: "business_owner", label: "Local Business Owner",  description: "Showcase your local business" },
-  { value: "moderator",      label: "Community Moderator",   description: "Help manage the community" },
-];
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -23,7 +16,7 @@ export default function Signup() {
     address: "",
     password: "",
     confirmPassword: "",
-    role: "resident" as UserRole,
+    isServiceProvider: false,
   });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -60,7 +53,7 @@ export default function Signup() {
         formData.password,
         formData.phone,
         formData.address,
-        formData.role,
+        formData.isServiceProvider ? 'business_owner' : 'resident',
       );
       toast.success("Account created successfully!");
       navigate("/neighborhood-discovery");
@@ -146,40 +139,22 @@ export default function Signup() {
               </div>
             </div>
 
-            {/* Role selector — REQ-5 */}
-            <div>
-              <label className="block text-sm mb-2 text-muted-foreground">
-                <Users className="inline w-4 h-4 mr-1 -mt-0.5" />
-                Account Type
-              </label>
-              <div className="space-y-2">
-                {ROLE_OPTIONS.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => handleChange("role", option.value)}
-                    className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-colors ${
-                      formData.role === option.value
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:bg-muted/30"
-                    }`}
-                  >
-                    <div
-                      className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${
-                        formData.role === option.value
-                          ? "border-primary bg-primary"
-                          : "border-muted-foreground"
-                      }`}
-                    />
-                    <div>
-                      <div className={`text-sm ${formData.role === option.value ? "text-primary" : ""}`}>
-                        {option.label}
-                      </div>
-                      <div className="text-xs text-muted-foreground">{option.description}</div>
-                    </div>
-                  </button>
-                ))}
+            {/* Service Provider toggle */}
+            <div className="flex items-center justify-between p-3 rounded-xl border border-border">
+              <div className="flex items-center gap-3">
+                <Briefcase className="w-5 h-5 text-muted-foreground" />
+                <div>
+                  <div className="text-sm">Local Business / Service Provider</div>
+                  <div className="text-xs text-muted-foreground">Enable to offer services in the community</div>
+                </div>
               </div>
+              <button
+                type="button"
+                onClick={() => setFormData(prev => ({ ...prev, isServiceProvider: !prev.isServiceProvider }))}
+                className={`w-11 h-6 rounded-full transition-colors flex-shrink-0 ${formData.isServiceProvider ? 'bg-primary' : 'bg-muted'}`}
+              >
+                <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform mx-0.5 ${formData.isServiceProvider ? 'translate-x-5' : 'translate-x-0'}`} />
+              </button>
             </div>
 
             {/* Password */}

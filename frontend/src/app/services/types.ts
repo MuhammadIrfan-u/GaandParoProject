@@ -1,27 +1,13 @@
-export type UserRole = 'resident' | 'business_owner' | 'moderator';
 export type ModerationStatus = 'active' | 'suspended' | 'banned';
 
-export interface UserPrivacy {
-  showPhone: boolean;
-  showAddress: boolean;
-  profileVisible: boolean;
-}
-
-export interface UserNotificationPrefs {
-  push: boolean;
-  email: boolean;
-  communityAlerts: boolean;
-}
-
 export interface User {
-  id: string;
+  id: number;
   name: string;
   email: string;
   phone: string;
   address: string;
   avatar: string;
   bio?: string;
-  role: UserRole;
   verified: boolean;
   reputation: number;
   joinedDate: string;
@@ -29,8 +15,7 @@ export interface User {
   isFlagged?: boolean;
   flagReason?: string;
   moderationStatus?: ModerationStatus;
-  privacy?: UserPrivacy;
-  notifications?: UserNotificationPrefs;
+  isServiceProvider?: boolean;
   neighborhoodId?: number;
 }
 

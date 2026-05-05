@@ -5,6 +5,15 @@ import { Switch } from "../components/ui/switch";
 import { authService } from "../services/storage";
 import { toast } from "sonner";
 
+// Preferences stored in localStorage only (not in DB schema)
+const PREFS_KEY = "neighborhub_prefs";
+const getStoredPrefs = () => {
+  try {
+    const stored = localStorage.getItem(PREFS_KEY);
+    return stored ? JSON.parse(stored) : null;
+  } catch { return null; }
+};
+
 export default function Settings() {
   const navigate = useNavigate();
   const currentUser = authService.getCurrentUser();
@@ -14,52 +23,28 @@ export default function Settings() {
       navigate("/login");
       return;
     }
-    // Re-hydrate user from API to get latest prefs
     authService.validateSession().catch(() => navigate("/login"));
   }, []);
 
   if (!currentUser) return null;
 
-  // Local state mirrors the user's stored preferences — REQ-9
+  const stored = getStoredPrefs();
+
+  // REQ-9: privacy & notification preferences stored locally
   const [prefs, setPrefs] = useState({
-    pushNotifications:   currentUser.notifications?.push          ?? true,
-    emailNotifications:  currentUser.notifications?.email         ?? true,
-    communityAlerts:     currentUser.notifications?.communityAlerts ?? true,
-    profileVisible:      currentUser.privacy?.profileVisible      ?? true,
-    showPhone:           currentUser.privacy?.showPhone           ?? false,
+    pushNotifications:  stored?.pushNotifications  ?? true,
+    emailNotifications: stored?.emailNotifications ?? true,
+    communityAlerts:    stored?.communityAlerts    ?? true,
+    profileVisible:     stored?.profileVisible     ?? true,
+    showPhone:          stored?.showPhone          ?? false,
   });
 
-  const handleToggle = async (
-    key: keyof typeof prefs,
-    section: "notifications" | "privacy"
-  ) => {
+  const handleToggle = (key: keyof typeof prefs) => {
     const newValue = !prefs[key];
-    setPrefs((prev) => ({ ...prev, [key]: newValue }));
-
-    try {
-      if (section === "notifications") {
-        await authService.updateProfile({
-          notifications: {
-            push:             key === "pushNotifications"  ? newValue : prefs.pushNotifications,
-            email:            key === "emailNotifications" ? newValue : prefs.emailNotifications,
-            communityAlerts:  key === "communityAlerts"    ? newValue : prefs.communityAlerts,
-          },
-        });
-      } else {
-        await authService.updateProfile({
-          privacy: {
-            profileVisible: key === "profileVisible" ? newValue : prefs.profileVisible,
-            showPhone:      key === "showPhone"       ? newValue : prefs.showPhone,
-            showAddress:    currentUser.privacy?.showAddress ?? true,
-          },
-        });
-      }
-      toast.success(`${newValue ? "Enabled" : "Disabled"} successfully`);
-    } catch (error: any) {
-      // Revert on failure
-      setPrefs((prev) => ({ ...prev, [key]: !newValue }));
-      toast.error(error?.message ?? "Failed to save setting");
-    }
+    const updated = { ...prefs, [key]: newValue };
+    setPrefs(updated);
+    localStorage.setItem(PREFS_KEY, JSON.stringify(updated));
+    toast.success(`${newValue ? "Enabled" : "Disabled"} successfully`);
   };
 
   return (
@@ -104,10 +89,7 @@ export default function Settings() {
           <div className="mb-6">
             <h3 className="text-sm px-4 mb-2 text-muted-foreground">Neighborhood Management</h3>
             <div className="bg-white rounded-2xl border border-border overflow-hidden">
-              <Link
-                to="/hub-settings"
-                className="flex items-center gap-3 p-4 hover:bg-muted/30 transition-colors border-b border-border"
-              >
+              <Link to="/hub-settings" className="flex items-center gap-3 p-4 hover:bg-muted/30 transition-colors border-b border-border">
                 <Settings2 className="w-5 h-5 text-muted-foreground" />
                 <div className="flex-1">
                   <div>Hub Settings</div>
@@ -117,10 +99,7 @@ export default function Settings() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </Link>
-              <Link
-                to="/neighborhoods"
-                className="flex items-center gap-3 p-4 hover:bg-muted/30 transition-colors"
-              >
+              <Link to="/neighborhoods" className="flex items-center gap-3 p-4 hover:bg-muted/30 transition-colors">
                 <HomeIcon className="w-5 h-5 text-muted-foreground" />
                 <div className="flex-1">
                   <div>All Neighborhoods</div>
@@ -139,24 +118,16 @@ export default function Settings() {
           <h3 className="text-sm px-4 mb-2 text-muted-foreground">Notifications</h3>
           <div className="bg-white rounded-2xl border border-border overflow-hidden">
             {[
-              { key: "pushNotifications"  as const, icon: Bell,   label: "Push Notifications" },
-              { key: "emailNotifications" as const, icon: Bell,   label: "Email Notifications" },
-              { key: "communityAlerts"    as const, icon: Bell,   label: "Community Alerts" },
+              { key: "pushNotifications"  as const, label: "Push Notifications" },
+              { key: "emailNotifications" as const, label: "Email Notifications" },
+              { key: "communityAlerts"    as const, label: "Community Alerts" },
             ].map((item, index, arr) => (
-              <div
-                key={item.key}
-                className={`flex items-center justify-between p-4 ${
-                  index < arr.length - 1 ? "border-b border-border" : ""
-                }`}
-              >
+              <div key={item.key} className={`flex items-center justify-between p-4 ${index < arr.length - 1 ? "border-b border-border" : ""}`}>
                 <div className="flex items-center gap-3">
-                  <item.icon className="w-5 h-5 text-muted-foreground" />
+                  <Bell className="w-5 h-5 text-muted-foreground" />
                   <span>{item.label}</span>
                 </div>
-                <Switch
-                  checked={prefs[item.key]}
-                  onCheckedChange={() => handleToggle(item.key, "notifications")}
-                />
+                <Switch checked={prefs[item.key]} onCheckedChange={() => handleToggle(item.key)} />
               </div>
             ))}
           </div>
@@ -170,26 +141,18 @@ export default function Settings() {
               { key: "profileVisible" as const, icon: Shield, label: "Profile Visibility" },
               { key: "showPhone"      as const, icon: Lock,   label: "Show Phone Number" },
             ].map((item, index, arr) => (
-              <div
-                key={item.key}
-                className={`flex items-center justify-between p-4 ${
-                  index < arr.length - 1 ? "border-b border-border" : ""
-                }`}
-              >
+              <div key={item.key} className={`flex items-center justify-between p-4 ${index < arr.length - 1 ? "border-b border-border" : ""}`}>
                 <div className="flex items-center gap-3">
                   <item.icon className="w-5 h-5 text-muted-foreground" />
                   <span>{item.label}</span>
                 </div>
-                <Switch
-                  checked={prefs[item.key]}
-                  onCheckedChange={() => handleToggle(item.key, "privacy")}
-                />
+                <Switch checked={prefs[item.key]} onCheckedChange={() => handleToggle(item.key)} />
               </div>
             ))}
           </div>
         </div>
 
-        {/* Preferences (static for now) */}
+        {/* Preferences */}
         <div className="mb-6">
           <h3 className="text-sm px-4 mb-2 text-muted-foreground">Preferences</h3>
           <div className="bg-white rounded-2xl border border-border overflow-hidden">
@@ -198,10 +161,7 @@ export default function Settings() {
                 <Moon className="w-5 h-5 text-muted-foreground" />
                 <span>Dark Mode</span>
               </div>
-              <Switch
-                checked={false}
-                onCheckedChange={() => toast.info("Dark mode coming soon!")}
-              />
+              <Switch checked={false} onCheckedChange={() => toast.info("Dark mode coming soon!")} />
             </div>
             <div className="flex items-center justify-between p-4">
               <div className="flex items-center gap-3">
