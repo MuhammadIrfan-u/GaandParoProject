@@ -102,15 +102,15 @@ export default function Profile() {
                 <div className="text-sm">{currentUser.email}</div>
               </div>
             </div>
+            {showPhone && (
             <div className="p-4 flex items-center gap-3">
               <Phone className="w-5 h-5 text-muted-foreground" />
               <div className="flex-1">
                 <div className="text-xs text-muted-foreground">Phone</div>
-                <div className="text-sm">
-                  {showPhone ? currentUser.phone || "Not set" : "Hidden — enable in Settings"}
-                </div>
+                <div className="text-sm">{currentUser.phone || "Not set"}</div>
               </div>
             </div>
+            )}
             <div className="p-4 flex items-center gap-3">
               <MapPin className="w-5 h-5 text-muted-foreground" />
               <div className="flex-1">
