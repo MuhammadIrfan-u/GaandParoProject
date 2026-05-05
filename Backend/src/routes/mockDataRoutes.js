@@ -1,7 +1,5 @@
-const express = require('express');
-const router = express.Router();
-
-const {
+import express from 'express';
+import {
   users,
   posts,
   marketplaceItems,
@@ -18,7 +16,9 @@ const {
   analyticsData,
   currentUser,
   currentLocation,
-} = require('../mockData');
+} from '../mockData.js';
+
+const router = express.Router();
 
 const findById = (collection, id) => collection.find((item) => item.id === id);
 
@@ -137,4 +137,4 @@ router.get('/service-requests', (req, res) => {
   res.json(serviceRequests);
 });
 
-module.exports = router;
+export default router;
