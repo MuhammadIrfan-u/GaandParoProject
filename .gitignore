@@ -1,0 +1,10 @@
+# Ignore node_modules in frontend and backend
+node_modules/
+node_modules/
+
+# Optional: ignore logs and env files
+*.log
+
+# Optional: OS files
+.DS_Store
+Thumbs.db
