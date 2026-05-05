@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
+import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
 
 const userSchema = new mongoose.Schema(
   {
@@ -20,108 +20,59 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Password is required'],
       minlength: 8,
-      select: false, // never returned in queries by default
+      select: false,
     },
-    phone: {
-      type: String,
-      trim: true,
-      default: '',
-    },
-    address: {
-      type: String,
-      trim: true,
-      default: '',
-    },
-    avatar: {
-      type: String,
-      default: '',
-    },
-    bio: {
-      type: String,
-      default: '',
-    },
+    phone: { type: String, trim: true, default: '' },
+    address: { type: String, trim: true, default: '' },
+    avatar: { type: String, default: '' },
+    bio: { type: String, default: '' },
     role: {
       type: String,
       enum: ['resident', 'business_owner', 'moderator'],
       default: 'resident',
     },
-    verified: {
-      type: Boolean,
-      default: false,
-    },
-    reputation: {
-      type: Number,
-      default: 0,
-      min: 0,
-      max: 5,
-    },
-    isAdmin: {
-      type: Boolean,
-      default: false,
-    },
-    isFlagged: {
-      type: Boolean,
-      default: false,
-    },
-    flagReason: {
-      type: String,
-      default: '',
-    },
+    verified: { type: Boolean, default: false },
+    reputation: { type: Number, default: 0, min: 0, max: 5 },
+    isAdmin: { type: Boolean, default: false },
+    isFlagged: { type: Boolean, default: false },
+    flagReason: { type: String, default: '' },
     moderationStatus: {
       type: String,
       enum: ['active', 'suspended', 'banned'],
       default: 'active',
     },
-    // Privacy settings
     privacy: {
-      showPhone: { type: Boolean, default: false },
-      showAddress: { type: Boolean, default: true },
+      showPhone:      { type: Boolean, default: false },
+      showAddress:    { type: Boolean, default: true },
       profileVisible: { type: Boolean, default: true },
     },
-    // Notification preferences
     notifications: {
-      push: { type: Boolean, default: true },
-      email: { type: Boolean, default: true },
+      push:            { type: Boolean, default: true },
+      email:           { type: Boolean, default: true },
       communityAlerts: { type: Boolean, default: true },
     },
-    // Account recovery
-    resetPasswordToken: {
-      type: String,
-      select: false,
-    },
-    resetPasswordExpires: {
-      type: Date,
-      select: false,
-    },
-    joinedDate: {
-      type: Date,
-      default: Date.now,
-    },
+    resetPasswordToken:   { type: String, select: false },
+    resetPasswordExpires: { type: Date,   select: false },
+    joinedDate: { type: Date, default: Date.now },
   },
-  {
-    timestamps: true, // adds createdAt and updatedAt
-  }
+  { timestamps: true }
 );
 
-// Hash password before saving
 userSchema.pre('save', async function () {
-  // Only hash if passwordHash field was modified
   if (!this.isModified('passwordHash')) return;
   this.passwordHash = await bcrypt.hash(this.passwordHash, 10);
 });
 
-// Instance method: compare plain password with stored hash
 userSchema.methods.comparePassword = async function (plainPassword) {
   return bcrypt.compare(plainPassword, this.passwordHash);
 };
 
-// Instance method: return safe public profile (no sensitive fields)
 userSchema.methods.toPublicProfile = function () {
   return {
     id: this._id,
     name: this.name,
     email: this.email,
-    phone: this.phone,           // always returned to the owner
+    phone: this.phone,
     address: this.address,
     avatar: this.avatar,
     bio: this.bio,
@@ -137,4 +88,4 @@ userSchema.methods.toPublicProfile = function () {
   };
 };
 
-module.exports = mongoose.model('User', userSchema);
+export default mongoose.model('User', userSchema);

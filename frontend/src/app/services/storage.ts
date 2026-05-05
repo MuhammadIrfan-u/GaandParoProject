@@ -559,82 +559,248 @@ export const usersService = {
 // Neighborhoods Service
 export const neighborhoodsService = {
   getNeighborhoods: async () => {
-    const neighborhoods = await apiGet<Neighborhood[]>('/neighborhoods');
-    return neighborhoods;
+    try {
+      const neighborhoods = await apiGet<Neighborhood[]>('/neighborhoods');
+      return neighborhoods;
+    } catch (error) {
+      console.error('Error fetching neighborhoods from Supabase:', error);
+      // Fallback to local store if API fails
+      return neighborhoodsStore;
+    }
   },
   
   getNeighborhood: async (id: string) => {
-    const neighborhood = await apiGet<Neighborhood>(`/neighborhoods/${encodeURIComponent(id)}`);
-    return neighborhood;
+    try {
+      const neighborhood = await apiGet<Neighborhood>(`/neighborhoods/${encodeURIComponent(id)}`);
+      return neighborhood;
+    } catch (error) {
+      console.error('Error fetching neighborhood from Supabase:', error);
+      return neighborhoodsStore.find(n => n.id === id);
+    }
   },
   
   getCurrentNeighborhood: async () => {
-    const neighborhood = await apiGet<Neighborhood>('/neighborhoods/current');
-    return neighborhood;
+    try {
+      const user = authService.getCurrentUser();
+      const neighborhood = await apiGet<Neighborhood>(`/neighborhoods/current?userId=${user.id}`);
+      return neighborhood;
+    } catch (error) {
+      console.error('Error fetching current neighborhood from Supabase:', error);
+      const user = authService.getCurrentUser();
+      return neighborhoodsStore.find(n => n.leadId === user.id);
+    }
   },
   
-  updateSettings: (neighborhoodId: string, settings: Partial<NeighborhoodSettings>) => {
-    const neighborhood = neighborhoodsStore.find(n => n.id === neighborhoodId);
-    if (neighborhood) {
-      neighborhood.settings = { ...neighborhood.settings, ...settings };
-      setStoredData('neighborhub_neighborhoods', neighborhoodsStore);
+  updateSettings: async (neighborhoodId: string | number, settings: Partial<NeighborhoodSettings>) => {
+    try {
+      // Map camelCase to snake_case for API - save all settings to neighborhood_settings table
+      const apiPayload = {
+        enable_marketplace: settings.enableMarketplace,
+        enable_resource_exchange: settings.enableResourceExchange,
+        enable_public_alerts: settings.enablePublicAlerts,
+        enable_events: settings.enableEvents,
+        enable_services: settings.enableServices,
+        require_verification: settings.requireVerification,
+      };
+      
+      const response = await apiFetch(`/neighborhoods/${neighborhoodId}/hub-settings`, {
+        method: 'PUT',
+        body: JSON.stringify(apiPayload),
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error updating settings in Supabase:', error);
+      // Fallback to local store
+      const neighborhood = neighborhoodsStore.find(n => n.id === parseInt(neighborhoodId as string));
+      if (neighborhood) {
+        neighborhood.settings = { ...neighborhood.settings, ...settings };
+        setStoredData('neighborhub_neighborhoods', neighborhoodsStore);
+      }
+      return neighborhood;
     }
-    return Promise.resolve(neighborhood);
+  },
+
+  updateGuidelines: async (neighborhoodId: string | number, guidelines: string) => {
+    try {
+      const response = await apiFetch(`/neighborhoods/${neighborhoodId}/guidelines`, {
+        method: 'PUT',
+        body: JSON.stringify({ guidelines }),
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error updating guidelines in Supabase:', error);
+      // Fallback to local store
+      const neighborhood = neighborhoodsStore.find(n => n.id === neighborhoodId);
+      if (neighborhood) {
+        neighborhood.guidelines = guidelines;
+        setStoredData('neighborhub_neighborhoods', neighborhoodsStore);
+      }
+      return neighborhood;
+    }
   },
   
-  updateGuidelines: (neighborhoodId: string, guidelines: string) => {
-    const neighborhood = neighborhoodsStore.find(n => n.id === neighborhoodId);
-    if (neighborhood) {
-      neighborhood.guidelines = guidelines;
-      setStoredData('neighborhub_neighborhoods', neighborhoodsStore);
+  updateBranding: async (neighborhoodId: string, coverPhoto?: string, logo?: string) => {
+    try {
+      const response = await apiFetch(`/neighborhoods/${neighborhoodId}/branding`, {
+        method: 'PUT',
+        body: JSON.stringify({ coverPhoto, logo }),
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error updating branding in Supabase:', error);
+      // Fallback to local store
+      const neighborhood = neighborhoodsStore.find(n => n.id === neighborhoodId);
+      if (neighborhood) {
+        if (coverPhoto) neighborhood.coverPhoto = coverPhoto;
+        if (logo) neighborhood.logo = logo;
+        setStoredData('neighborhub_neighborhoods', neighborhoodsStore);
+      }
+      return neighborhood;
     }
-    return Promise.resolve(neighborhood);
   },
   
-  updateBranding: (neighborhoodId: string, coverPhoto?: string, logo?: string) => {
-    const neighborhood = neighborhoodsStore.find(n => n.id === neighborhoodId);
-    if (neighborhood) {
-      if (coverPhoto) neighborhood.coverPhoto = coverPhoto;
-      if (logo) neighborhood.logo = logo;
+  deleteNeighborhood: async (neighborhoodId: string) => {
+    try {
+      await apiFetch(`/neighborhoods/${neighborhoodId}`, {
+        method: 'DELETE',
+      });
+    } catch (error) {
+      console.error('Error deleting neighborhood from Supabase:', error);
+      // Fallback to local store
+      neighborhoodsStore = neighborhoodsStore.filter(n => n.id !== neighborhoodId);
       setStoredData('neighborhub_neighborhoods', neighborhoodsStore);
     }
-    return Promise.resolve(neighborhood);
+  },
+
+  joinNeighborhood: async (neighborhoodId: number) => {
+    try {
+      const user = authService.getCurrentUser();
+      const response = await apiFetch(`/neighborhoods/${neighborhoodId}/join`, {
+        method: 'POST',
+        body: JSON.stringify({ userId: user.id }),
+      });
+      const result = await response.json();
+      // Update user's neighborhood ID
+      authUser = { ...authUser, neighborhoodId };
+      return result;
+    } catch (error) {
+      console.error('Error joining neighborhood:', error);
+      throw error;
+    }
+  },
+
+  leaveNeighborhood: async (neighborhoodId: number) => {
+    try {
+      const user = authService.getCurrentUser();
+      const response = await apiFetch(`/neighborhoods/${neighborhoodId}/leave`, {
+        method: 'POST',
+        body: JSON.stringify({ userId: user.id }),
+      });
+      const result = await response.json();
+      // Clear user's neighborhood ID
+      authUser = { ...authUser, neighborhoodId: undefined };
+      return result;
+    } catch (error) {
+      console.error('Error leaving neighborhood:', error);
+      throw error;
+    }
+  },
+
+  getUserNeighborhood: async (userId?: string) => {
+    try {
+      const id = userId || authService.getCurrentUser().id;
+      const result = await apiGet<{ neighborhood: Neighborhood | null }>(`/users/${id}/neighborhood`);
+      if (result.neighborhood) {
+        // Update auth user with neighborhood ID
+        authUser = { ...authUser, neighborhoodId: parseInt(result.neighborhood.id) };
+      }
+      return result.neighborhood;
+    } catch (error) {
+      console.error('Error fetching user neighborhood:', error);
+      return null;
+    }
   },
 };
 
 // Proposals Service
 export const proposalsService = {
   getProposals: async () => {
-    const proposals = await apiGet<NeighborhoodProposal[]>('/proposals');
-    return proposals;
+    try {
+      // Get only the current user's proposals
+      const user = authService.getCurrentUser();
+      const proposals = await apiGet<NeighborhoodProposal[]>(`/proposals/user/${user.id}`);
+      return proposals;
+    } catch (error) {
+      console.error('Error fetching proposals from Supabase:', error);
+      // Fallback to local store - only return user's proposals
+      const user = authService.getCurrentUser();
+      return proposalsStore.filter(p => p.proposerId === user.id);
+    }
   },
   
   getProposal: async (id: string) => {
-    const proposal = await apiGet<NeighborhoodProposal>(`/proposals/${encodeURIComponent(id)}`);
-    return proposal;
-  },
-  
-  createProposal: (proposal: Omit<NeighborhoodProposal, 'id' | 'status' | 'submittedDate'>) => {
-    const newProposal: NeighborhoodProposal = {
-      ...proposal,
-      id: `proposal-${Date.now()}`,
-      status: 'pending',
-      submittedDate: new Date().toISOString().split('T')[0],
-    };
-    proposalsStore = [newProposal, ...proposalsStore];
-    setStoredData('neighborhub_proposals', proposalsStore);
-    return Promise.resolve(newProposal);
-  },
-  
-  updateProposalStatus: (proposalId: string, status: NeighborhoodProposal['status'], reviewNotes?: string) => {
-    const proposal = proposalsStore.find(p => p.id === proposalId);
-    if (proposal) {
-      proposal.status = status;
-      proposal.reviewedDate = new Date().toISOString().split('T')[0];
-      if (reviewNotes) proposal.reviewNotes = reviewNotes;
-      setStoredData('neighborhub_proposals', proposalsStore);
+    try {
+      const proposal = await apiGet<NeighborhoodProposal>(`/proposals/${encodeURIComponent(id)}`);
+      // Verify that the proposal belongs to the current user
+      const user = authService.getCurrentUser();
+      if (proposal.proposerId !== user.id) {
+        throw new Error('Unauthorized: You can only view your own proposals');
+      }
+      return proposal;
+    } catch (error) {
+      console.error('Error fetching proposal from Supabase:', error);
+      const user = authService.getCurrentUser();
+      const proposal = proposalsStore.find(p => p.id === id);
+      // Only return if it belongs to the current user
+      if (proposal && proposal.proposerId === user.id) {
+        return proposal;
+      }
+      return null;
     }
-    return Promise.resolve(proposal);
+  },
+  
+  createProposal: async (proposal: Omit<NeighborhoodProposal, 'id' | 'status' | 'submittedDate'>) => {
+    try {
+      const response = await apiFetch('/proposals', {
+        method: 'POST',
+        body: JSON.stringify(proposal),
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error creating proposal in Supabase:', error);
+      // Fallback to local store
+      const newProposal: NeighborhoodProposal = {
+        ...proposal,
+        id: `proposal-${Date.now()}`,
+        status: 'pending',
+        submittedDate: new Date().toISOString().split('T')[0],
+      };
+      proposalsStore = [newProposal, ...proposalsStore];
+      setStoredData('neighborhub_proposals', proposalsStore);
+      return newProposal;
+    }
+  },
+  
+  updateProposalStatus: async (proposalId: string, status: NeighborhoodProposal['status'], reviewNotes?: string) => {
+    try {
+      const user = authService.getCurrentUser();
+      const response = await apiFetch(`/proposals/${proposalId}/status`, {
+        method: 'PUT',
+        body: JSON.stringify({ status, reviewNotes, adminId: user.id }),
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error updating proposal status in Supabase:', error);
+      // Fallback to local store
+      const proposal = proposalsStore.find(p => p.id === proposalId);
+      if (proposal) {
+        proposal.status = status;
+        proposal.reviewedDate = new Date().toISOString().split('T')[0];
+        if (reviewNotes) proposal.reviewNotes = reviewNotes;
+        setStoredData('neighborhub_proposals', proposalsStore);
+      }
+      return proposal;
+    }
   },
 };
 

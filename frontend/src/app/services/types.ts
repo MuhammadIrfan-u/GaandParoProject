@@ -31,6 +31,7 @@ export interface User {
   moderationStatus?: ModerationStatus;
   privacy?: UserPrivacy;
   notifications?: UserNotificationPrefs;
+  neighborhoodId?: number;
 }
 
 export interface AuthResponse {
@@ -211,9 +212,11 @@ export interface Neighborhood {
   primaryLandmark: string;
   leadId: string;
   leadName: string;
+  adminId?: string;
   verified: boolean;
   createdDate: string;
   coverPhoto?: string;
+  logo?: string;
   settings: NeighborhoodSettings;
   guidelines: string;
 }

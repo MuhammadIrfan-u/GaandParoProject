@@ -1,26 +1,21 @@
-const express = require('express');
+import express from 'express';
+import { register, login, forgotPassword, resetPassword, getMe } from '../controllers/authController.js';
+import { getProfile, updateProfile, deleteProfile, changePassword } from '../controllers/profileController.js';
+import { protect } from '../middleware/authMiddleware.js';
+
 const router = express.Router();
-const {
-  register,
-  login,
-  forgotPassword,
-  resetPassword,
-  getMe,
-} = require('../controllers/authController');
-const { getProfile, updateProfile, deleteProfile, changePassword } = require('../controllers/profileController');
-const { protect } = require('../middleware/authMiddleware');
 
-// ── Public routes ────────────────────────────────────────────────────────────
-router.post('/register', register);           // REQ-1, REQ-2
-router.post('/login', login);                 // REQ-3, REQ-4
-router.post('/forgot-password', forgotPassword); // REQ-7, REQ-8
-router.post('/reset-password', resetPassword);   // REQ-7, REQ-8
+// Public
+router.post('/register', register);
+router.post('/login', login);
+router.post('/forgot-password', forgotPassword);
+router.post('/reset-password', resetPassword);
 
-// ── Protected routes (JWT required) ─────────────────────────────────────────
-router.get('/me', protect, getMe);                        // REQ-13: session validation
-router.get('/profile', protect, getProfile);              // REQ-6.3
-router.put('/profile', protect, updateProfile);           // REQ-6.2, REQ-9
-router.delete('/profile', protect, deleteProfile);        // REQ-6.4
-router.put('/change-password', protect, changePassword);  // security
+// Protected
+router.get('/me', protect, getMe);
+router.get('/profile', protect, getProfile);
+router.put('/profile', protect, updateProfile);
+router.delete('/profile', protect, deleteProfile);
+router.put('/change-password', protect, changePassword);
 
-module.exports = router;
+export default router;

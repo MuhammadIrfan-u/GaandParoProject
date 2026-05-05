@@ -1,11 +1,10 @@
-const express = require('express');
-const router = express.Router();
-const { getUserById } = require('../controllers/profileController');
-const { protect } = require('../middleware/authMiddleware');
-const { restrictTo } = require('../middleware/roleMiddleware');
+import express from 'express';
+import { getUserById } from '../controllers/profileController.js';
+import { protect } from '../middleware/authMiddleware.js';
 
-// ── REQ-12: inter-module user lookup ─────────────────────────────────────────
-// Other modules call GET /api/users/:id to get a user's public profile
+const router = express.Router();
+
+// REQ-12: inter-module user lookup
 router.get('/:id', protect, getUserById);
 
-module.exports = router;
+export default router;

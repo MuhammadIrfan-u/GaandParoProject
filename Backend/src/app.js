@@ -1,23 +1,27 @@
-require('dotenv').config();
-const express = require('express');
-const mongoose = require('mongoose');
+import 'dotenv/config';
+import express from 'express';
+import mongoose from 'mongoose';
+
+import mockDataRoutes from './routes/mockDataRoutes.js';
+import authRoutes from './routes/authRoutes.js';
+import userRoutes from './routes/userRoutes.js';
+import supabaseNeighborhoodsRoutes from './routes/supabaseNeighborhoodsRoutes.js';
+import supabaseProposalsRoutes from './routes/supabaseProposalsRoutes.js';
+
 const app = express();
 
-const mockDataRoutes = require('./routes/mockDataRoutes');
-const authRoutes = require('./routes/authRoutes');
-const userRoutes = require('./routes/userRoutes');
-
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+  res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization,x-user-id');
   if (req.method === 'OPTIONS') return res.sendStatus(200);
   next();
 });
 
-// MongoDB connection
+// MongoDB connection (for Auth & Profile module)
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log('MongoDB connected'))
@@ -28,13 +32,15 @@ app.get('/', (req, res) => {
   res.send('Welcome to Verified Neighbourhood Community');
 });
 
-// ── Auth & Profile routes (REQ-1 to REQ-13) ──────────────────────────────────
+// ── Auth & Profile routes (User Authentication module) ────────────────────────
 app.use('/auth', authRoutes);
-
-// ── User lookup for inter-module use ─────────────────────────────────────────
 app.use('/api/users', userRoutes);
 
-// ── Mock data routes (existing, untouched) ───────────────────────────────────
+// ── Supabase routes (Neighborhood Creation module) ────────────────────────────
+app.use('/', supabaseNeighborhoodsRoutes);
+app.use('/', supabaseProposalsRoutes);
+
+// ── Mock data routes ──────────────────────────────────────────────────────────
 app.use('/', mockDataRoutes);
 
-module.exports = app;
+export default app;

@@ -156,6 +156,10 @@ export const router = createBrowserRouter([
     Component: ProposeNeighborhood,
   },
   {
+    path: "/hub-settings/:neighborhoodId",
+    Component: HubSettings,
+  },
+  {
     path: "/hub-settings",
     Component: HubSettings,
   },
