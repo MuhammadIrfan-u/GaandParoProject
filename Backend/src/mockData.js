@@ -648,7 +648,7 @@ const currentLocation = {
   lng: -74.0040,
 };
 
-module.exports = {
+export {
   currentUser,
   users,
   posts,

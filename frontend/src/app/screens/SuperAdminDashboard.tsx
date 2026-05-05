@@ -82,8 +82,7 @@ export default function SuperAdminDashboard() {
 
   const handleDeleteNeighborhood = async (neighborhoodId: string) => {
     try {
-      // In a real app, this would call a delete service
-      // For now, we'll simulate it
+      await neighborhoodsService.deleteNeighborhood(neighborhoodId);
       toast.success("Neighborhood deleted successfully");
       setShowDeleteConfirm(null);
       await loadData();
