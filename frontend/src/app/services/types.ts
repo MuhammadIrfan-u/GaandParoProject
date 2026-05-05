@@ -11,6 +11,7 @@ export interface User {
   bio?: string;
   isAdmin?: boolean;
   neighborhoodId?: number;
+  isProvider?: boolean;
 }
 
 export interface Post {
@@ -67,6 +68,7 @@ export interface Service {
   reviewCount: number;
   price: string;
   availability: string;
+  status?: 'active' | 'inactive';
 }
 
 export interface ServiceRequest {

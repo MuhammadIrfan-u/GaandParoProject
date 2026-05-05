@@ -70,6 +70,8 @@ let reviewsStore: Review[] = getStoredData('neighborhub_reviews', []);
 let neighborhoodsStore: Neighborhood[] = getStoredData('neighborhub_neighborhoods', []);
 let proposalsStore: NeighborhoodProposal[] = getStoredData('neighborhub_proposals', []);
 let locationStore = getStoredData('neighborhub_location', { lat: 0, lng: 0 });
+let servicesStore: Service[] = getStoredData('neighborhub_services', []);
+let serviceOverridesStore: { [id: string]: Partial<Service> } = getStoredData('neighborhub_service_overrides', {});
 
 // Auth State
 const localCurrentUser: User = {
@@ -84,6 +86,7 @@ const localCurrentUser: User = {
   joinedDate: '2024-01-15',
   bio: 'Long-time resident of Oak Valley. Love our community!',
   isAdmin: true,
+  isProvider: true,
 };
 
 let authUser: User = localCurrentUser;
@@ -408,13 +411,33 @@ export const analyticsService = {
 // Services Service
 export const servicesService = {
   getServices: async () => {
-    const services = await apiGet<Service[]>('/services');
-    return services;
+    const backendServices = await apiGet<Service[]>('/services');
+    // Merge backend services with overrides
+    const mergedBackend = backendServices.map(s => ({
+      ...s,
+      ...(serviceOverridesStore[s.id] || {})
+    }));
+    return [...servicesStore, ...mergedBackend];
   },
   
   getService: async (id: string) => {
-    const service = await apiGet<Service>(`/services/${encodeURIComponent(id)}`);
-    return service;
+    // Check local store first
+    let service = servicesStore.find(s => s.id === id);
+    
+    if (!service) {
+      try {
+        service = await apiGet<Service>(`/services/${encodeURIComponent(id)}`);
+      } catch (error) {
+        return null;
+      }
+    }
+
+    if (service) {
+      // Apply overrides if any
+      return { ...service, ...(serviceOverridesStore[id] || {}) };
+    }
+    
+    return null;
   },
   
   requestService: async (serviceId: string, description: string, scheduledDate?: string) => {
@@ -447,6 +470,45 @@ export const servicesService = {
       setStoredData('neighborhub_service_requests', serviceRequestsStore);
     }
     return Promise.resolve(request);
+  },
+
+  createService: async (service: Omit<Service, 'id' | 'provider' | 'providerAvatar' | 'verified' | 'rating' | 'reviews' | 'status'>) => {
+    const newService: Service = {
+      ...service,
+      id: `service-${Date.now()}`,
+      provider: authUser.name,
+      providerAvatar: authUser.avatar,
+      verified: authUser.verified,
+      rating: 5.0,
+      reviews: 0,
+      status: 'active',
+      price: `$${service.price}/hr`,
+    };
+
+    servicesStore = [newService, ...servicesStore];
+    setStoredData('neighborhub_services', servicesStore);
+    return Promise.resolve(newService);
+  },
+
+  deleteService: async (id: string) => {
+    servicesStore = servicesStore.filter(s => s.id !== id);
+    setStoredData('neighborhub_services', servicesStore);
+    return Promise.resolve(true);
+  },
+
+  updateServiceStatus: async (id: string, status: 'active' | 'inactive') => {
+    // Try local store first
+    const service = servicesStore.find(s => s.id === id);
+    if (service) {
+      service.status = status;
+      setStoredData('neighborhub_services', servicesStore);
+      return Promise.resolve(service);
+    }
+    
+    // Otherwise, store as an override for backend services
+    serviceOverridesStore[id] = { ...serviceOverridesStore[id], status };
+    setStoredData('neighborhub_service_overrides', serviceOverridesStore);
+    return Promise.resolve({ id, status } as any);
   },
 };
 
