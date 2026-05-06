@@ -1,4 +1,6 @@
-import express from "express";
+import express from 'express';
+import cors from 'cors';
+import authRoutes from './routes/authRoutes.js';
 import mockDataRoutes from "./routes/mockDataRoutes.js";
 import supabaseNeighborhoodsRoutes from "./routes/supabaseNeighborhoodsRoutes.js";
 import supabaseProposalsRoutes from "./routes/supabaseProposalsRoutes.js";
@@ -14,13 +16,8 @@ app.use((req, res, next) => {
   res.header("Access-Control-Allow-Headers", "Content-Type,Authorization,x-user-id");
   next();
 });
-import 'dotenv/config';
-import express from 'express';
-import cors from 'cors';
-import authRoutes from './routes/authRoutes.js';
 
 
-const app = express();
 
 app.use(cors());
 app.use(express.json());
