@@ -4,7 +4,7 @@ import { MapPin, Users, Shield, Search, Plus } from "lucide-react";
 import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
 import { neighborhoodsService } from "../services/storage";
-import { Neighborhood } from "../services/mockData";
+import { Neighborhood } from "../services/types";
 import { toast } from "sonner";
 
 export default function NeighborhoodDiscovery() {
@@ -12,6 +12,8 @@ export default function NeighborhoodDiscovery() {
   const [neighborhoods, setNeighborhoods] = useState<Neighborhood[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
+  const [userNeighborhood, setUserNeighborhood] = useState<Neighborhood | null>(null);
+  const [joiningNeighborhoodId, setJoiningNeighborhoodId] = useState<number | null>(null);
 
   useEffect(() => {
     loadNeighborhoods();
@@ -19,12 +21,39 @@ export default function NeighborhoodDiscovery() {
 
   const loadNeighborhoods = async () => {
     try {
-      const data = await neighborhoodsService.getNeighborhoods();
+      const [data, userNbh] = await Promise.all([
+        neighborhoodsService.getNeighborhoods(),
+        neighborhoodsService.getUserNeighborhood(),
+      ]);
       setNeighborhoods(data);
+      setUserNeighborhood(userNbh);
     } catch (error) {
       toast.error("Failed to load neighborhoods");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleJoinNeighborhood = async (neighborhoodId: number | string) => {
+    const targetId = typeof neighborhoodId === 'number' ? neighborhoodId : parseInt(neighborhoodId as string);
+    try {
+      setJoiningNeighborhoodId(targetId);
+
+      if (userNeighborhood && userNeighborhood.id !== targetId) {
+        try {
+          await neighborhoodsService.leaveNeighborhood(userNeighborhood.id as any);
+        } catch (leaveErr) {
+          console.warn('Failed to leave existing neighborhood:', leaveErr);
+        }
+      }
+
+      await neighborhoodsService.joinNeighborhood(targetId);
+      toast.success("Successfully joined neighborhood!");
+      setUserNeighborhood(neighborhoods.find(n => n.id === targetId) || null);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to join neighborhood");
+    } finally {
+      setJoiningNeighborhoodId(null);
     }
   };
 
@@ -98,12 +127,18 @@ export default function NeighborhoodDiscovery() {
                   {hoods.map((neighborhood) => (
                     <div
                       key={neighborhood.id}
-                      onClick={() => navigate(`/neighborhood/${neighborhood.id}`)}
-                      className="bg-white rounded-2xl border border-border p-4 hover:shadow-lg transition-shadow cursor-pointer"
+                      className="bg-white rounded-2xl border border-border p-4 hover:shadow-lg transition-shadow"
                     >
-                      <div className="flex items-start gap-4">
-                        <div className="bg-gradient-to-br from-primary to-indigo-600 rounded-2xl w-16 h-16 flex items-center justify-center text-white flex-shrink-0">
-                          <MapPin className="w-8 h-8" />
+                      <div 
+                        onClick={() => navigate(`/neighborhood/${neighborhood.id}`)}
+                        className="flex items-start gap-4 cursor-pointer mb-3"
+                      >
+                        <div className="bg-gradient-to-br from-primary to-indigo-600 rounded-2xl w-16 h-16 flex items-center justify-center text-white flex-shrink-0 overflow-hidden">
+                          {neighborhood.logo ? (
+                            <img src={neighborhood.logo} alt={neighborhood.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <MapPin className="w-8 h-8" />
+                          )}
                         </div>
 
                         <div className="flex-1 min-w-0">
@@ -132,6 +167,25 @@ export default function NeighborhoodDiscovery() {
                           </div>
                         </div>
                       </div>
+
+                      {/* Join Button */}
+                      {userNeighborhood && userNeighborhood.id === neighborhood.id ? (
+                        <Button 
+                          onClick={() => navigate(`/neighborhood/${neighborhood.id}`)}
+                          className="w-full" 
+                          variant="default"
+                        >
+                          View My Neighborhood
+                        </Button>
+                      ) : (
+                        <Button 
+                          onClick={() => handleJoinNeighborhood(neighborhood.id)}
+                          disabled={joiningNeighborhoodId !== null}
+                          className={`w-full ${userNeighborhood ? 'bg-orange-600 hover:bg-orange-700' : 'bg-green-600 hover:bg-green-700'}`}
+                        >
+                          {joiningNeighborhoodId === neighborhood.id ? (userNeighborhood ? "Switching..." : "Joining...") : (userNeighborhood ? "Switch Neighborhood" : "Join Neighborhood")}
+                        </Button>
+                      )}
                     </div>
                   ))}
                 </div>

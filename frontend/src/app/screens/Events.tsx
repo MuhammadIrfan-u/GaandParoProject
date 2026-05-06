@@ -4,7 +4,7 @@ import { Plus, Calendar, MapPin, Users } from "lucide-react";
 import { BottomNav } from "../components/BottomNav";
 import { Button } from "../components/ui/button";
 import { eventsService } from "../services/storage";
-import { Event } from "../services/mockData";
+import { Event } from "../services/types";
 import { toast } from "sonner";
 
 export default function Events() {

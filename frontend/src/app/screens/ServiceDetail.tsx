@@ -6,7 +6,7 @@ import { Textarea } from "../components/ui/textarea";
 import { Input } from "../components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../components/ui/dialog";
 import { servicesService } from "../services/storage";
-import { Service } from "../services/mockData";
+import { Service } from "../services/types";
 import { toast } from "sonner";
 
 export default function ServiceDetail() {

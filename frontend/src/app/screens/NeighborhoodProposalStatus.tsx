@@ -3,7 +3,7 @@ import { useNavigate } from "react-router";
 import { ArrowLeft, Clock, CheckCircle, XCircle } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { proposalsService, authService } from "../services/storage";
-import { NeighborhoodProposal } from "../services/mockData";
+import { NeighborhoodProposal } from "../services/types";
 import { toast } from "sonner";
 
 export default function NeighborhoodProposalStatus() {

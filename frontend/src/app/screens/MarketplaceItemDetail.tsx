@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from "react-router";
 import { ArrowLeft, DollarSign, MapPin, ShoppingBag, MessageCircle } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { marketplaceService } from "../services/storage";
-import { MarketplaceItem } from "../services/mockData";
+import { MarketplaceItem } from "../services/types";
 import { toast } from "sonner";
 
 export default function MarketplaceItemDetail() {

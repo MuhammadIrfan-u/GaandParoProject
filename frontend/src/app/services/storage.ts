@@ -1,22 +1,7 @@
 // Local Storage Service
 // This simulates a backend with persistent local storage
 
-import {
-  posts as initialPosts,
-  marketplaceItems as initialMarketplaceItems,
-  events as initialEvents,
-  alerts as initialAlerts,
-  conversations as initialConversations,
-  messages as initialMessages,
-  notifications as initialNotifications,
-  serviceRequests as initialServiceRequests,
-  services as initialServices,
-  currentUser,
-  users,
-  reviews,
-  neighborhoods as initialNeighborhoods,
-  neighborhoodProposals as initialProposals,
-  currentLocation,
+import type {
   Post,
   MarketplaceItem,
   Event,
@@ -31,7 +16,28 @@ import {
   Neighborhood,
   NeighborhoodProposal,
   NeighborhoodSettings,
-} from './mockData';
+  AnalyticsData,
+} from './types';
+
+const API_BASE = 'http://localhost:3000';
+
+const apiFetch = async (path: string, init?: RequestInit) => {
+  const response = await fetch(`${API_BASE}${path}`, {
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    ...init,
+  });
+  if (!response.ok) {
+    throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+  }
+  return response;
+};
+
+const apiGet = async <T>(path: string): Promise<T> => {
+  const response = await apiFetch(path);
+  return response.json();
+};
 
 // Initialize data from localStorage or use defaults
 const getStoredData = <T,>(key: string, defaultData: T): T => {
@@ -51,22 +57,36 @@ const setStoredData = <T,>(key: string, data: T): void => {
   }
 };
 
-// Data stores
-let postsStore = getStoredData('neighborhub_posts', initialPosts);
-let marketplaceStore = getStoredData('neighborhub_marketplace', initialMarketplaceItems);
-let eventsStore = getStoredData('neighborhub_events', initialEvents);
-let alertsStore = getStoredData('neighborhub_alerts', initialAlerts);
-let conversationsStore = getStoredData('neighborhub_conversations', initialConversations);
-let messagesStore = getStoredData('neighborhub_messages', initialMessages);
-let notificationsStore = getStoredData('neighborhub_notifications', initialNotifications);
-let serviceRequestsStore = getStoredData('neighborhub_service_requests', initialServiceRequests);
-let reviewsStore = getStoredData('neighborhub_reviews', reviews);
-let neighborhoodsStore = getStoredData('neighborhub_neighborhoods', initialNeighborhoods);
-let proposalsStore = getStoredData('neighborhub_proposals', initialProposals);
-let locationStore = getStoredData('neighborhub_location', currentLocation);
+// Data stores for incremental local updates
+let postsStore: Post[] = getStoredData('neighborhub_posts', []);
+let marketplaceStore: MarketplaceItem[] = getStoredData('neighborhub_marketplace', []);
+let eventsStore: Event[] = getStoredData('neighborhub_events', []);
+let alertsStore: Alert[] = getStoredData('neighborhub_alerts', []);
+let conversationsStore: Conversation[] = getStoredData('neighborhub_conversations', []);
+let messagesStore: { [conversationId: string]: Message[] } = getStoredData('neighborhub_messages', {});
+let notificationsStore: Notification[] = getStoredData('neighborhub_notifications', []);
+let serviceRequestsStore: ServiceRequest[] = getStoredData('neighborhub_service_requests', []);
+let reviewsStore: Review[] = getStoredData('neighborhub_reviews', []);
+let neighborhoodsStore: Neighborhood[] = getStoredData('neighborhub_neighborhoods', []);
+let proposalsStore: NeighborhoodProposal[] = getStoredData('neighborhub_proposals', []);
+let locationStore = getStoredData('neighborhub_location', { lat: 0, lng: 0 });
 
 // Auth State
-let authUser = currentUser;
+const localCurrentUser: User = {
+  id: 'user-1',
+  name: 'Alex Thompson',
+  email: 'alex.thompson@email.com',
+  phone: '+1 (555) 123-4567',
+  address: '123 Oak Street, Oak Valley',
+  avatar: 'AT',
+  verified: true,
+  reputation: 4.8,
+  joinedDate: '2024-01-15',
+  bio: 'Long-time resident of Oak Valley. Love our community!',
+  isAdmin: true,
+};
+
+let authUser: User = localCurrentUser;
 let isAuthenticated = false;
 
 // Auth Service
@@ -76,7 +96,8 @@ export const authService = {
     return new Promise<User>((resolve) => {
       setTimeout(() => {
         isAuthenticated = true;
-        resolve(currentUser);
+        authUser = localCurrentUser;
+        resolve(authUser);
       }, 500);
     });
   },
@@ -85,7 +106,8 @@ export const authService = {
     return new Promise<User>((resolve) => {
       setTimeout(() => {
         isAuthenticated = true;
-        resolve(currentUser);
+        authUser = localCurrentUser;
+        resolve(authUser);
       }, 500);
     });
   },
@@ -106,9 +128,15 @@ export const authService = {
 
 // Posts Service
 export const postsService = {
-  getPosts: () => Promise.resolve([...postsStore]),
+  getPosts: async () => {
+    const posts = await apiGet<Post[]>('/posts');
+    return posts;
+  },
   
-  getPost: (id: string) => Promise.resolve(postsStore.find(p => p.id === id)),
+  getPost: async (id: string) => {
+    const post = await apiGet<Post>(`/posts/${encodeURIComponent(id)}`);
+    return post;
+  },
   
   createPost: (content: string, category: string) => {
     const newPost: Post = {
@@ -172,9 +200,15 @@ export const postsService = {
 
 // Marketplace Service
 export const marketplaceService = {
-  getItems: () => Promise.resolve([...marketplaceStore]),
+  getItems: async () => {
+    const items = await apiGet<MarketplaceItem[]>('/marketplace');
+    return items;
+  },
   
-  getItem: (id: string) => Promise.resolve(marketplaceStore.find(i => i.id === id)),
+  getItem: async (id: string) => {
+    const item = await apiGet<MarketplaceItem>(`/marketplace/${encodeURIComponent(id)}`);
+    return item;
+  },
   
   createItem: (item: Omit<MarketplaceItem, 'id' | 'sellerId' | 'seller' | 'sellerAvatar' | 'verified' | 'postedDate' | 'status'>) => {
     const newItem: MarketplaceItem = {
@@ -210,9 +244,15 @@ export const marketplaceService = {
 
 // Events Service
 export const eventsService = {
-  getEvents: () => Promise.resolve([...eventsStore]),
+  getEvents: async () => {
+    const events = await apiGet<Event[]>('/events');
+    return events;
+  },
   
-  getEvent: (id: string) => Promise.resolve(eventsStore.find(e => e.id === id)),
+  getEvent: async (id: string) => {
+    const event = await apiGet<Event>(`/events/${encodeURIComponent(id)}`);
+    return event;
+  },
   
   createEvent: (event: Omit<Event, 'id' | 'organizerId' | 'organizer' | 'organizerAvatar' | 'attendees'>) => {
     const newEvent: Event = {
@@ -253,7 +293,10 @@ export const eventsService = {
 
 // Alerts Service
 export const alertsService = {
-  getAlerts: () => Promise.resolve([...alertsStore]),
+  getAlerts: async () => {
+    const alerts = await apiGet<Alert[]>('/alerts');
+    return alerts;
+  },
   
   createAlert: (alert: Omit<Alert, 'id' | 'authorId' | 'author' | 'timestamp' | 'resolved'>) => {
     const newAlert: Alert = {
@@ -281,9 +324,15 @@ export const alertsService = {
 
 // Messages Service
 export const messagesService = {
-  getConversations: () => Promise.resolve([...conversationsStore]),
+  getConversations: async () => {
+    const conversations = await apiGet<Conversation[]>('/conversations');
+    return conversations;
+  },
   
-  getMessages: (conversationId: string) => Promise.resolve(messagesStore[conversationId] || []),
+  getMessages: async (conversationId: string) => {
+    const messages = await apiGet<Message[]>(`/conversations/${encodeURIComponent(conversationId)}/messages`);
+    return messages;
+  },
   
   sendMessage: (conversationId: string, content: string) => {
     const newMessage: Message = {
@@ -327,7 +376,10 @@ export const messagesService = {
 
 // Notifications Service
 export const notificationsService = {
-  getNotifications: () => Promise.resolve([...notificationsStore]),
+  getNotifications: async () => {
+    const notifications = await apiGet<Notification[]>('/notifications');
+    return notifications;
+  },
   
   markAsRead: (notificationId: string) => {
     const notification = notificationsStore.find(n => n.id === notificationId);
@@ -345,16 +397,30 @@ export const notificationsService = {
   },
 };
 
+// Analytics Service
+export const analyticsService = {
+  getAnalytics: async () => {
+    const analytics = await apiGet<AnalyticsData>('/analytics');
+    return analytics;
+  },
+};
+
 // Services Service
 export const servicesService = {
-  getServices: () => Promise.resolve([...initialServices]),
+  getServices: async () => {
+    const services = await apiGet<Service[]>('/services');
+    return services;
+  },
   
-  getService: (id: string) => Promise.resolve(initialServices.find(s => s.id === id)),
+  getService: async (id: string) => {
+    const service = await apiGet<Service>(`/services/${encodeURIComponent(id)}`);
+    return service;
+  },
   
-  requestService: (serviceId: string, description: string, scheduledDate?: string) => {
-    const service = initialServices.find(s => s.id === serviceId);
+  requestService: async (serviceId: string, description: string, scheduledDate?: string) => {
+    const service = await apiGet<Service>(`/services/${encodeURIComponent(serviceId)}`);
     if (!service) return Promise.reject('Service not found');
-    
+
     const newRequest: ServiceRequest = {
       id: `req-${Date.now()}`,
       userId: authUser.id,
@@ -366,7 +432,7 @@ export const servicesService = {
       scheduledDate,
       description,
     };
-    
+
     serviceRequestsStore = [newRequest, ...serviceRequestsStore];
     setStoredData('neighborhub_service_requests', serviceRequestsStore);
     return Promise.resolve(newRequest);
@@ -405,104 +471,275 @@ export const reviewsService = {
 
 // Users Service
 export const usersService = {
-  getUsers: () => Promise.resolve([...users]),
+  getUsers: async () => {
+    const users = await apiGet<User[]>('/users');
+    return users;
+  },
   
-  getUser: (id: string) => Promise.resolve(users.find(u => u.id === id)),
+  getUser: async (id: string) => {
+    const user = await apiGet<User>(`/users/${encodeURIComponent(id)}`);
+    return user;
+  },
 };
 
 // Neighborhoods Service
 export const neighborhoodsService = {
-  getNeighborhoods: () => Promise.resolve([...neighborhoodsStore]),
-  
-  getNeighborhood: (id: string) => Promise.resolve(neighborhoodsStore.find(n => n.id === id)),
-  
-  getCurrentNeighborhood: () => {
-    // Find neighborhood based on current location
-    const neighborhood = neighborhoodsStore.find(n => {
-      // Simple point-in-polygon check (simplified for demo)
-      return n.verified;
-    });
-    return Promise.resolve(neighborhood);
+  getNeighborhoods: async () => {
+    try {
+      const neighborhoods = await apiGet<Neighborhood[]>('/neighborhoods');
+      return neighborhoods;
+    } catch (error) {
+      console.error('Error fetching neighborhoods from Supabase:', error);
+      // Fallback to local store if API fails
+      return neighborhoodsStore;
+    }
   },
   
-  updateSettings: (neighborhoodId: string, settings: Partial<NeighborhoodSettings>) => {
-    const neighborhood = neighborhoodsStore.find(n => n.id === neighborhoodId);
-    if (neighborhood) {
-      neighborhood.settings = { ...neighborhood.settings, ...settings };
-      setStoredData('neighborhub_neighborhoods', neighborhoodsStore);
+  getNeighborhood: async (id: string) => {
+    try {
+      const neighborhood = await apiGet<Neighborhood>(`/neighborhoods/${encodeURIComponent(id)}`);
+      return neighborhood;
+    } catch (error) {
+      console.error('Error fetching neighborhood from Supabase:', error);
+      return neighborhoodsStore.find(n => n.id === id);
     }
-    return Promise.resolve(neighborhood);
   },
   
-  updateGuidelines: (neighborhoodId: string, guidelines: string) => {
-    const neighborhood = neighborhoodsStore.find(n => n.id === neighborhoodId);
-    if (neighborhood) {
-      neighborhood.guidelines = guidelines;
-      setStoredData('neighborhub_neighborhoods', neighborhoodsStore);
+  getCurrentNeighborhood: async () => {
+    try {
+      const user = authService.getCurrentUser();
+      const neighborhood = await apiGet<Neighborhood>(`/neighborhoods/current?userId=${user.id}`);
+      return neighborhood;
+    } catch (error) {
+      console.error('Error fetching current neighborhood from Supabase:', error);
+      const user = authService.getCurrentUser();
+      return neighborhoodsStore.find(n => n.leadId === user.id);
     }
-    return Promise.resolve(neighborhood);
   },
   
-  updateBranding: (neighborhoodId: string, coverPhoto?: string, logo?: string) => {
-    const neighborhood = neighborhoodsStore.find(n => n.id === neighborhoodId);
-    if (neighborhood) {
-      if (coverPhoto) neighborhood.coverPhoto = coverPhoto;
-      if (logo) neighborhood.logo = logo;
+  updateSettings: async (neighborhoodId: string | number, settings: Partial<NeighborhoodSettings>) => {
+    try {
+      // Map camelCase to snake_case for API - save all settings to neighborhood_settings table
+      const apiPayload = {
+        enable_marketplace: settings.enableMarketplace,
+        enable_resource_exchange: settings.enableResourceExchange,
+        enable_public_alerts: settings.enablePublicAlerts,
+        enable_events: settings.enableEvents,
+        enable_services: settings.enableServices,
+        require_verification: settings.requireVerification,
+      };
+      
+      const response = await apiFetch(`/neighborhoods/${neighborhoodId}/hub-settings`, {
+        method: 'PUT',
+        body: JSON.stringify(apiPayload),
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error updating settings in Supabase:', error);
+      // Fallback to local store
+      const neighborhood = neighborhoodsStore.find(n => n.id === parseInt(neighborhoodId as string));
+      if (neighborhood) {
+        neighborhood.settings = { ...neighborhood.settings, ...settings };
+        setStoredData('neighborhub_neighborhoods', neighborhoodsStore);
+      }
+      return neighborhood;
+    }
+  },
+
+  updateGuidelines: async (neighborhoodId: string | number, guidelines: string) => {
+    try {
+      const response = await apiFetch(`/neighborhoods/${neighborhoodId}/guidelines`, {
+        method: 'PUT',
+        body: JSON.stringify({ guidelines }),
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error updating guidelines in Supabase:', error);
+      // Fallback to local store
+      const neighborhood = neighborhoodsStore.find(n => n.id === neighborhoodId);
+      if (neighborhood) {
+        neighborhood.guidelines = guidelines;
+        setStoredData('neighborhub_neighborhoods', neighborhoodsStore);
+      }
+      return neighborhood;
+    }
+  },
+  
+  updateBranding: async (neighborhoodId: string, coverPhoto?: string, logo?: string) => {
+    try {
+      const response = await apiFetch(`/neighborhoods/${neighborhoodId}/branding`, {
+        method: 'PUT',
+        body: JSON.stringify({ coverPhoto, logo }),
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error updating branding in Supabase:', error);
+      // Fallback to local store
+      const neighborhood = neighborhoodsStore.find(n => n.id === neighborhoodId);
+      if (neighborhood) {
+        if (coverPhoto) neighborhood.coverPhoto = coverPhoto;
+        if (logo) neighborhood.logo = logo;
+        setStoredData('neighborhub_neighborhoods', neighborhoodsStore);
+      }
+      return neighborhood;
+    }
+  },
+  
+  deleteNeighborhood: async (neighborhoodId: string) => {
+    try {
+      await apiFetch(`/neighborhoods/${neighborhoodId}`, {
+        method: 'DELETE',
+      });
+    } catch (error) {
+      console.error('Error deleting neighborhood from Supabase:', error);
+      // Fallback to local store
+      neighborhoodsStore = neighborhoodsStore.filter(n => n.id !== neighborhoodId);
       setStoredData('neighborhub_neighborhoods', neighborhoodsStore);
     }
-    return Promise.resolve(neighborhood);
+  },
+
+  joinNeighborhood: async (neighborhoodId: number) => {
+    try {
+      const user = authService.getCurrentUser();
+      const response = await apiFetch(`/neighborhoods/${neighborhoodId}/join`, {
+        method: 'POST',
+        body: JSON.stringify({ userId: user.id }),
+      });
+      const result = await response.json();
+      // Update user's neighborhood ID
+      authUser = { ...authUser, neighborhoodId };
+      return result;
+    } catch (error) {
+      console.error('Error joining neighborhood:', error);
+      throw error;
+    }
+  },
+
+  leaveNeighborhood: async (neighborhoodId: number) => {
+    try {
+      const user = authService.getCurrentUser();
+      const response = await apiFetch(`/neighborhoods/${neighborhoodId}/leave`, {
+        method: 'POST',
+        body: JSON.stringify({ userId: user.id }),
+      });
+      const result = await response.json();
+      // Clear user's neighborhood ID
+      authUser = { ...authUser, neighborhoodId: undefined };
+      return result;
+    } catch (error) {
+      console.error('Error leaving neighborhood:', error);
+      throw error;
+    }
+  },
+
+  getUserNeighborhood: async (userId?: string) => {
+    try {
+      const id = userId || authService.getCurrentUser().id;
+      const result = await apiGet<{ neighborhood: Neighborhood | null }>(`/users/${id}/neighborhood`);
+      if (result.neighborhood) {
+        // Update auth user with neighborhood ID
+        authUser = { ...authUser, neighborhoodId: parseInt(result.neighborhood.id) };
+      }
+      return result.neighborhood;
+    } catch (error) {
+      console.error('Error fetching user neighborhood:', error);
+      return null;
+    }
   },
 };
 
 // Proposals Service
 export const proposalsService = {
-  getProposals: () => Promise.resolve([...proposalsStore]),
-  
-  getProposal: (id: string) => Promise.resolve(proposalsStore.find(p => p.id === id)),
-  
-  createProposal: (proposal: Omit<NeighborhoodProposal, 'id' | 'status' | 'submittedDate'>) => {
-    const newProposal: NeighborhoodProposal = {
-      ...proposal,
-      id: `proposal-${Date.now()}`,
-      status: 'pending',
-      submittedDate: new Date().toISOString().split('T')[0],
-    };
-    proposalsStore = [newProposal, ...proposalsStore];
-    setStoredData('neighborhub_proposals', proposalsStore);
-    return Promise.resolve(newProposal);
+  getProposals: async () => {
+    try {
+      // Get only the current user's proposals
+      const user = authService.getCurrentUser();
+      const proposals = await apiGet<NeighborhoodProposal[]>(`/proposals/user/${user.id}`);
+      return proposals;
+    } catch (error) {
+      console.error('Error fetching proposals from Supabase:', error);
+      // Fallback to local store - only return user's proposals
+      const user = authService.getCurrentUser();
+      return proposalsStore.filter(p => p.proposerId === user.id);
+    }
   },
   
-  updateProposalStatus: (proposalId: string, status: NeighborhoodProposal['status'], reviewNotes?: string) => {
-    const proposal = proposalsStore.find(p => p.id === proposalId);
-    if (proposal) {
-      proposal.status = status;
-      proposal.reviewedDate = new Date().toISOString().split('T')[0];
-      if (reviewNotes) proposal.reviewNotes = reviewNotes;
-      setStoredData('neighborhub_proposals', proposalsStore);
+  getProposal: async (id: string) => {
+    try {
+      const proposal = await apiGet<NeighborhoodProposal>(`/proposals/${encodeURIComponent(id)}`);
+      // Verify that the proposal belongs to the current user
+      const user = authService.getCurrentUser();
+      if (proposal.proposerId !== user.id) {
+        throw new Error('Unauthorized: You can only view your own proposals');
+      }
+      return proposal;
+    } catch (error) {
+      console.error('Error fetching proposal from Supabase:', error);
+      const user = authService.getCurrentUser();
+      const proposal = proposalsStore.find(p => p.id === id);
+      // Only return if it belongs to the current user
+      if (proposal && proposal.proposerId === user.id) {
+        return proposal;
+      }
+      return null;
     }
-    return Promise.resolve(proposal);
+  },
+  
+  createProposal: async (proposal: Omit<NeighborhoodProposal, 'id' | 'status' | 'submittedDate'>) => {
+    try {
+      const response = await apiFetch('/proposals', {
+        method: 'POST',
+        body: JSON.stringify(proposal),
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error creating proposal in Supabase:', error);
+      // Fallback to local store
+      const newProposal: NeighborhoodProposal = {
+        ...proposal,
+        id: `proposal-${Date.now()}`,
+        status: 'pending',
+        submittedDate: new Date().toISOString().split('T')[0],
+      };
+      proposalsStore = [newProposal, ...proposalsStore];
+      setStoredData('neighborhub_proposals', proposalsStore);
+      return newProposal;
+    }
+  },
+  
+  updateProposalStatus: async (proposalId: string, status: NeighborhoodProposal['status'], reviewNotes?: string) => {
+    try {
+      const user = authService.getCurrentUser();
+      const response = await apiFetch(`/proposals/${proposalId}/status`, {
+        method: 'PUT',
+        body: JSON.stringify({ status, reviewNotes, adminId: user.id }),
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error updating proposal status in Supabase:', error);
+      // Fallback to local store
+      const proposal = proposalsStore.find(p => p.id === proposalId);
+      if (proposal) {
+        proposal.status = status;
+        proposal.reviewedDate = new Date().toISOString().split('T')[0];
+        if (reviewNotes) proposal.reviewNotes = reviewNotes;
+        setStoredData('neighborhub_proposals', proposalsStore);
+      }
+      return proposal;
+    }
   },
 };
 
 // Location Service
 export const locationService = {
-  getCurrentLocation: () => Promise.resolve(locationStore),
+  getCurrentLocation: async () => {
+    const location = await apiGet<{ lat: number; lng: number }>('/location');
+    return location;
+  },
   
   checkInsideNeighborhood: (lat: number, lng: number) => {
     // Simplified point-in-polygon check
-    const neighborhood = neighborhoodsStore.find(n => {
-      const coords = n.boundary.coordinates;
-      // Simple bounding box check for demo
-      const lats = coords.map(c => c.lat);
-      const lngs = coords.map(c => c.lng);
-      const minLat = Math.min(...lats);
-      const maxLat = Math.max(...lats);
-      const minLng = Math.min(...lngs);
-      const maxLng = Math.max(...lngs);
-      
-      return lat >= minLat && lat <= maxLat && lng >= minLng && lng <= maxLng;
-    });
-    
+    const neighborhood = neighborhoodsStore.find((n) => n.verified);
     return Promise.resolve(neighborhood);
   },
 };

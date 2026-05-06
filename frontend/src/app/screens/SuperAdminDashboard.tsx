@@ -4,7 +4,7 @@ import { ArrowLeft, CheckCircle, XCircle, Trash2, MapPin, Users, Shield, Calenda
 import { Button } from "../components/ui/button";
 import { Textarea } from "../components/ui/textarea";
 import { proposalsService, neighborhoodsService, authService } from "../services/storage";
-import { NeighborhoodProposal, Neighborhood } from "../services/mockData";
+import { NeighborhoodProposal, Neighborhood } from "../services/types";
 import { toast } from "sonner";
 
 type Tab = 'proposals' | 'neighborhoods';
@@ -82,8 +82,7 @@ export default function SuperAdminDashboard() {
 
   const handleDeleteNeighborhood = async (neighborhoodId: string) => {
     try {
-      // In a real app, this would call a delete service
-      // For now, we'll simulate it
+      await neighborhoodsService.deleteNeighborhood(neighborhoodId);
       toast.success("Neighborhood deleted successfully");
       setShowDeleteConfirm(null);
       await loadData();

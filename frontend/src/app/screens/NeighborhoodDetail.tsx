@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router";
 import { ArrowLeft, MapPin, Users, Calendar, Shield, Settings as SettingsIcon } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { neighborhoodsService, authService } from "../services/storage";
-import { Neighborhood } from "../services/mockData";
+import { Neighborhood } from "../services/types";
 import { toast } from "sonner";
 
 export default function NeighborhoodDetail() {
@@ -12,6 +12,8 @@ export default function NeighborhoodDetail() {
   const currentUser = authService.getCurrentUser();
   const [neighborhood, setNeighborhood] = useState<Neighborhood | null>(null);
   const [loading, setLoading] = useState(true);
+  const [userNeighborhood, setUserNeighborhood] = useState<Neighborhood | null>(null);
+  const [isJoining, setIsJoining] = useState(false);
 
   useEffect(() => {
     loadNeighborhood();
@@ -20,12 +22,44 @@ export default function NeighborhoodDetail() {
   const loadNeighborhood = async () => {
     if (!neighborhoodId) return;
     try {
-      const data = await neighborhoodsService.getNeighborhood(neighborhoodId);
+      const [data, userNbh] = await Promise.all([
+        neighborhoodsService.getNeighborhood(neighborhoodId),
+        neighborhoodsService.getUserNeighborhood(),
+      ]);
       setNeighborhood(data || null);
+      setUserNeighborhood(userNbh);
     } catch (error) {
       toast.error("Failed to load neighborhood");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleJoinNeighborhood = async () => {
+    if (!neighborhood) return;
+    try {
+      setIsJoining(true);
+      await neighborhoodsService.joinNeighborhood(neighborhood.id);
+      toast.success("Successfully joined neighborhood!");
+      setUserNeighborhood(neighborhood);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to join neighborhood");
+    } finally {
+      setIsJoining(false);
+    }
+  };
+
+  const handleLeaveNeighborhood = async () => {
+    if (!neighborhood) return;
+    try {
+      setIsJoining(true);
+      await neighborhoodsService.leaveNeighborhood(neighborhood.id);
+      toast.success("You have left the neighborhood");
+      setUserNeighborhood(null);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to leave neighborhood");
+    } finally {
+      setIsJoining(false);
     }
   };
 
@@ -113,11 +147,11 @@ export default function NeighborhoodDetail() {
             <div className="text-sm text-muted-foreground mb-2">Neighborhood Lead</div>
             <div className="flex items-center gap-3">
               <div className="bg-gradient-to-br from-primary to-indigo-600 rounded-full w-12 h-12 flex items-center justify-center text-white text-lg">
-                {neighborhood.leadName[0]}
+                {(neighborhood.leadName && neighborhood.leadName.length > 0) ? neighborhood.leadName[0] : (neighborhood.leadName?.charAt(0) ?? '?')}
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span>{neighborhood.leadName}</span>
+                  <span>{neighborhood.leadName ?? 'Unknown'}</span>
                   {isLead && (
                     <div className="bg-primary/10 text-primary px-2 py-0.5 rounded-full text-xs">
                       You
@@ -182,22 +216,58 @@ export default function NeighborhoodDetail() {
 
           {/* Action Buttons */}
           <div className="space-y-3">
-            <Button 
-              onClick={() => {
-                toast.success("Joined " + neighborhood.name);
-                navigate("/home");
-              }}
-              className="w-full bg-primary hover:bg-primary/90"
-            >
-              Join This Neighborhood
-            </Button>
-            <Button 
-              onClick={() => navigate("/neighborhoods")}
-              variant="outline"
-              className="w-full"
-            >
-              Browse Other Neighborhoods
-            </Button>
+            {userNeighborhood && userNeighborhood.id === neighborhood.id ? (
+              <>
+                <Button 
+                  disabled={isJoining}
+                  onClick={handleLeaveNeighborhood}
+                  className="w-full" 
+                  variant="outline"
+                >
+                  {isJoining ? "Leaving..." : "Leave Neighborhood"}
+                </Button>
+                <Button 
+                  onClick={() => navigate("/home")}
+                  className="w-full bg-primary hover:bg-primary/90"
+                >
+                  Go to Home
+                </Button>
+              </>
+            ) : userNeighborhood ? (
+              <>
+                <Button 
+                  disabled={isJoining}
+                  onClick={handleJoinNeighborhood}
+                  className="w-full bg-orange-600 hover:bg-orange-700"
+                >
+                  {isJoining ? "Switching..." : "Switch to This Neighborhood"}
+                </Button>
+                <Button 
+                  onClick={() => navigate("/neighborhoods")}
+                  variant="outline"
+                  className="w-full"
+                >
+                  Browse Other Neighborhoods
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button 
+                  disabled={isJoining}
+                  onClick={handleJoinNeighborhood}
+                  className="w-full bg-green-600 hover:bg-green-700"
+                >
+                  {isJoining ? "Joining..." : "Join This Neighborhood"}
+                </Button>
+                <Button 
+                  onClick={() => navigate("/neighborhoods")}
+                  variant="outline"
+                  className="w-full"
+                >
+                  Browse Other Neighborhoods
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </div>

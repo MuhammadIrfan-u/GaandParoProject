@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router";
 import { ArrowLeft, Bell, Heart, MessageCircle, Calendar, AlertCircle, Check } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { notificationsService } from "../services/storage";
-import { Notification } from "../services/mockData";
+import { Notification } from "../services/types";
 import { toast } from "sonner";
 
 export default function Notifications() {

@@ -4,7 +4,7 @@ import { ArrowLeft, Send } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { messagesService, authService } from "../services/storage";
-import { Message } from "../services/mockData";
+import { Message } from "../services/types";
 import { toast } from "sonner";
 
 export default function ChatScreen() {

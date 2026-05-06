@@ -4,7 +4,6 @@ node_modules/
 
 # Optional: ignore logs and env files
 *.log
-.env
 
 # Optional: OS files
 .DS_Store

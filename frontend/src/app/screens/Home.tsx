@@ -2,13 +2,14 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router";
 import { Bell, Plus, Heart, MessageCircle, Share2, MoreVertical, AlertCircle, Calendar, ShoppingBag, MapPin, TrendingUp } from "lucide-react";
 import { BottomNav } from "../components/BottomNav";
-import { postsService } from "../services/storage";
-import { Post } from "../services/mockData";
+import { postsService, neighborhoodsService } from "../services/storage";
+import { Post, Neighborhood } from "../services/types";
 import { toast } from "sonner";
 
 export default function Home() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userNeighborhood, setUserNeighborhood] = useState<Neighborhood | null>(null);
 
   useEffect(() => {
     loadPosts();
@@ -18,6 +19,12 @@ export default function Home() {
     try {
       const data = await postsService.getPosts();
       setPosts(data);
+      try {
+        const nbh = await neighborhoodsService.getUserNeighborhood();
+        setUserNeighborhood(nbh || null);
+      } catch (e) {
+        // ignore
+      }
     } catch (error) {
       toast.error("Failed to load posts");
     } finally {
@@ -48,8 +55,11 @@ export default function Home() {
         <div className="max-w-lg mx-auto px-4 py-4 flex items-center justify-between">
           <div>
             <h1 className="text-xl">NeighborHub</h1>
-            <Link to="/neighborhoods" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-              Oak Valley Community
+            <Link
+              to={userNeighborhood ? `/neighborhood/${userNeighborhood.id}` : "/neighborhoods"}
+              className="text-sm text-muted-foreground hover:text-primary transition-colors"
+            >
+              {userNeighborhood ? userNeighborhood.name : 'Oak Valley Community'}
             </Link>
           </div>
           <Link to="/notifications" className="relative">
