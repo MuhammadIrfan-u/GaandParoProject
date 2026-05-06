@@ -202,47 +202,72 @@ export const postsService = {
 // Marketplace Service
 export const marketplaceService = {
   getItems: async () => {
-    const items = await apiGet<MarketplaceItem[]>('/marketplace');
-    return items;
+    try {
+      const items = await apiGet<MarketplaceItem[]>('/api/marketplace');
+      return items;
+    } catch (error) {
+      console.error('Error fetching marketplace listings:', error);
+      return marketplaceStore;
+    }
   },
 
   getItem: async (id: string) => {
-    const item = await apiGet<MarketplaceItem>(`/marketplace/${encodeURIComponent(id)}`);
-    return item;
-  },
-
-  createItem: (item: Omit<MarketplaceItem, 'id' | 'sellerId' | 'seller' | 'sellerAvatar' | 'verified' | 'postedDate' | 'status'>) => {
-    const newItem: MarketplaceItem = {
-      ...item,
-      id: `market-${Date.now()}`,
-      sellerId: authUser.id,
-      seller: authUser.name,
-      sellerAvatar: authUser.avatar,
-      verified: authUser.verified,
-      postedDate: 'Just now',
-      status: 'available',
-    };
-    marketplaceStore = [newItem, ...marketplaceStore];
-    setStoredData('neighborhub_marketplace', marketplaceStore);
-    return Promise.resolve(newItem);
-  },
-
-  updateItemStatus: (itemId: string, status: MarketplaceItem['status']) => {
-    const item = marketplaceStore.find(i => i.id === itemId);
-    if (item) {
-      item.status = status;
-      setStoredData('neighborhub_marketplace', marketplaceStore);
+    try {
+      const item = await apiGet<MarketplaceItem>(`/api/marketplace/${encodeURIComponent(id)}`);
+      return item;
+    } catch (error) {
+      console.error('Error fetching listing:', error);
+      return marketplaceStore.find(i => i.id === id);
     }
-    return Promise.resolve(item);
   },
 
-  deleteItem: (itemId: string) => {
-    marketplaceStore = marketplaceStore.filter(i => i.id !== itemId);
-    setStoredData('neighborhub_marketplace', marketplaceStore);
-    return Promise.resolve(true);
+  createItem: async (item: Omit<MarketplaceItem, 'id' | 'sellerId' | 'seller' | 'sellerAvatar' | 'verified' | 'postedDate' | 'status'>): Promise<MarketplaceItem> => {
+    try {
+      const user = authService.getCurrentUser();
+      const response = await apiFetch('/api/marketplace', {
+        method: 'POST',
+        body: JSON.stringify({
+          ...item,
+          sellerId: user.id
+        })
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error creating marketplace item:', error);
+      throw error;
+    }
+  },
+
+  updateItem: async (id: string, updates: Partial<MarketplaceItem>) => {
+    try {
+      const user = authService.getCurrentUser();
+      const response = await apiFetch(`/api/marketplace/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          ...updates,
+          sellerId: user.id
+        })
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error updating marketplace item:', error);
+      throw error;
+    }
+  },
+
+  deleteItem: async (itemId: string) => {
+    try {
+      const user = authService.getCurrentUser();
+      await apiFetch(`/api/marketplace/${itemId}?sellerId=${user.id}`, {
+        method: 'DELETE'
+      });
+      return true;
+    } catch (error) {
+      console.error('Error deleting marketplace item:', error);
+      throw error;
+    }
   },
 };
-
 // Events Service
 export const eventsService = {
   getEvents: async (neighborhoodId?: string | number) => {

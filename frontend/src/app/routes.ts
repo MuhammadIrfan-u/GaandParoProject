@@ -20,6 +20,7 @@ import Alerts from "./screens/Alerts";
 import Report from "./screens/Report";
 import CreatePost from "./screens/CreatePost";
 import CreateMarketplaceItem from "./screens/CreateMarketplaceItem";
+import EditMarketplaceItem from "./screens/EditMarketplaceItem";
 import CreateEvent from "./screens/CreateEvent";
 import EditEvent from "./screens/EditEvent";
 import CreateAlert from "./screens/CreateAlert";
@@ -118,6 +119,10 @@ export const router = createBrowserRouter([
   {
     path: "/create-marketplace-item",
     Component: CreateMarketplaceItem,
+  },
+  {
+    path: "/edit-marketplace-item/:itemId",
+    Component: EditMarketplaceItem,
   },
   {
     path: "/create-event",

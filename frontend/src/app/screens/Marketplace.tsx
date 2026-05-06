@@ -4,7 +4,7 @@ import { Plus, Search, Filter, DollarSign, ShoppingBag } from "lucide-react";
 import { BottomNav } from "../components/BottomNav";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
-import { marketplaceService } from "../services/storage";
+import { marketplaceService, authService } from "../services/storage";
 import { MarketplaceItem } from "../services/types";
 import { toast } from "sonner";
 
@@ -19,6 +19,9 @@ export default function Marketplace() {
 
   const loadItems = async () => {
     try {
+      const currentUser = authService.getCurrentUser();
+      console.log('DEBUG: Marketplace - Current User ID:', currentUser.id);
+      
       const data = await marketplaceService.getItems();
       setItems(data);
     } catch (error) {
