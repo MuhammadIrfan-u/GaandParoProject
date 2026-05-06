@@ -1,10 +1,9 @@
-import express from 'express';
-import cors from 'cors';
 import authRoutes from './routes/authRoutes.js';
 import mockDataRoutes from "./routes/mockDataRoutes.js";
 import supabaseNeighborhoodsRoutes from "./routes/supabaseNeighborhoodsRoutes.js";
 import supabaseProposalsRoutes from "./routes/supabaseProposalsRoutes.js";
-
+import express from 'express'
+import cors from 'cors'
 const app = express();
 
 app.use(express.json({ limit: '50mb' }));

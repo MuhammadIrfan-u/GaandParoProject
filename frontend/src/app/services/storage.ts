@@ -537,7 +537,7 @@ export const neighborhoodsService = {
     } catch (error) {
       console.error('Error updating settings in Supabase:', error);
       // Fallback to local store
-      const neighborhood = neighborhoodsStore.find(n => n.id === parseInt(neighborhoodId as string));
+      const neighborhood = neighborhoodsStore.find(n => String(n.id) === String(neighborhoodId));
       if (neighborhood) {
         neighborhood.settings = { ...neighborhood.settings, ...settings };
         setStoredData('neighborhub_neighborhoods', neighborhoodsStore);
@@ -556,7 +556,7 @@ export const neighborhoodsService = {
     } catch (error) {
       console.error('Error updating guidelines in Supabase:', error);
       // Fallback to local store
-      const neighborhood = neighborhoodsStore.find(n => n.id === neighborhoodId);
+      const neighborhood = neighborhoodsStore.find(n => String(n.id) === String(neighborhoodId));
       if (neighborhood) {
         neighborhood.guidelines = guidelines;
         setStoredData('neighborhub_neighborhoods', neighborhoodsStore);
@@ -575,7 +575,7 @@ export const neighborhoodsService = {
     } catch (error) {
       console.error('Error updating branding in Supabase:', error);
       // Fallback to local store
-      const neighborhood = neighborhoodsStore.find(n => n.id === neighborhoodId);
+      const neighborhood = neighborhoodsStore.find(n => String(n.id) === String(neighborhoodId));
       if (neighborhood) {
         if (coverPhoto) neighborhood.coverPhoto = coverPhoto;
         if (logo) neighborhood.logo = logo;
@@ -593,7 +593,7 @@ export const neighborhoodsService = {
     } catch (error) {
       console.error('Error deleting neighborhood from Supabase:', error);
       // Fallback to local store
-      neighborhoodsStore = neighborhoodsStore.filter(n => n.id !== neighborhoodId);
+      neighborhoodsStore = neighborhoodsStore.filter(n => String(n.id) !== String(neighborhoodId));
       setStoredData('neighborhub_neighborhoods', neighborhoodsStore);
     }
   },
@@ -652,14 +652,18 @@ export const neighborhoodsService = {
 export const proposalsService = {
   getProposals: async () => {
     try {
-      // Get only the current user's proposals
       const user = authService.getCurrentUser();
-      const proposals = await apiGet<NeighborhoodProposal[]>(`/proposals/user/${user.id}`);
+      // If admin, get all proposals. If regular user, get only their own.
+      const url = user.isAdmin ? '/proposals' : `/proposals/user/${user.id}`;
+      const proposals = await apiGet<NeighborhoodProposal[]>(url);
       return proposals;
     } catch (error) {
       console.error('Error fetching proposals from Supabase:', error);
-      // Fallback to local store - only return user's proposals
+      // Fallback to local store
       const user = authService.getCurrentUser();
+      if (user.isAdmin) {
+        return proposalsStore;
+      }
       return proposalsStore.filter(p => p.proposerId === user.id);
     }
   },
