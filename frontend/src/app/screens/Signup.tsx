@@ -3,7 +3,6 @@ import { Link, useNavigate } from "react-router";
 import { Home as HomeIcon, Mail, Lock, User, Phone, MapPin, Eye, EyeOff } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
-import { authService } from "../services/storage";
 import { toast } from "sonner";
 
 export default function Signup() {
@@ -24,35 +23,61 @@ export default function Signup() {
   };
 
   const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (!formData.name || !formData.email || !formData.phone || !formData.address || !formData.password) {
-      toast.error("Please fill in all fields");
-      return;
+  if (
+    !formData.name ||
+    !formData.email ||
+    !formData.phone ||
+    !formData.address ||
+    !formData.password
+  ) {
+    toast.error("Please ill in all fields");
+    return;
+  }
+
+  if (formData.password !== formData.confirmPassword) {
+    toast.error("Passwords don't match");
+    return;
+  }
+
+  if (formData.password.length < 6) {
+    toast.error("Password must be at least 6 characters");
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const res = await fetch("http://localhost:3000/api/auth/signup", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        confirmPassword: formData.confirmPassword,
+        phone: formData.phone,
+        address: formData.address,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.error || "Signup failed");
     }
 
-    if (formData.password !== formData.confirmPassword) {
-      toast.error("Passwords don't match");
-      return;
-    }
-
-    if (formData.password.length < 6) {
-      toast.error("Password must be at least 6 characters");
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      await authService.signup(formData.name, formData.email, formData.password, formData.phone, formData.address);
-      toast.success("Account created successfully!");
-      navigate("/neighborhood-discovery");
-    } catch (error) {
-      toast.error("Signup failed. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
+    toast.success("Account created successfully!");
+    navigate("/login"); // better flow
+  } catch (error: any) {
+    toast.error(error.message || "Signup failed");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary via-indigo-600 to-purple-600 flex items-center justify-center p-4">
