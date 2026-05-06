@@ -73,7 +73,7 @@ let locationStore = getStoredData('neighborhub_location', { lat: 0, lng: 0 });
 
 // Auth State
 const localCurrentUser: User = {
-  id: 'user-1',
+  id: '42', // Changed to numeric string to match DB integer
   name: 'Alex Thompson',
   email: 'alex.thompson@email.com',
   phone: '+1 (555) 123-4567',
@@ -84,6 +84,7 @@ const localCurrentUser: User = {
   joinedDate: '2024-01-15',
   bio: 'Long-time resident of Oak Valley. Love our community!',
   isAdmin: true,
+  neighborhoodId: 11, // Reset to 1 for standard test data
 };
 
 let authUser: User = localCurrentUser;
@@ -101,7 +102,7 @@ export const authService = {
       }, 500);
     });
   },
-  
+
   signup: (name: string, email: string, password: string, phone: string, address: string) => {
     return new Promise<User>((resolve) => {
       setTimeout(() => {
@@ -111,15 +112,15 @@ export const authService = {
       }, 500);
     });
   },
-  
+
   logout: () => {
     isAuthenticated = false;
   },
-  
+
   getCurrentUser: () => authUser,
-  
+
   isAuthenticated: () => isAuthenticated,
-  
+
   updateProfile: (updates: Partial<User>) => {
     authUser = { ...authUser, ...updates };
     return Promise.resolve(authUser);
@@ -132,12 +133,12 @@ export const postsService = {
     const posts = await apiGet<Post[]>('/posts');
     return posts;
   },
-  
+
   getPost: async (id: string) => {
     const post = await apiGet<Post>(`/posts/${encodeURIComponent(id)}`);
     return post;
   },
-  
+
   createPost: (content: string, category: string) => {
     const newPost: Post = {
       id: `post-${Date.now()}`,
@@ -157,7 +158,7 @@ export const postsService = {
     setStoredData('neighborhub_posts', postsStore);
     return Promise.resolve(newPost);
   },
-  
+
   likePost: (postId: string) => {
     const post = postsStore.find(p => p.id === postId);
     if (post) {
@@ -173,7 +174,7 @@ export const postsService = {
     }
     return Promise.resolve(post);
   },
-  
+
   addComment: (postId: string, content: string) => {
     const post = postsStore.find(p => p.id === postId);
     if (post) {
@@ -190,7 +191,7 @@ export const postsService = {
     }
     return Promise.resolve(post);
   },
-  
+
   deletePost: (postId: string) => {
     postsStore = postsStore.filter(p => p.id !== postId);
     setStoredData('neighborhub_posts', postsStore);
@@ -204,12 +205,12 @@ export const marketplaceService = {
     const items = await apiGet<MarketplaceItem[]>('/marketplace');
     return items;
   },
-  
+
   getItem: async (id: string) => {
     const item = await apiGet<MarketplaceItem>(`/marketplace/${encodeURIComponent(id)}`);
     return item;
   },
-  
+
   createItem: (item: Omit<MarketplaceItem, 'id' | 'sellerId' | 'seller' | 'sellerAvatar' | 'verified' | 'postedDate' | 'status'>) => {
     const newItem: MarketplaceItem = {
       ...item,
@@ -225,7 +226,7 @@ export const marketplaceService = {
     setStoredData('neighborhub_marketplace', marketplaceStore);
     return Promise.resolve(newItem);
   },
-  
+
   updateItemStatus: (itemId: string, status: MarketplaceItem['status']) => {
     const item = marketplaceStore.find(i => i.id === itemId);
     if (item) {
@@ -234,7 +235,7 @@ export const marketplaceService = {
     }
     return Promise.resolve(item);
   },
-  
+
   deleteItem: (itemId: string) => {
     marketplaceStore = marketplaceStore.filter(i => i.id !== itemId);
     setStoredData('neighborhub_marketplace', marketplaceStore);
@@ -244,50 +245,113 @@ export const marketplaceService = {
 
 // Events Service
 export const eventsService = {
-  getEvents: async () => {
-    const events = await apiGet<Event[]>('/events');
-    return events;
-  },
-  
-  getEvent: async (id: string) => {
-    const event = await apiGet<Event>(`/events/${encodeURIComponent(id)}`);
-    return event;
-  },
-  
-  createEvent: (event: Omit<Event, 'id' | 'organizerId' | 'organizer' | 'organizerAvatar' | 'attendees'>) => {
-    const newEvent: Event = {
-      ...event,
-      id: `event-${Date.now()}`,
-      organizerId: authUser.id,
-      organizer: authUser.name,
-      organizerAvatar: authUser.avatar,
-      attendees: [authUser.id],
-    };
-    eventsStore = [newEvent, ...eventsStore];
-    setStoredData('neighborhub_events', eventsStore);
-    return Promise.resolve(newEvent);
-  },
-  
-  rsvpEvent: (eventId: string) => {
-    const event = eventsStore.find(e => e.id === eventId);
-    if (event) {
-      const index = event.attendees.indexOf(authUser.id);
-      if (index > -1) {
-        event.attendees.splice(index, 1);
-      } else {
-        if (!event.maxAttendees || event.attendees.length < event.maxAttendees) {
-          event.attendees.push(authUser.id);
-        }
-      }
-      setStoredData('neighborhub_events', eventsStore);
+  getEvents: async (neighborhoodId?: string | number) => {
+    try {
+      const url = neighborhoodId ? `/events?neighborhoodId=${neighborhoodId}` : '/events';
+      const events = await apiGet<Event[]>(url);
+      return events;
+    } catch (error) {
+      console.error('Error fetching events:', error);
+      return eventsStore;
     }
-    return Promise.resolve(event);
   },
-  
-  deleteEvent: (eventId: string) => {
-    eventsStore = eventsStore.filter(e => e.id !== eventId);
-    setStoredData('neighborhub_events', eventsStore);
-    return Promise.resolve(true);
+
+  getEvent: async (id: string) => {
+    try {
+      const event = await apiGet<Event>(`/events/${encodeURIComponent(id)}`);
+      return event;
+    } catch (error) {
+      console.error('Error fetching event:', error);
+      return eventsStore.find(e => e.id === id);
+    }
+  },
+
+  createEvent: async (event: Omit<Event, 'id' | 'organizerId' | 'organizer' | 'organizerAvatar' | 'attendees'>) => {
+    try {
+      const user = authService.getCurrentUser();
+      const payload = {
+        ...event,
+        organizerId: user.id,
+        neighborhoodId: user.neighborhoodId
+      };
+
+      const response = await apiFetch('/events', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error creating event:', error);
+      // Fallback
+      const newEvent: Event = {
+        ...event,
+        id: `event-${Date.now()}`,
+        organizerId: authUser.id,
+        organizer: authUser.name,
+        organizerAvatar: authUser.avatar,
+        attendees: [authUser.id],
+      };
+      eventsStore = [newEvent, ...eventsStore];
+      setStoredData('neighborhub_events', eventsStore);
+      return newEvent;
+    }
+  },
+
+  updateEvent: async (id: string, updates: Partial<Event>) => {
+    try {
+      const user = authService.getCurrentUser();
+      const response = await apiFetch(`/events/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ ...updates, userId: user.id })
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error updating event:', error);
+      throw error;
+    }
+  },
+
+  rsvpEvent: async (eventId: string) => {
+    try {
+      const user = authService.getCurrentUser();
+      const response = await apiFetch(`/events/${eventId}/rsvp`, {
+        method: 'POST',
+        body: JSON.stringify({ userId: user.id })
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error RSVing to event:', error);
+      // Fallback
+      const event = eventsStore.find(e => e.id === eventId);
+      if (event) {
+        const index = event.attendees.indexOf(authUser.id);
+        if (index > -1) {
+          event.attendees.splice(index, 1);
+        } else {
+          if (!event.maxAttendees || event.attendees.length < event.maxAttendees) {
+            event.attendees.push(authUser.id);
+          }
+        }
+        setStoredData('neighborhub_events', eventsStore);
+      }
+      return event;
+    }
+  },
+
+  deleteEvent: async (eventId: string) => {
+    try {
+      const user = authService.getCurrentUser();
+      await apiFetch(`/events/${eventId}?userId=${user.id}`, {
+        method: 'DELETE'
+      });
+      return true;
+    } catch (error) {
+      console.error('Error deleting event:', error);
+      // Fallback
+      eventsStore = eventsStore.filter(e => e.id !== eventId);
+      setStoredData('neighborhub_events', eventsStore);
+      return true;
+    }
   },
 };
 
@@ -297,7 +361,7 @@ export const alertsService = {
     const alerts = await apiGet<Alert[]>('/alerts');
     return alerts;
   },
-  
+
   createAlert: (alert: Omit<Alert, 'id' | 'authorId' | 'author' | 'timestamp' | 'resolved'>) => {
     const newAlert: Alert = {
       ...alert,
@@ -311,7 +375,7 @@ export const alertsService = {
     setStoredData('neighborhub_alerts', alertsStore);
     return Promise.resolve(newAlert);
   },
-  
+
   resolveAlert: (alertId: string) => {
     const alert = alertsStore.find(a => a.id === alertId);
     if (alert) {
@@ -328,12 +392,12 @@ export const messagesService = {
     const conversations = await apiGet<Conversation[]>('/conversations');
     return conversations;
   },
-  
+
   getMessages: async (conversationId: string) => {
     const messages = await apiGet<Message[]>(`/conversations/${encodeURIComponent(conversationId)}/messages`);
     return messages;
   },
-  
+
   sendMessage: (conversationId: string, content: string) => {
     const newMessage: Message = {
       id: `msg-${Date.now()}`,
@@ -345,25 +409,25 @@ export const messagesService = {
       timestamp: new Date().toISOString(),
       read: false,
     };
-    
+
     if (!messagesStore[conversationId]) {
       messagesStore[conversationId] = [];
     }
     messagesStore[conversationId].push(newMessage);
-    
+
     // Update conversation
     const conversation = conversationsStore.find(c => c.id === conversationId);
     if (conversation) {
       conversation.lastMessage = content;
       conversation.lastMessageTime = 'Just now';
     }
-    
+
     setStoredData('neighborhub_messages', messagesStore);
     setStoredData('neighborhub_conversations', conversationsStore);
-    
+
     return Promise.resolve(newMessage);
   },
-  
+
   markAsRead: (conversationId: string) => {
     const conversation = conversationsStore.find(c => c.id === conversationId);
     if (conversation) {
@@ -380,7 +444,7 @@ export const notificationsService = {
     const notifications = await apiGet<Notification[]>('/notifications');
     return notifications;
   },
-  
+
   markAsRead: (notificationId: string) => {
     const notification = notificationsStore.find(n => n.id === notificationId);
     if (notification) {
@@ -389,7 +453,7 @@ export const notificationsService = {
     }
     return Promise.resolve(notification);
   },
-  
+
   markAllAsRead: () => {
     notificationsStore = notificationsStore.map(n => ({ ...n, read: true }));
     setStoredData('neighborhub_notifications', notificationsStore);
@@ -411,12 +475,12 @@ export const servicesService = {
     const services = await apiGet<Service[]>('/services');
     return services;
   },
-  
+
   getService: async (id: string) => {
     const service = await apiGet<Service>(`/services/${encodeURIComponent(id)}`);
     return service;
   },
-  
+
   requestService: async (serviceId: string, description: string, scheduledDate?: string) => {
     const service = await apiGet<Service>(`/services/${encodeURIComponent(serviceId)}`);
     if (!service) return Promise.reject('Service not found');
@@ -437,9 +501,9 @@ export const servicesService = {
     setStoredData('neighborhub_service_requests', serviceRequestsStore);
     return Promise.resolve(newRequest);
   },
-  
+
   getMyRequests: () => Promise.resolve(serviceRequestsStore.filter(r => r.userId === authUser.id)),
-  
+
   updateRequestStatus: (requestId: string, status: ServiceRequest['status']) => {
     const request = serviceRequestsStore.find(r => r.id === requestId);
     if (request) {
@@ -453,7 +517,7 @@ export const servicesService = {
 // Reviews Service
 export const reviewsService = {
   getReviews: (targetId: string) => Promise.resolve(reviewsStore.filter(r => r.targetId === targetId)),
-  
+
   addReview: (review: Omit<Review, 'id' | 'reviewerId' | 'reviewer' | 'reviewerAvatar' | 'timestamp'>) => {
     const newReview: Review = {
       ...review,
@@ -475,7 +539,7 @@ export const usersService = {
     const users = await apiGet<User[]>('/users');
     return users;
   },
-  
+
   getUser: async (id: string) => {
     const user = await apiGet<User>(`/users/${encodeURIComponent(id)}`);
     return user;
@@ -494,7 +558,7 @@ export const neighborhoodsService = {
       return neighborhoodsStore;
     }
   },
-  
+
   getNeighborhood: async (id: string) => {
     try {
       const neighborhood = await apiGet<Neighborhood>(`/neighborhoods/${encodeURIComponent(id)}`);
@@ -504,7 +568,7 @@ export const neighborhoodsService = {
       return neighborhoodsStore.find(n => n.id === id);
     }
   },
-  
+
   getCurrentNeighborhood: async () => {
     try {
       const user = authService.getCurrentUser();
@@ -516,7 +580,7 @@ export const neighborhoodsService = {
       return neighborhoodsStore.find(n => n.leadId === user.id);
     }
   },
-  
+
   updateSettings: async (neighborhoodId: string | number, settings: Partial<NeighborhoodSettings>) => {
     try {
       // Map camelCase to snake_case for API - save all settings to neighborhood_settings table
@@ -528,7 +592,7 @@ export const neighborhoodsService = {
         enable_services: settings.enableServices,
         require_verification: settings.requireVerification,
       };
-      
+
       const response = await apiFetch(`/neighborhoods/${neighborhoodId}/hub-settings`, {
         method: 'PUT',
         body: JSON.stringify(apiPayload),
@@ -564,7 +628,7 @@ export const neighborhoodsService = {
       return neighborhood;
     }
   },
-  
+
   updateBranding: async (neighborhoodId: string, coverPhoto?: string, logo?: string) => {
     try {
       const response = await apiFetch(`/neighborhoods/${neighborhoodId}/branding`, {
@@ -584,7 +648,7 @@ export const neighborhoodsService = {
       return neighborhood;
     }
   },
-  
+
   deleteNeighborhood: async (neighborhoodId: string) => {
     try {
       await apiFetch(`/neighborhoods/${neighborhoodId}`, {
@@ -667,7 +731,7 @@ export const proposalsService = {
       return proposalsStore.filter(p => p.proposerId === user.id);
     }
   },
-  
+
   getProposal: async (id: string) => {
     try {
       const proposal = await apiGet<NeighborhoodProposal>(`/proposals/${encodeURIComponent(id)}`);
@@ -688,7 +752,7 @@ export const proposalsService = {
       return null;
     }
   },
-  
+
   createProposal: async (proposal: Omit<NeighborhoodProposal, 'id' | 'status' | 'submittedDate'>) => {
     try {
       const response = await apiFetch('/proposals', {
@@ -710,7 +774,7 @@ export const proposalsService = {
       return newProposal;
     }
   },
-  
+
   updateProposalStatus: async (proposalId: string, status: NeighborhoodProposal['status'], reviewNotes?: string) => {
     try {
       const user = authService.getCurrentUser();
@@ -740,7 +804,7 @@ export const locationService = {
     const location = await apiGet<{ lat: number; lng: number }>('/location');
     return location;
   },
-  
+
   checkInsideNeighborhood: (lat: number, lng: number) => {
     // Simplified point-in-polygon check
     const neighborhood = neighborhoodsStore.find((n) => n.verified);

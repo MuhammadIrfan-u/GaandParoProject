@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router";
-import { ArrowLeft, Calendar, MapPin, Users, Check } from "lucide-react";
+import { ArrowLeft, Calendar, MapPin, Users, Check, Trash2, Edit } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { eventsService, authService } from "../services/storage";
 import { Event } from "../services/types";
@@ -32,12 +32,22 @@ export default function EventDetail() {
   const handleRSVP = async () => {
     if (!eventId) return;
     try {
-      await eventsService.rsvpEvent(eventId);
+      const response = await eventsService.rsvpEvent(eventId);
       await loadEvent();
-      const isAttending = event?.attendees.includes(currentUser.id);
-      toast.success(isAttending ? "RSVP cancelled" : "RSVP confirmed!");
+      toast.success(response.rsvp ? "RSVP confirmed!" : "RSVP cancelled");
     } catch (error) {
       toast.error("Failed to RSVP");
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!eventId || !window.confirm("Are you sure you want to delete this event?")) return;
+    try {
+      await eventsService.deleteEvent(eventId);
+      toast.success("Event deleted successfully");
+      navigate("/events");
+    } catch (error) {
+      toast.error("Failed to delete event");
     }
   };
 
@@ -67,7 +77,25 @@ export default function EventDetail() {
           <button onClick={() => navigate(-1)} className="p-2 hover:bg-muted rounded-full">
             <ArrowLeft className="w-6 h-6" />
           </button>
-          <h1 className="text-xl">Event Details</h1>
+          <h1 className="text-xl flex-1">Event Details</h1>
+          {String(event.organizerId) === String(currentUser.id) && (
+            <div className="flex items-center gap-1">
+              <button 
+                onClick={() => navigate(`/edit-event/${event.id}`)}
+                className="p-2 text-blue-500 hover:bg-blue-50 rounded-full transition-colors"
+                title="Edit Event"
+              >
+                <Edit className="w-6 h-6" />
+              </button>
+              <button 
+                onClick={handleDelete}
+                className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                title="Delete Event"
+              >
+                <Trash2 className="w-6 h-6" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

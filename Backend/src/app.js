@@ -2,6 +2,7 @@ import authRoutes from './routes/authRoutes.js';
 import mockDataRoutes from "./routes/mockDataRoutes.js";
 import supabaseNeighborhoodsRoutes from "./routes/supabaseNeighborhoodsRoutes.js";
 import supabaseProposalsRoutes from "./routes/supabaseProposalsRoutes.js";
+import supabaseEventsRoutes from "./routes/supabaseEventsRoutes.js";
 import express from 'express'
 import cors from 'cors'
 const app = express();
@@ -32,6 +33,7 @@ app.get("/", (req, res) => {
 // Supabase routes (neighborhoods and proposals) - MUST BE BEFORE MOCK DATA ROUTES
 app.use("/", supabaseNeighborhoodsRoutes);
 app.use("/", supabaseProposalsRoutes);
+app.use("/", supabaseEventsRoutes);
 
 // Mock data routes (for other features)
 app.use("/", mockDataRoutes);

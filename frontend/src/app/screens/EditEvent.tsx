@@ -1,14 +1,15 @@
-import { useState } from "react";
-import { useNavigate } from "react-router";
+import { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router";
 import { ArrowLeft, Calendar as CalendarIcon, Clock, MapPin as MapPinIcon } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Textarea } from "../components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
-import { eventsService, authService } from "../services/storage";
+import { eventsService } from "../services/storage";
 import { toast } from "sonner";
 
-export default function CreateEvent() {
+export default function EditEvent() {
+  const { eventId } = useParams();
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     title: "",
@@ -19,9 +20,38 @@ export default function CreateEvent() {
     category: "Community",
     maxAttendees: "",
   });
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
   const categories = ["Community", "Social", "Family", "Sports", "Education", "Other"];
+
+  useEffect(() => {
+    if (eventId) {
+      loadEvent();
+    }
+  }, [eventId]);
+
+  const loadEvent = async () => {
+    try {
+      const event = await eventsService.getEvent(eventId!);
+      if (event) {
+        setFormData({
+          title: event.title,
+          description: event.description,
+          date: event.date,
+          time: event.time,
+          location: event.location,
+          category: event.category,
+          maxAttendees: event.maxAttendees?.toString() || "",
+        });
+      }
+    } catch (error) {
+      toast.error("Failed to load event");
+      navigate("/events");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async () => {
     if (!formData.title || !formData.description || !formData.date || !formData.time || !formData.location) {
@@ -29,13 +59,9 @@ export default function CreateEvent() {
       return;
     }
 
-    setLoading(true);
+    setSubmitting(true);
     try {
-      const currentUser = authService.getCurrentUser();
-      console.log('DEBUG: Creating event with Organizer ID:', currentUser.id);
-      console.log('DEBUG: Creating event for Neighborhood ID:', currentUser.neighborhoodId);
-      
-      await eventsService.createEvent({
+      await eventsService.updateEvent(eventId!, {
         title: formData.title,
         description: formData.description,
         date: formData.date,
@@ -44,14 +70,22 @@ export default function CreateEvent() {
         category: formData.category,
         maxAttendees: formData.maxAttendees ? parseInt(formData.maxAttendees) : undefined,
       });
-      toast.success("Event created successfully!");
-      navigate("/events");
+      toast.success("Event updated successfully!");
+      navigate(`/event/${eventId}`);
     } catch (error) {
-      toast.error("Failed to create event");
+      toast.error("Failed to update event");
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -60,9 +94,9 @@ export default function CreateEvent() {
           <button onClick={() => navigate(-1)} className="p-2 hover:bg-muted rounded-full">
             <ArrowLeft className="w-6 h-6" />
           </button>
-          <h1 className="text-xl">Create Event</h1>
-          <Button onClick={handleSubmit} disabled={loading} className="bg-primary hover:bg-primary/90">
-            {loading ? "Creating..." : "Create"}
+          <h1 className="text-xl">Edit Event</h1>
+          <Button onClick={handleSubmit} disabled={submitting} className="bg-primary hover:bg-primary/90">
+            {submitting ? "Saving..." : "Save"}
           </Button>
         </div>
       </div>

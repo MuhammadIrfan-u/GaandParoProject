@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router";
-import { Plus, Calendar, MapPin, Users } from "lucide-react";
+import { Plus, Calendar, MapPin, Users, Trash2, Edit } from "lucide-react";
 import { BottomNav } from "../components/BottomNav";
 import { Button } from "../components/ui/button";
-import { eventsService } from "../services/storage";
+import { eventsService, authService } from "../services/storage";
 import { Event } from "../services/types";
 import { toast } from "sonner";
-
+import { useNavigate } from "react-router";
 export default function Events() {
+  const navigate = useNavigate();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -17,7 +18,17 @@ export default function Events() {
 
   const loadEvents = async () => {
     try {
-      const data = await eventsService.getEvents();
+      const currentUser = authService.getCurrentUser();
+      console.log('DEBUG: Current User ID:', currentUser.id);
+      console.log('DEBUG: Neighborhood ID:', currentUser.neighborhoodId);
+
+      if (!currentUser.neighborhoodId) {
+        console.warn('DEBUG: No neighborhood ID found for user');
+        setEvents([]);
+        setLoading(false);
+        return;
+      }
+      const data = await eventsService.getEvents(currentUser.neighborhoodId);
       setEvents(data);
     } catch (error) {
       toast.error("Failed to load events");
@@ -25,6 +36,29 @@ export default function Events() {
       setLoading(false);
     }
   };
+
+  const handleDelete = async (e: React.MouseEvent, eventId: string) => {
+    e.preventDefault(); // Prevent navigation to detail page
+    e.stopPropagation();
+
+    if (!window.confirm("Are you sure you want to delete this event?")) return;
+
+    try {
+      await eventsService.deleteEvent(eventId);
+      toast.success("Event deleted successfully");
+      loadEvents(); // Refresh list
+    } catch (error) {
+      toast.error("Failed to delete event");
+    }
+  };
+
+  const handleEdit = (e: React.MouseEvent, eventId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    navigate(`/edit-event/${eventId}`);
+  };
+
+  const currentUser = authService.getCurrentUser();
 
   const getCategoryColor = (category: string) => {
     const colors: { [key: string]: string } = {
@@ -74,13 +108,35 @@ export default function Events() {
                     <span className={`text-xs px-2 py-1 rounded-full ${getCategoryColor(event.category)}`}>
                       {event.category}
                     </span>
-                    {event.attendees.includes('user-1') && (
+                    {event.attendees.includes(currentUser.id) && (
                       <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700">Going</span>
                     )}
                   </div>
-                  <h3 className="text-lg mb-2">{event.title}</h3>
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="text-lg mb-2">{event.title}</h3>
+                    <div className="flex items-center gap-1">
+                      {String(event.organizerId) === String(currentUser.id) && (
+                        <>
+                          <button
+                            onClick={(e) => handleEdit(e, event.id)}
+                            className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Edit Event"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={(e) => handleDelete(e, event.id)}
+                            className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Delete Event"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
                   <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{event.description}</p>
-                  
+
                   <div className="space-y-2 text-sm">
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <Calendar className="w-4 h-4" />

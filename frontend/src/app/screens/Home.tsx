@@ -43,7 +43,7 @@ export default function Home() {
 
   const quickActions = [
     { icon: AlertCircle, label: "Alert", color: "text-red-600", bg: "bg-red-100", link: "/create-alert" },
-    { icon: Calendar, label: "Event", color: "text-blue-600", bg: "bg-blue-100", link: "/create-event" },
+    { icon: Calendar, label: "Event", color: "text-blue-600", bg: "bg-blue-100", link: "/events" },
     { icon: ShoppingBag, label: "Sell", color: "text-green-600", bg: "bg-green-100", link: "/create-marketplace-item" },
     { icon: MapPin, label: "Service", color: "text-purple-600", bg: "bg-purple-100", link: "/services" },
   ];
@@ -167,25 +167,24 @@ export default function Home() {
 
                 {/* Post Actions */}
                 <div className="px-4 py-3 border-t border-border flex items-center justify-around">
-                  <button 
+                  <button
                     onClick={() => handleLike(post.id)}
-                    className={`flex items-center gap-2 transition-colors py-2 px-4 rounded-xl ${
-                      post.likedBy.includes('user-1') 
-                        ? 'text-red-500 bg-red-50' 
+                    className={`flex items-center gap-2 transition-colors py-2 px-4 rounded-xl ${post.likedBy.includes('user-1')
+                        ? 'text-red-500 bg-red-50'
                         : 'text-muted-foreground hover:text-red-500 hover:bg-red-50'
-                    }`}
+                      }`}
                   >
                     <Heart className={`w-5 h-5 ${post.likedBy.includes('user-1') ? 'fill-current' : ''}`} />
                     <span className="text-sm">{post.likes}</span>
                   </button>
-                  <Link 
+                  <Link
                     to={`/post/${post.id}`}
                     className="flex items-center gap-2 text-muted-foreground hover:text-blue-500 transition-colors py-2 px-4 rounded-xl hover:bg-blue-50"
                   >
                     <MessageCircle className="w-5 h-5" />
                     <span className="text-sm">{post.comments.length}</span>
                   </Link>
-                  <button 
+                  <button
                     onClick={() => toast.success("Post shared!")}
                     className="flex items-center gap-2 text-muted-foreground hover:text-green-500 transition-colors py-2 px-4 rounded-xl hover:bg-green-50"
                   >
