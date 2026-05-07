@@ -42,7 +42,7 @@ export default function Home() {
   };
 
   const quickActions = [
-    { icon: AlertCircle, label: "Alert", color: "text-red-600", bg: "bg-red-100", link: "/create-alert" },
+    { icon: AlertCircle, label: "Alert", color: "text-red-600", bg: "bg-red-100", link: "/alerts" },
     { icon: Calendar, label: "Event", color: "text-blue-600", bg: "bg-blue-100", link: "/events" },
     { icon: ShoppingBag, label: "Sell", color: "text-green-600", bg: "bg-green-100", link: "/marketplace" },
     { icon: MapPin, label: "Service", color: "text-purple-600", bg: "bg-purple-100", link: "/services" },

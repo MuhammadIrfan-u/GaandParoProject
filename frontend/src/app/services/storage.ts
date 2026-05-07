@@ -383,31 +383,54 @@ export const eventsService = {
 // Alerts Service
 export const alertsService = {
   getAlerts: async () => {
-    const alerts = await apiGet<Alert[]>('/alerts');
-    return alerts;
-  },
-
-  createAlert: (alert: Omit<Alert, 'id' | 'authorId' | 'author' | 'timestamp' | 'resolved'>) => {
-    const newAlert: Alert = {
-      ...alert,
-      id: `alert-${Date.now()}`,
-      authorId: authUser.id,
-      author: authUser.name,
-      timestamp: new Date().toISOString(),
-      resolved: false,
-    };
-    alertsStore = [newAlert, ...alertsStore];
-    setStoredData('neighborhub_alerts', alertsStore);
-    return Promise.resolve(newAlert);
-  },
-
-  resolveAlert: (alertId: string) => {
-    const alert = alertsStore.find(a => a.id === alertId);
-    if (alert) {
-      alert.resolved = true;
-      setStoredData('neighborhub_alerts', alertsStore);
+    try {
+      const alerts = await apiGet<Alert[]>('/alerts');
+      return alerts;
+    } catch (error) {
+      console.error('Error fetching alerts:', error);
+      return alertsStore;
     }
-    return Promise.resolve(alert);
+  },
+
+  createAlert: async (alert: Omit<Alert, 'id' | 'authorId' | 'author' | 'timestamp' | 'resolved'>) => {
+    try {
+      const response = await apiFetch('/alerts', {
+        method: 'POST',
+        body: JSON.stringify({
+          ...alert,
+          authorId: authUser.id
+        })
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error creating alert:', error);
+      throw error;
+    }
+  },
+
+  resolveAlert: async (alertId: string) => {
+    try {
+      const response = await apiFetch(`/alerts/${alertId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ resolved: true })
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error resolving alert:', error);
+      throw error;
+    }
+  },
+
+  deleteAlert: async (alertId: string) => {
+    try {
+      await apiFetch(`/alerts/${alertId}`, {
+        method: 'DELETE'
+      });
+      return true;
+    } catch (error) {
+      console.error('Error deleting alert:', error);
+      throw error;
+    }
   },
 };
 
@@ -466,23 +489,38 @@ export const messagesService = {
 // Notifications Service
 export const notificationsService = {
   getNotifications: async () => {
-    const notifications = await apiGet<Notification[]>('/notifications');
-    return notifications;
-  },
-
-  markAsRead: (notificationId: string) => {
-    const notification = notificationsStore.find(n => n.id === notificationId);
-    if (notification) {
-      notification.read = true;
-      setStoredData('neighborhub_notifications', notificationsStore);
+    try {
+      const notifications = await apiGet<Notification[]>(`/notifications?userId=${authUser.id}`);
+      return notifications;
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+      return notificationsStore;
     }
-    return Promise.resolve(notification);
   },
 
-  markAllAsRead: () => {
-    notificationsStore = notificationsStore.map(n => ({ ...n, read: true }));
-    setStoredData('neighborhub_notifications', notificationsStore);
-    return Promise.resolve(true);
+  markAsRead: async (notificationId: string) => {
+    try {
+      const response = await apiFetch(`/notifications/${notificationId}/read`, {
+        method: 'PUT'
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+      throw error;
+    }
+  },
+
+  markAllAsRead: async () => {
+    try {
+      await apiFetch('/notifications/read-all', {
+        method: 'POST',
+        body: JSON.stringify({ userId: authUser.id })
+      });
+      return true;
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+      throw error;
+    }
   },
 };
 

@@ -4,6 +4,8 @@ import supabaseNeighborhoodsRoutes from "./routes/supabaseNeighborhoodsRoutes.js
 import supabaseProposalsRoutes from "./routes/supabaseProposalsRoutes.js";
 import supabaseEventsRoutes from "./routes/supabaseEventsRoutes.js";
 import marketplaceRoutes from "./routes/marketplaceRoutes.js";
+import alertRoutes from "./routes/alertRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
 import express from 'express'
 import cors from 'cors'
 const app = express();
@@ -36,6 +38,8 @@ app.use("/", supabaseNeighborhoodsRoutes);
 app.use("/", supabaseProposalsRoutes);
 app.use("/", supabaseEventsRoutes);
 app.use("/", marketplaceRoutes);
+app.use("/", alertRoutes);
+app.use("/", notificationRoutes);
 
 // Mock data routes (for other features)
 app.use("/", mockDataRoutes);
