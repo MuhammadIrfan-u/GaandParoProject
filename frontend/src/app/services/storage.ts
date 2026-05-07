@@ -128,7 +128,7 @@ export const authService = {
 
   isAuthenticated: () => isAuthenticated,
 
-  updateProfile: (updates: Partial<User>) => {
+  updateProfile: async (updates: Partial<User>) => {
     authUser = { ...authUser, ...updates };
     await authService.syncUser(authUser);
     return authUser;
