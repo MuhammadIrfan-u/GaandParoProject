@@ -3,7 +3,6 @@ import { Link, useNavigate } from "react-router";
 import { Home as HomeIcon, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
-import { authService } from "../services/storage";
 import { toast } from "sonner";
 
 export default function Login() {
@@ -14,25 +13,42 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!email || !password) {
-      toast.error("Please fill in all fields");
-      return;
+  e.preventDefault();
+
+  if (!email || !password) {
+    toast.error("Please fill in all fields");
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const res = await fetch("http://localhost:3000/api/auth/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email, password }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.error || "Login failed");
     }
 
-    setLoading(true);
-    
-    try {
-      await authService.login(email, password);
-      toast.success("Welcome back!");
-      navigate("/home");
-    } catch (error) {
-      toast.error("Login failed. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
+    // ✅ Store token + user
+    localStorage.setItem("token", data.token);
+    localStorage.setItem("user", JSON.stringify(data.user));
+
+    toast.success("Welcome back!");
+    navigate("/home");
+  } catch (error: any) {
+    toast.error(error.message || "Login failed");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary via-indigo-600 to-purple-600 flex items-center justify-center p-4">

@@ -10,17 +10,24 @@ import { toast } from "sonner";
 export default function ChatScreen() {
   const { conversationId } = useParams();
   const navigate = useNavigate();
-  const location = useLocation();
+  const searchParams = new URLSearchParams(window.location.search);
+  const recipientId = searchParams.get('recipientId');
+  const recipientName = searchParams.get('name') || 'User';
+
   const [messages, setMessages] = useState<Message[]>([]);
-  const [newMessage, setNewMessage] = useState(location.state?.prefill || "");
-  const [loading, setLoading] = useState(true);
+  const [newMessage, setNewMessage] = useState("");
+  const [loading, setLoading] = useState(conversationId !== 'new');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const currentUser = authService.getCurrentUser();
 
   useEffect(() => {
-    loadMessages();
-    if (conversationId) {
-      messagesService.markAsRead(conversationId);
+    if (conversationId && conversationId !== 'new') {
+      loadMessages();
+      // Only mark the last message as read if it's from the other person
+      // For simplicity, we mark the whole conversation as read in the backend if possible,
+      // but the current API marks by messageId. We'll handle this later or mark specific messages.
+    } else {
+      setLoading(false);
     }
   }, [conversationId]);
 
@@ -33,10 +40,14 @@ export default function ChatScreen() {
   };
 
   const loadMessages = async () => {
-    if (!conversationId) return;
+    if (!conversationId || conversationId === 'new') return;
     try {
       const data = await messagesService.getMessages(conversationId);
       setMessages(data);
+      
+      // Mark unread messages as read
+      const unreadMessages = data.filter(m => !m.read && m.senderId !== currentUser.id);
+      unreadMessages.forEach(m => messagesService.markAsRead(m.id));
     } catch (error) {
       toast.error("Failed to load messages");
     } finally {
@@ -45,12 +56,27 @@ export default function ChatScreen() {
   };
 
   const handleSendMessage = async () => {
-    if (!conversationId || !newMessage.trim()) return;
+    if (!newMessage.trim()) return;
 
     try {
-      await messagesService.sendMessage(conversationId, newMessage);
+      const data: any = {
+        content: newMessage
+      };
+
+      if (conversationId === 'new' && recipientId) {
+        data.recipientId = recipientId;
+      } else {
+        data.conversationId = conversationId;
+      }
+
+      const result = await messagesService.sendMessage(data);
       setNewMessage("");
-      await loadMessages();
+      
+      if (conversationId === 'new') {
+        navigate(`/chat/${result.conversationId}`, { replace: true });
+      } else {
+        await loadMessages();
+      }
     } catch (error) {
       toast.error("Failed to send message");
     }
@@ -73,11 +99,11 @@ export default function ChatScreen() {
           </button>
           <div className="flex items-center gap-3 flex-1">
             <div className="bg-gradient-to-br from-primary to-indigo-600 rounded-full w-10 h-10 flex items-center justify-center text-white">
-              {messages[0]?.senderId === currentUser.id ? messages[0]?.senderAvatar : messages[1]?.senderAvatar || 'U'}
+              {conversationId === 'new' ? recipientName.charAt(0) : (messages.find(m => m.senderId !== currentUser.id)?.senderAvatar || 'U')}
             </div>
             <div>
               <h1 className="text-lg">
-                {messages[0]?.senderId === currentUser.id ? messages[0]?.sender : messages[1]?.sender || 'User'}
+                {conversationId === 'new' ? recipientName : (messages.find(m => m.senderId !== currentUser.id)?.sender || 'Chat')}
               </h1>
             </div>
           </div>

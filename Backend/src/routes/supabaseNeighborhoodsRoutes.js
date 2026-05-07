@@ -13,7 +13,8 @@ const transformNeighborhood = (data) => ({
   population: data.population,
   primaryLandmark: data.primary_landmark,
   adminId: data.admin_id,
-  leadId: data.lead_id,
+  leadId: data.admin_id, // Mapping admin_id to leadId for frontend compatibility
+  leadName: data.lead_name || 'System Admin', // Include lead name
   verified: data.verified,
   createdDate: data.created_date,
   coverPhoto: data.cover_photo,
@@ -31,31 +32,45 @@ router.get('/neighborhoods', async (req, res) => {
     
     if (neighborhoodsError) throw neighborhoodsError;
     
-    // Fetch settings for each neighborhood
+    // Fetch settings and lead name for each neighborhood
     const enrichedData = await Promise.all(
       (neighborhoods || []).map(async (n) => {
+        // Fetch settings
         const { data: settings } = await supabase
           .from('neighborhood_settings')
           .select('*')
           .eq('neighborhood_id', n.id)
           .single();
         
+        // Fetch lead name from users table
+        let leadName = 'System Admin';
+        if (n.admin_id) {
+          const { data: userData } = await supabase
+            .from('users')
+            .select('name')
+            .eq('id', n.admin_id)
+            .single();
+          
+          if (userData) leadName = userData.name;
+        }
+        
         return {
           ...n,
+          lead_name: leadName,
           settings: settings ? {
             enableMarketplace: settings.enable_marketplace ?? true,
             enableResourceExchange: settings.enable_resource_exchange ?? true,
             enablePublicAlerts: settings.enable_public_alerts ?? true,
             enableEvents: settings.enable_events ?? true,
             enableServices: settings.enable_services ?? true,
-            requireVerification: settings.require_verification ?? false,
+            require_verification: settings.require_verification ?? false,
           } : { 
             enableMarketplace: true, 
             enableResourceExchange: true,
             enablePublicAlerts: true,
             enableEvents: true,
             enableServices: true,
-            requireVerification: false,
+            require_verification: false,
           },
         };
       })
@@ -84,29 +99,42 @@ router.get('/neighborhoods/:id', async (req, res) => {
       return res.status(404).json({ message: 'Neighborhood not found' });
     }
     
-    // Fetch settings for the neighborhood
+    // Fetch settings and lead name
     const { data: settings } = await supabase
       .from('neighborhood_settings')
       .select('*')
       .eq('neighborhood_id', data.id)
       .single();
     
+    // Fetch lead name
+    let leadName = 'System Admin';
+    if (data.admin_id) {
+      const { data: userData } = await supabase
+        .from('users')
+        .select('name')
+        .eq('id', data.admin_id)
+        .single();
+      
+      if (userData) leadName = userData.name;
+    }
+
     const enrichedData = {
       ...data,
+      lead_name: leadName,
       settings: settings ? {
         enableMarketplace: settings.enable_marketplace ?? true,
         enableResourceExchange: settings.enable_resource_exchange ?? true,
         enablePublicAlerts: settings.enable_public_alerts ?? true,
         enableEvents: settings.enable_events ?? true,
         enableServices: settings.enable_services ?? true,
-        requireVerification: settings.require_verification ?? false,
+        require_verification: settings.require_verification ?? false,
       } : { 
         enableMarketplace: true, 
         enableResourceExchange: true,
         enablePublicAlerts: true,
         enableEvents: true,
         enableServices: true,
-        requireVerification: false,
+        require_verification: false,
       },
     };
     

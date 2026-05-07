@@ -28,18 +28,27 @@ const transformProposal = (data) => {
 router.get('/proposals', async (req, res) => {
   try {
     const userId = req.query.userId;
+    const status = req.query.status;
     
-    if (!userId) {
-      return res.status(400).json({ error: 'userId query parameter is required for proposal viewing' });
-    }
-
-    console.log(`Fetching proposals for user: ${userId}`);
-
-    const { data, error } = await supabase
+    let query = supabase
       .from('neighborhood_proposals')
       .select('*')
-      .eq('proposer_id', userId)
       .order('submitted_date', { ascending: false });
+
+    // If userId is provided, filter by it (for regular users viewing their own)
+    // If not provided, it's likely an admin view (returning all)
+    if (userId) {
+      console.log(`Fetching proposals for user: ${userId}`);
+      query = query.eq('proposer_id', userId);
+    } else {
+      console.log('Fetching all proposals (Admin view)');
+    }
+
+    if (status) {
+      query = query.eq('status', status);
+    }
+    
+    const { data, error } = await query;
     
     if (error) throw error;
     
@@ -167,7 +176,7 @@ router.put('/proposals/:id/status', async (req, res) => {
     // If approved, create neighborhood
     if (status === 'approved') {
       const proposal = data;
-      const { error: createError } = await supabase
+      const { data: newNeighborhood, error: createError } = await supabase
         .from('neighborhoods')
         .insert([{
           name: proposal.name,
@@ -179,13 +188,33 @@ router.put('/proposals/:id/status', async (req, res) => {
           admin_id: proposal.proposer_id,
           verified: true,
           created_date: new Date().toISOString(),
-        }]);
+        }])
+        .select()
+        .single();
       
       if (createError) {
         console.error('Error creating neighborhood from approved proposal:', createError);
-        console.error('Details: admin_id type issue - ensure neighborhoods.admin_id is VARCHAR not INTEGER');
       } else {
         console.log(`✓ Neighborhood created: "${proposal.name}", Admin: ${proposal.proposer_id}`);
+        
+        // Also create default settings for the neighborhood
+        const { error: settingsError } = await supabase
+          .from('neighborhood_settings')
+          .insert([{
+            neighborhood_id: newNeighborhood.id,
+            enable_marketplace: true,
+            enable_resource_exchange: true,
+            enable_public_alerts: true,
+            enable_events: true,
+            enable_services: true,
+            require_verification: false,
+          }]);
+        
+        if (settingsError) {
+          console.error('Error creating neighborhood settings:', settingsError);
+        } else {
+          console.log(`✓ Neighborhood settings initialized for: "${proposal.name}"`);
+        }
       }
     }
     

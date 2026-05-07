@@ -20,7 +20,9 @@ import Alerts from "./screens/Alerts";
 import Report from "./screens/Report";
 import CreatePost from "./screens/CreatePost";
 import CreateMarketplaceItem from "./screens/CreateMarketplaceItem";
+import EditMarketplaceItem from "./screens/EditMarketplaceItem";
 import CreateEvent from "./screens/CreateEvent";
+import EditEvent from "./screens/EditEvent";
 import CreateAlert from "./screens/CreateAlert";
 import ChatScreen from "./screens/ChatScreen";
 import PostDetail from "./screens/PostDetail";
@@ -36,6 +38,8 @@ import SuperAdminDashboard from "./screens/SuperAdminDashboard";
 import NeighborhoodDetail from "./screens/NeighborhoodDetail";
 import ApplyProvider from "./screens/ApplyProvider";
 import ServiceRequests from "./screens/ServiceRequests";
+import ForgotPassword from "./screens/ForgotPassword";
+import ResetPassword from "./screens/ResetPassword";
 
 export const router = createBrowserRouter([
   {
@@ -119,8 +123,16 @@ export const router = createBrowserRouter([
     Component: CreateMarketplaceItem,
   },
   {
+    path: "/edit-marketplace-item/:itemId",
+    Component: EditMarketplaceItem,
+  },
+  {
     path: "/create-event",
     Component: CreateEvent,
+  },
+  {
+    path: "/edit-event/:eventId",
+    Component: EditEvent,
   },
   {
     path: "/create-alert",
@@ -185,5 +197,13 @@ export const router = createBrowserRouter([
   {
     path: "/super-admin-dashboard",
     Component: SuperAdminDashboard,
+  },
+  {
+    path: "/forgot-password",
+    Component: ForgotPassword,
+  },
+  {
+    path: "/reset-password/:token",
+    Component: ResetPassword,
   },
 ]);

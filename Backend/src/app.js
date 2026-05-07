@@ -1,17 +1,20 @@
-import express from "express";
+import authRoutes from './routes/authRoutes.js';
 import mockDataRoutes from "./routes/mockDataRoutes.js";
 import supabaseNeighborhoodsRoutes from "./routes/supabaseNeighborhoodsRoutes.js";
 import supabaseProposalsRoutes from "./routes/supabaseProposalsRoutes.js";
 import supabaseProviderApplicationsRoutes from "./routes/supabaseProviderApplicationsRoutes.js";
 import supabaseServiceRequestsRoutes from "./routes/supabaseServiceRequestsRoutes.js";
 import supabaseServicesRoutes from "./routes/supabaseServicesRoutes.js";
-import supabasePostsRoutes from "./routes/supabasePostsRoutes.js";
-import supabaseMarketplaceRoutes from "./routes/supabaseMarketplaceRoutes.js";
-import supabaseEventsRoutes from "./routes/supabaseEventsRoutes.js";
-import supabaseAlertsRoutes from "./routes/supabaseAlertsRoutes.js";
-import supabaseMessagesRoutes from "./routes/supabaseMessagesRoutes.js";
-import supabaseUsersRoutes from "./routes/supabaseUsersRoutes.js";
+;
 
+import supabaseEventsRoutes from "./routes/supabaseEventsRoutes.js";
+import marketplaceRoutes from "./routes/marketplaceRoutes.js";
+import alertRoutes from "./routes/alertRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
+import postRoutes from "./routes/postRoutes.js";
+import messageRoutes from "./routes/messageRoutes.js";
+import express from 'express'
+import cors from 'cors'
 const app = express();
 
 app.use(express.json({ limit: '50mb' }));
@@ -24,6 +27,14 @@ app.use((req, res, next) => {
   next();
 });
 
+
+
+app.use(cors());
+app.use(express.json());
+
+// Routes
+app.use('/api/auth', authRoutes);
+
 // Home route
 app.get("/", (req, res) => {
   res.send("Welcome to Verified Neighbourhood Community - Supabase Edition");
@@ -35,12 +46,13 @@ app.use("/", supabaseProposalsRoutes);
 app.use("/", supabaseProviderApplicationsRoutes);
 app.use("/", supabaseServiceRequestsRoutes);
 app.use("/", supabaseServicesRoutes);
-app.use("/", supabasePostsRoutes);
-app.use("/", supabaseMarketplaceRoutes);
+
 app.use("/", supabaseEventsRoutes);
-app.use("/", supabaseAlertsRoutes);
-app.use("/", supabaseMessagesRoutes);
-app.use("/", supabaseUsersRoutes);
+app.use("/", marketplaceRoutes);
+app.use("/", alertRoutes);
+app.use("/", postRoutes);
+app.use("/", notificationRoutes);
+app.use("/messages", messageRoutes);
 
 // Mock data routes (for other features)
 app.use("/", mockDataRoutes);

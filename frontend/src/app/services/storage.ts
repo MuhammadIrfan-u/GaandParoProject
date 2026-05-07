@@ -77,7 +77,7 @@ let providerApplicationsStore: ProviderApplication[] = getStoredData('neighborhu
 
 // Auth State
 const localCurrentUser: User = {
-  id: 'user-1',
+  id: '42', // Changed to numeric string to match DB integer
   name: 'Alex Thompson',
   email: 'alex.thompson@email.com',
   phone: '+1 (555) 123-4567',
@@ -89,7 +89,7 @@ const localCurrentUser: User = {
   bio: 'Long-time resident of Oak Valley. Love our community!',
   isAdmin: true,
   isProvider: true,
-  neighborhoodId: 3,
+  neighborhoodId: 11, // Reset to 1 for standard test data
 };
 
 let authUser: User = localCurrentUser;
@@ -110,26 +110,14 @@ export const authService = {
     }
   },
 
-  login: async (email: string, password: string) => {
-    // Simulate login and sync
-    isAuthenticated = true;
-    authUser = localCurrentUser;
-    await authService.syncUser(authUser);
-    return authUser;
-  },
-
-  signup: async (name: string, email: string, password: string, phone: string, address: string) => {
-    isAuthenticated = true;
-    authUser = {
-      ...localCurrentUser,
-      name,
-      email,
-      phone,
-      address,
-      id: `user-${Date.now()}`
-    };
-    await authService.syncUser(authUser);
-    return authUser;
+  signup: (name: string, email: string, password: string, phone: string, address: string) => {
+    return new Promise<User>((resolve) => {
+      setTimeout(() => {
+        isAuthenticated = true;
+        authUser = localCurrentUser;
+        resolve(authUser);
+      }, 500);
+    });
   },
 
   logout: () => {
@@ -140,7 +128,7 @@ export const authService = {
 
   isAuthenticated: () => isAuthenticated,
 
-  updateProfile: async (updates: Partial<User>) => {
+  updateProfile: (updates: Partial<User>) => {
     authUser = { ...authUser, ...updates };
     await authService.syncUser(authUser);
     return authUser;
@@ -149,27 +137,61 @@ export const authService = {
 
 // Posts Service
 export const postsService = {
-  getPosts: async () => {
-    const posts = await apiGet<Post[]>('/posts');
-    return posts;
+  getPosts: async (neighborhoodId?: string | number) => {
+    try {
+      const user = authService.getCurrentUser();
+      const nId = neighborhoodId || user.neighborhoodId;
+      const posts = await apiGet<Post[]>(`/posts?neighborhoodId=${nId}`);
+      return posts;
+    } catch (error) {
+      console.error('Error fetching posts:', error);
+      return postsStore;
+    }
   },
 
   getPost: async (id: string) => {
-    const post = await apiGet<Post>(`/posts/${encodeURIComponent(id)}`);
-    return post;
+    try {
+      const post = await apiGet<Post>(`/posts/${encodeURIComponent(id)}`);
+      return post;
+    } catch (error) {
+      console.error('Error fetching post:', error);
+      return postsStore.find(p => p.id === id);
+    }
   },
 
-  createPost: async (content: string, image?: string, category?: string) => {
-    const response = await apiFetch('/posts', {
-      method: 'POST',
-      body: JSON.stringify({
-        authorId: authUser.id,
-        content,
-        image,
-        category,
-      }),
-    });
-    return response.json();
+  createPost: async (content: string, category: string) => {
+    try {
+      const response = await apiFetch('/posts', {
+        method: 'POST',
+        body: JSON.stringify({
+          authorId: authUser.id,
+          neighborhoodId: authUser.neighborhoodId,
+          content,
+          category
+        })
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error creating post:', error);
+      throw error;
+    }
+  },
+
+  updatePost: async (postId: string, content: string, category: string) => {
+    try {
+      const response = await apiFetch(`/posts/${postId}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          authorId: authUser.id,
+          content,
+          category
+        })
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error updating post:', error);
+      throw error;
+    }
   },
 
   likePost: (postId: string) => {
@@ -188,171 +210,267 @@ export const postsService = {
     return Promise.resolve(post);
   },
 
-  addComment: (postId: string, content: string) => {
-    const post = postsStore.find(p => p.id === postId);
-    if (post) {
-      const comment = {
-        id: `comment-${Date.now()}`,
-        authorId: authUser.id,
-        author: authUser.name,
-        avatar: authUser.avatar,
-        content,
-        time: 'Just now',
-      };
-      post.comments.push(comment);
-      setStoredData('neighborhub_posts', postsStore);
+  addComment: async (postId: string, content: string) => {
+    try {
+      const response = await apiFetch(`/posts/${postId}/comments`, {
+        method: 'POST',
+        body: JSON.stringify({
+          authorId: authUser.id,
+          content
+        })
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error adding comment:', error);
+      throw error;
     }
-    return Promise.resolve(post);
   },
 
-  deletePost: (postId: string) => {
-    postsStore = postsStore.filter(p => p.id !== postId);
-    setStoredData('neighborhub_posts', postsStore);
-    return Promise.resolve(true);
+  deletePost: async (postId: string) => {
+    try {
+      await apiFetch(`/posts/${postId}?authorId=${authUser.id}`, {
+        method: 'DELETE'
+      });
+      return true;
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      throw error;
+    }
   },
 };
 
 // Marketplace Service
 export const marketplaceService = {
   getItems: async () => {
-    const items = await apiGet<MarketplaceItem[]>('/marketplace');
-    return items;
+    try {
+      const items = await apiGet<MarketplaceItem[]>('/api/marketplace');
+      return items;
+    } catch (error) {
+      console.error('Error fetching marketplace listings:', error);
+      return marketplaceStore;
+    }
   },
 
   getItem: async (id: string) => {
-    const item = await apiGet<MarketplaceItem>(`/marketplace/${encodeURIComponent(id)}`);
-    return item;
-  },
-
-  createItem: async (item: Omit<MarketplaceItem, 'id' | 'sellerId' | 'seller' | 'sellerAvatar' | 'verified' | 'postedDate' | 'status'>) => {
-    const response = await apiFetch('/marketplace', {
-      method: 'POST',
-      body: JSON.stringify({
-        ...item,
-        sellerId: authUser.id,
-      }),
-    });
-    return response.json();
-  },
-
-  updateItemStatus: (itemId: string, status: MarketplaceItem['status']) => {
-    const item = marketplaceStore.find(i => i.id === itemId);
-    if (item) {
-      item.status = status;
-      setStoredData('neighborhub_marketplace', marketplaceStore);
+    try {
+      const item = await apiGet<MarketplaceItem>(`/api/marketplace/${encodeURIComponent(id)}`);
+      return item;
+    } catch (error) {
+      console.error('Error fetching listing:', error);
+      return marketplaceStore.find(i => i.id === id);
     }
-    return Promise.resolve(item);
   },
 
-  deleteItem: (itemId: string) => {
-    marketplaceStore = marketplaceStore.filter(i => i.id !== itemId);
-    setStoredData('neighborhub_marketplace', marketplaceStore);
-    return Promise.resolve(true);
+  createItem: async (item: Omit<MarketplaceItem, 'id' | 'sellerId' | 'seller' | 'sellerAvatar' | 'verified' | 'postedDate' | 'status'>): Promise<MarketplaceItem> => {
+    try {
+      const user = authService.getCurrentUser();
+      const response = await apiFetch('/api/marketplace', {
+        method: 'POST',
+        body: JSON.stringify({
+          ...item,
+          sellerId: user.id
+        })
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error creating marketplace item:', error);
+      throw error;
+    }
+  },
+
+  updateItem: async (id: string, updates: Partial<MarketplaceItem>) => {
+    try {
+      const user = authService.getCurrentUser();
+      const response = await apiFetch(`/api/marketplace/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          ...updates,
+          sellerId: user.id
+        })
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error updating marketplace item:', error);
+      throw error;
+    }
+  },
+
+  deleteItem: async (itemId: string) => {
+    try {
+      const user = authService.getCurrentUser();
+      await apiFetch(`/api/marketplace/${itemId}?sellerId=${user.id}`, {
+        method: 'DELETE'
+      });
+      return true;
+    } catch (error) {
+      console.error('Error deleting marketplace item:', error);
+      throw error;
+    }
   },
 };
-
 // Events Service
 export const eventsService = {
-  getEvents: async () => {
-    const events = await apiGet<Event[]>('/events');
-    return events;
+  getEvents: async (neighborhoodId?: string | number) => {
+    try {
+      const url = neighborhoodId ? `/events?neighborhoodId=${neighborhoodId}` : '/events';
+      const events = await apiGet<Event[]>(url);
+      return events;
+    } catch (error) {
+      console.error('Error fetching events:', error);
+      return eventsStore;
+    }
   },
 
   getEvent: async (id: string) => {
-    const event = await apiGet<Event>(`/events/${encodeURIComponent(id)}`);
-    return event;
+    try {
+      const event = await apiGet<Event>(`/events/${encodeURIComponent(id)}`);
+      return event;
+    } catch (error) {
+      console.error('Error fetching event:', error);
+      return eventsStore.find(e => e.id === id);
+    }
   },
 
   createEvent: async (event: Omit<Event, 'id' | 'organizerId' | 'organizer' | 'organizerAvatar' | 'attendees'>) => {
-    const response = await apiFetch('/events', {
-      method: 'POST',
-      body: JSON.stringify({
+    try {
+      const user = authService.getCurrentUser();
+      const payload = {
         ...event,
+        organizerId: user.id,
+        neighborhoodId: user.neighborhoodId
+      };
+
+      const response = await apiFetch('/events', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error creating event:', error);
+      // Fallback
+      const newEvent: Event = {
+        ...event,
+        id: `event-${Date.now()}`,
         organizerId: authUser.id,
-      }),
-    });
-    return response.json();
-  },
-
-  rsvpEvent: (eventId: string) => {
-    const event = eventsStore.find(e => e.id === eventId);
-    if (event) {
-      const index = event.attendees.indexOf(authUser.id);
-      if (index > -1) {
-        event.attendees.splice(index, 1);
-      } else {
-        if (!event.maxAttendees || event.attendees.length < event.maxAttendees) {
-          event.attendees.push(authUser.id);
-        }
-      }
+        organizer: authUser.name,
+        organizerAvatar: authUser.avatar,
+        attendees: [authUser.id],
+      };
+      eventsStore = [newEvent, ...eventsStore];
       setStoredData('neighborhub_events', eventsStore);
+      return newEvent;
     }
-    return Promise.resolve(event);
   },
 
-  deleteEvent: (eventId: string) => {
-    eventsStore = eventsStore.filter(e => e.id !== eventId);
-    setStoredData('neighborhub_events', eventsStore);
-    return Promise.resolve(true);
+  updateEvent: async (id: string, updates: Partial<Event>) => {
+    try {
+      const user = authService.getCurrentUser();
+      const response = await apiFetch(`/events/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ ...updates, userId: user.id })
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error updating event:', error);
+      throw error;
+    }
+  },
+
+  rsvpEvent: async (eventId: string) => {
+    try {
+      const user = authService.getCurrentUser();
+      const response = await apiFetch(`/events/${eventId}/rsvp`, {
+        method: 'POST',
+        body: JSON.stringify({ userId: user.id })
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error RSVing to event:', error);
+      // Fallback
+      const event = eventsStore.find(e => e.id === eventId);
+      if (event) {
+        const index = event.attendees.indexOf(authUser.id);
+        if (index > -1) {
+          event.attendees.splice(index, 1);
+        } else {
+          if (!event.maxAttendees || event.attendees.length < event.maxAttendees) {
+            event.attendees.push(authUser.id);
+          }
+        }
+        setStoredData('neighborhub_events', eventsStore);
+      }
+      return event;
+    }
+  },
+
+  deleteEvent: async (eventId: string) => {
+    try {
+      const user = authService.getCurrentUser();
+      await apiFetch(`/events/${eventId}?userId=${user.id}`, {
+        method: 'DELETE'
+      });
+      return true;
+    } catch (error) {
+      console.error('Error deleting event:', error);
+      // Fallback
+      eventsStore = eventsStore.filter(e => e.id !== eventId);
+      setStoredData('neighborhub_events', eventsStore);
+      return true;
+    }
   },
 };
 
 // Alerts Service
 export const alertsService = {
   getAlerts: async () => {
-    const alerts = await apiGet<Alert[]>('/alerts');
-    return alerts;
+    try {
+      const alerts = await apiGet<Alert[]>('/alerts');
+      return alerts;
+    } catch (error) {
+      console.error('Error fetching alerts:', error);
+      return alertsStore;
+    }
   },
 
   createAlert: async (alert: Omit<Alert, 'id' | 'authorId' | 'author' | 'timestamp' | 'resolved'>) => {
-    const response = await apiFetch('/alerts', {
-      method: 'POST',
-      body: JSON.stringify({
-        ...alert,
-        authorId: authUser.id,
-      }),
-    });
-    return response.json();
-  },
-
-  resolveAlert: (alertId: string) => {
-    const alert = alertsStore.find(a => a.id === alertId);
-    if (alert) {
-      alert.resolved = true;
-      setStoredData('neighborhub_alerts', alertsStore);
+    try {
+      const response = await apiFetch('/alerts', {
+        method: 'POST',
+        body: JSON.stringify({
+          ...alert,
+          authorId: authUser.id
+        })
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error creating alert:', error);
+      throw error;
     }
-    return Promise.resolve(alert);
-  },
-};
-
-// Messages Service
-export const messagesService = {
-  getConversations: async () => {
-    const conversations = await apiGet<Conversation[]>('/conversations');
-    return conversations;
   },
 
-  getMessages: async (conversationId: string) => {
-    const messages = await apiGet<Message[]>(`/messages/${encodeURIComponent(conversationId)}`);
-    return messages;
-  },
-
-  sendMessage: async (conversationId: string, content: string, image?: string) => {
-    const response = await apiFetch('/messages', {
-      method: 'POST',
-      body: JSON.stringify({ conversationId, content, image })
-    });
-    return response.json();
-  },
-
-  markAsRead: (conversationId: string) => {
-    // Keeping local for now or can implement a patch endpoint
-    const conversation = conversationsStore.find(c => c.id === conversationId);
-    if (conversation) {
-      conversation.unreadCount = 0;
-      setStoredData('neighborhub_conversations', conversationsStore);
+  resolveAlert: async (alertId: string) => {
+    try {
+      const response = await apiFetch(`/alerts/${alertId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ resolved: true })
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error resolving alert:', error);
+      throw error;
     }
-    return Promise.resolve(true);
+  },
+
+  deleteAlert: async (alertId: string) => {
+    try {
+      await apiFetch(`/alerts/${alertId}`, {
+        method: 'DELETE'
+      });
+      return true;
+    } catch (error) {
+      console.error('Error deleting alert:', error);
+      throw error;
+    }
   },
 
   getOrCreateConversation: async (providerId: string, providerName: string, providerAvatar: string) => {
@@ -364,26 +482,42 @@ export const messagesService = {
   },
 };
 
+
 // Notifications Service
 export const notificationsService = {
   getNotifications: async () => {
-    const notifications = await apiGet<Notification[]>('/notifications');
-    return notifications;
-  },
-
-  markAsRead: (notificationId: string) => {
-    const notification = notificationsStore.find(n => n.id === notificationId);
-    if (notification) {
-      notification.read = true;
-      setStoredData('neighborhub_notifications', notificationsStore);
+    try {
+      const notifications = await apiGet<Notification[]>(`/notifications?userId=${authUser.id}`);
+      return notifications;
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+      return notificationsStore;
     }
-    return Promise.resolve(notification);
   },
 
-  markAllAsRead: () => {
-    notificationsStore = notificationsStore.map(n => ({ ...n, read: true }));
-    setStoredData('neighborhub_notifications', notificationsStore);
-    return Promise.resolve(true);
+  markAsRead: async (notificationId: string) => {
+    try {
+      const response = await apiFetch(`/notifications/${notificationId}/read`, {
+        method: 'PUT'
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+      throw error;
+    }
+  },
+
+  markAllAsRead: async () => {
+    try {
+      await apiFetch('/notifications/read-all', {
+        method: 'POST',
+        body: JSON.stringify({ userId: authUser.id })
+      });
+      return true;
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+      throw error;
+    }
   },
 };
 
@@ -651,7 +785,7 @@ export const neighborhoodsService = {
     } catch (error) {
       console.error('Error updating settings in Supabase:', error);
       // Fallback to local store
-      const neighborhood = neighborhoodsStore.find(n => n.id === parseInt(neighborhoodId as string));
+      const neighborhood = neighborhoodsStore.find(n => String(n.id) === String(neighborhoodId));
       if (neighborhood) {
         neighborhood.settings = { ...neighborhood.settings, ...settings };
         setStoredData('neighborhub_neighborhoods', neighborhoodsStore);
@@ -670,7 +804,7 @@ export const neighborhoodsService = {
     } catch (error) {
       console.error('Error updating guidelines in Supabase:', error);
       // Fallback to local store
-      const neighborhood = neighborhoodsStore.find(n => n.id === neighborhoodId);
+      const neighborhood = neighborhoodsStore.find(n => String(n.id) === String(neighborhoodId));
       if (neighborhood) {
         neighborhood.guidelines = guidelines;
         setStoredData('neighborhub_neighborhoods', neighborhoodsStore);
@@ -689,7 +823,7 @@ export const neighborhoodsService = {
     } catch (error) {
       console.error('Error updating branding in Supabase:', error);
       // Fallback to local store
-      const neighborhood = neighborhoodsStore.find(n => n.id === neighborhoodId);
+      const neighborhood = neighborhoodsStore.find(n => String(n.id) === String(neighborhoodId));
       if (neighborhood) {
         if (coverPhoto) neighborhood.coverPhoto = coverPhoto;
         if (logo) neighborhood.logo = logo;
@@ -707,12 +841,12 @@ export const neighborhoodsService = {
     } catch (error) {
       console.error('Error deleting neighborhood from Supabase:', error);
       // Fallback to local store
-      neighborhoodsStore = neighborhoodsStore.filter(n => n.id !== neighborhoodId);
+      neighborhoodsStore = neighborhoodsStore.filter(n => String(n.id) !== String(neighborhoodId));
       setStoredData('neighborhub_neighborhoods', neighborhoodsStore);
     }
   },
 
-  joinNeighborhood: async (neighborhoodId: number) => {
+  joinNeighborhood: async (neighborhoodId: string | number) => {
     try {
       const user = authService.getCurrentUser();
       const response = await apiFetch(`/neighborhoods/${neighborhoodId}/join`, {
@@ -721,7 +855,7 @@ export const neighborhoodsService = {
       });
       const result = await response.json();
       // Update user's neighborhood ID
-      authUser = { ...authUser, neighborhoodId };
+      authUser = { ...authUser, neighborhoodId: parseInt(String(neighborhoodId)) };
       return result;
     } catch (error) {
       console.error('Error joining neighborhood:', error);
@@ -729,7 +863,7 @@ export const neighborhoodsService = {
     }
   },
 
-  leaveNeighborhood: async (neighborhoodId: number) => {
+  leaveNeighborhood: async (neighborhoodId: string | number) => {
     try {
       const user = authService.getCurrentUser();
       const response = await apiFetch(`/neighborhoods/${neighborhoodId}/leave`, {
@@ -766,14 +900,18 @@ export const neighborhoodsService = {
 export const proposalsService = {
   getProposals: async () => {
     try {
-      // Get only the current user's proposals
       const user = authService.getCurrentUser();
-      const proposals = await apiGet<NeighborhoodProposal[]>(`/proposals/user/${user.id}`);
+      // If admin, get all proposals. If regular user, get only their own.
+      const url = user.isAdmin ? '/proposals' : `/proposals/user/${user.id}`;
+      const proposals = await apiGet<NeighborhoodProposal[]>(url);
       return proposals;
     } catch (error) {
       console.error('Error fetching proposals from Supabase:', error);
-      // Fallback to local store - only return user's proposals
+      // Fallback to local store
       const user = authService.getCurrentUser();
+      if (user.isAdmin) {
+        return proposalsStore;
+      }
       return proposalsStore.filter(p => p.proposerId === user.id);
     }
   },
@@ -842,6 +980,67 @@ export const proposalsService = {
       return proposal;
     }
   },
+};
+
+// Messages Service
+export const messagesService = {
+  getConversations: async () => {
+    try {
+      const user = authService.getCurrentUser();
+      return await apiGet<Conversation[]>(`/messages/conversations?userId=${user.id}`);
+    } catch (error) {
+      console.error('Error fetching conversations:', error);
+      return conversationsStore;
+    }
+  },
+
+  getMessages: async (conversationId: string) => {
+    try {
+      return await apiGet<Message[]>(`/messages/${conversationId}`);
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+      return messagesStore[conversationId] || [];
+    }
+  },
+
+  sendMessage: async (data: { conversationId?: string; recipientId?: string; content: string; image?: string }) => {
+    try {
+      const user = authService.getCurrentUser();
+      const response = await apiFetch('/messages', {
+        method: 'POST',
+        body: JSON.stringify({
+          ...data,
+          senderId: user.id
+        })
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error sending message:', error);
+      throw error;
+    }
+  },
+
+  markAsRead: async (messageId: string) => {
+    try {
+      const response = await apiFetch(`/messages/${messageId}/read`, {
+        method: 'PUT'
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error marking message as read:', error);
+      throw error;
+    }
+  },
+
+  getNeighborhoodMembers: async (neighborhoodId: string | number) => {
+    try {
+      const user = authService.getCurrentUser();
+      return await apiGet<User[]>(`/messages/neighborhood/${neighborhoodId}/members?currentUserId=${user.id}`);
+    } catch (error) {
+      console.error('Error fetching neighborhood members:', error);
+      return [];
+    }
+  }
 };
 
 // Location Service

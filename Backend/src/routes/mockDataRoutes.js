@@ -54,15 +54,6 @@ router.get('/posts/:id', (req, res) => {
   res.json(post);
 });
 
-router.get('/marketplace', (req, res) => {
-  res.json(marketplaceItems);
-});
-
-router.get('/marketplace/:id', (req, res) => {
-  const item = findById(marketplaceItems, req.params.id);
-  if (!item) return res.status(404).json({ message: 'Marketplace item not found' });
-  res.json(item);
-});
 
 router.get('/services', (req, res) => {
   res.json(services);
@@ -74,15 +65,6 @@ router.get('/services/:id', (req, res) => {
   res.json(service);
 });
 
-router.get('/events', (req, res) => {
-  res.json(events);
-});
-
-router.get('/events/:id', (req, res) => {
-  const event = findById(events, req.params.id);
-  if (!event) return res.status(404).json({ message: 'Event not found' });
-  res.json(event);
-});
 
 router.get('/alerts', (req, res) => {
   res.json(alerts);
