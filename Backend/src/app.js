@@ -6,6 +6,8 @@ import supabaseEventsRoutes from "./routes/supabaseEventsRoutes.js";
 import marketplaceRoutes from "./routes/marketplaceRoutes.js";
 import alertRoutes from "./routes/alertRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
+import postRoutes from "./routes/postRoutes.js";
+import messageRoutes from "./routes/messageRoutes.js";
 import express from 'express'
 import cors from 'cors'
 const app = express();
@@ -39,7 +41,9 @@ app.use("/", supabaseProposalsRoutes);
 app.use("/", supabaseEventsRoutes);
 app.use("/", marketplaceRoutes);
 app.use("/", alertRoutes);
+app.use("/", postRoutes);
 app.use("/", notificationRoutes);
+app.use("/messages", messageRoutes);
 
 // Mock data routes (for other features)
 app.use("/", mockDataRoutes);

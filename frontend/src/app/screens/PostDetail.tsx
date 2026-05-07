@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router";
-import { ArrowLeft, Heart, MessageCircle, Share2, Send } from "lucide-react";
+import { ArrowLeft, Heart, MessageCircle, Share2, Send, Edit2, Trash2, X } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Textarea } from "../components/ui/textarea";
 import { postsService, authService } from "../services/storage";
@@ -13,6 +13,9 @@ export default function PostDetail() {
   const [post, setPost] = useState<Post | null>(null);
   const [comment, setComment] = useState("");
   const [loading, setLoading] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState("");
+  const [editCategory, setEditCategory] = useState("");
   const currentUser = authService.getCurrentUser();
 
   useEffect(() => {
@@ -53,6 +56,38 @@ export default function PostDetail() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!postId) return;
+    if (!window.confirm("Are you sure you want to delete this post?")) return;
+    
+    try {
+      await postsService.deletePost(postId);
+      toast.success("Post deleted");
+      navigate("/home");
+    } catch (error) {
+      toast.error("Failed to delete post");
+    }
+  };
+
+  const handleUpdate = async () => {
+    if (!postId || !editContent.trim()) return;
+    try {
+      await postsService.updatePost(postId, editContent, editCategory);
+      setIsEditing(false);
+      await loadPost();
+      toast.success("Post updated!");
+    } catch (error) {
+      toast.error("Failed to update post");
+    }
+  };
+
+  const startEditing = () => {
+    if (!post) return;
+    setEditContent(post.content);
+    setEditCategory(post.category);
+    setIsEditing(true);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -89,21 +124,50 @@ export default function PostDetail() {
               {post.avatar}
             </div>
             <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <span>{post.author}</span>
-                {post.verified && (
-                  <div className="bg-blue-500 rounded-full w-4 h-4 flex items-center justify-center">
-                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <div className="flex items-center gap-2">
+                  <span>{post.author}</span>
+                  {post.verified && (
+                    <div className="bg-blue-500 rounded-full w-4 h-4 flex items-center justify-center">
+                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  )}
+                </div>
+                {post.authorId === currentUser.id && (
+                  <div className="flex gap-1">
+                    <button onClick={startEditing} className="p-2 hover:bg-muted rounded-full text-muted-foreground">
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button onClick={handleDelete} className="p-2 hover:bg-muted rounded-full text-red-500">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 )}
               </div>
               <div className="text-sm text-muted-foreground mb-3">{post.time}</div>
-              <span className={`inline-block px-3 py-1 rounded-full text-xs mb-3 ${post.categoryColor}`}>
-                {post.category}
-              </span>
-              <p className="text-sm leading-relaxed mb-4">{post.content}</p>
+              
+              {isEditing ? (
+                <div className="space-y-3 mb-4">
+                  <Textarea
+                    value={editContent}
+                    onChange={(e) => setEditContent(e.target.value)}
+                    className="min-h-[120px] resize-none"
+                  />
+                  <div className="flex gap-2">
+                    <Button onClick={handleUpdate} size="sm">Save</Button>
+                    <Button onClick={() => setIsEditing(false)} variant="ghost" size="sm">Cancel</Button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <span className={`inline-block px-3 py-1 rounded-full text-xs mb-3 ${post.categoryColor}`}>
+                    {post.category}
+                  </span>
+                  <p className="text-sm leading-relaxed mb-4">{post.content}</p>
+                </>
+              )}
 
               {/* Actions */}
               <div className="flex items-center gap-4 pt-2 border-t border-border">

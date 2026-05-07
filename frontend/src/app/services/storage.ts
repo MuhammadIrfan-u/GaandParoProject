@@ -129,34 +129,61 @@ export const authService = {
 
 // Posts Service
 export const postsService = {
-  getPosts: async () => {
-    const posts = await apiGet<Post[]>('/posts');
-    return posts;
+  getPosts: async (neighborhoodId?: string | number) => {
+    try {
+      const user = authService.getCurrentUser();
+      const nId = neighborhoodId || user.neighborhoodId;
+      const posts = await apiGet<Post[]>(`/posts?neighborhoodId=${nId}`);
+      return posts;
+    } catch (error) {
+      console.error('Error fetching posts:', error);
+      return postsStore;
+    }
   },
 
   getPost: async (id: string) => {
-    const post = await apiGet<Post>(`/posts/${encodeURIComponent(id)}`);
-    return post;
+    try {
+      const post = await apiGet<Post>(`/posts/${encodeURIComponent(id)}`);
+      return post;
+    } catch (error) {
+      console.error('Error fetching post:', error);
+      return postsStore.find(p => p.id === id);
+    }
   },
 
-  createPost: (content: string, category: string) => {
-    const newPost: Post = {
-      id: `post-${Date.now()}`,
-      authorId: authUser.id,
-      author: authUser.name,
-      avatar: authUser.avatar,
-      verified: authUser.verified,
-      time: 'Just now',
-      content,
-      likes: 0,
-      comments: [],
-      category,
-      categoryColor: getCategoryColor(category),
-      likedBy: [],
-    };
-    postsStore = [newPost, ...postsStore];
-    setStoredData('neighborhub_posts', postsStore);
-    return Promise.resolve(newPost);
+  createPost: async (content: string, category: string) => {
+    try {
+      const response = await apiFetch('/posts', {
+        method: 'POST',
+        body: JSON.stringify({
+          authorId: authUser.id,
+          neighborhoodId: authUser.neighborhoodId,
+          content,
+          category
+        })
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error creating post:', error);
+      throw error;
+    }
+  },
+
+  updatePost: async (postId: string, content: string, category: string) => {
+    try {
+      const response = await apiFetch(`/posts/${postId}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          authorId: authUser.id,
+          content,
+          category
+        })
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error updating post:', error);
+      throw error;
+    }
   },
 
   likePost: (postId: string) => {
@@ -175,27 +202,32 @@ export const postsService = {
     return Promise.resolve(post);
   },
 
-  addComment: (postId: string, content: string) => {
-    const post = postsStore.find(p => p.id === postId);
-    if (post) {
-      const comment = {
-        id: `comment-${Date.now()}`,
-        authorId: authUser.id,
-        author: authUser.name,
-        avatar: authUser.avatar,
-        content,
-        time: 'Just now',
-      };
-      post.comments.push(comment);
-      setStoredData('neighborhub_posts', postsStore);
+  addComment: async (postId: string, content: string) => {
+    try {
+      const response = await apiFetch(`/posts/${postId}/comments`, {
+        method: 'POST',
+        body: JSON.stringify({
+          authorId: authUser.id,
+          content
+        })
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error adding comment:', error);
+      throw error;
     }
-    return Promise.resolve(post);
   },
 
-  deletePost: (postId: string) => {
-    postsStore = postsStore.filter(p => p.id !== postId);
-    setStoredData('neighborhub_posts', postsStore);
-    return Promise.resolve(true);
+  deletePost: async (postId: string) => {
+    try {
+      await apiFetch(`/posts/${postId}?authorId=${authUser.id}`, {
+        method: 'DELETE'
+      });
+      return true;
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      throw error;
+    }
   },
 };
 
@@ -434,57 +466,6 @@ export const alertsService = {
   },
 };
 
-// Messages Service
-export const messagesService = {
-  getConversations: async () => {
-    const conversations = await apiGet<Conversation[]>('/conversations');
-    return conversations;
-  },
-
-  getMessages: async (conversationId: string) => {
-    const messages = await apiGet<Message[]>(`/conversations/${encodeURIComponent(conversationId)}/messages`);
-    return messages;
-  },
-
-  sendMessage: (conversationId: string, content: string) => {
-    const newMessage: Message = {
-      id: `msg-${Date.now()}`,
-      conversationId,
-      senderId: authUser.id,
-      sender: authUser.name,
-      senderAvatar: authUser.avatar,
-      content,
-      timestamp: new Date().toISOString(),
-      read: false,
-    };
-
-    if (!messagesStore[conversationId]) {
-      messagesStore[conversationId] = [];
-    }
-    messagesStore[conversationId].push(newMessage);
-
-    // Update conversation
-    const conversation = conversationsStore.find(c => c.id === conversationId);
-    if (conversation) {
-      conversation.lastMessage = content;
-      conversation.lastMessageTime = 'Just now';
-    }
-
-    setStoredData('neighborhub_messages', messagesStore);
-    setStoredData('neighborhub_conversations', conversationsStore);
-
-    return Promise.resolve(newMessage);
-  },
-
-  markAsRead: (conversationId: string) => {
-    const conversation = conversationsStore.find(c => c.id === conversationId);
-    if (conversation) {
-      conversation.unreadCount = 0;
-      setStoredData('neighborhub_conversations', conversationsStore);
-    }
-    return Promise.resolve(true);
-  },
-};
 
 // Notifications Service
 export const notificationsService = {
@@ -725,7 +706,7 @@ export const neighborhoodsService = {
     }
   },
 
-  joinNeighborhood: async (neighborhoodId: number) => {
+  joinNeighborhood: async (neighborhoodId: string | number) => {
     try {
       const user = authService.getCurrentUser();
       const response = await apiFetch(`/neighborhoods/${neighborhoodId}/join`, {
@@ -734,7 +715,7 @@ export const neighborhoodsService = {
       });
       const result = await response.json();
       // Update user's neighborhood ID
-      authUser = { ...authUser, neighborhoodId };
+      authUser = { ...authUser, neighborhoodId: parseInt(String(neighborhoodId)) };
       return result;
     } catch (error) {
       console.error('Error joining neighborhood:', error);
@@ -742,7 +723,7 @@ export const neighborhoodsService = {
     }
   },
 
-  leaveNeighborhood: async (neighborhoodId: number) => {
+  leaveNeighborhood: async (neighborhoodId: string | number) => {
     try {
       const user = authService.getCurrentUser();
       const response = await apiFetch(`/neighborhoods/${neighborhoodId}/leave`, {
@@ -859,6 +840,67 @@ export const proposalsService = {
       return proposal;
     }
   },
+};
+
+// Messages Service
+export const messagesService = {
+  getConversations: async () => {
+    try {
+      const user = authService.getCurrentUser();
+      return await apiGet<Conversation[]>(`/messages/conversations?userId=${user.id}`);
+    } catch (error) {
+      console.error('Error fetching conversations:', error);
+      return conversationsStore;
+    }
+  },
+
+  getMessages: async (conversationId: string) => {
+    try {
+      return await apiGet<Message[]>(`/messages/${conversationId}`);
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+      return messagesStore[conversationId] || [];
+    }
+  },
+
+  sendMessage: async (data: { conversationId?: string; recipientId?: string; content: string; image?: string }) => {
+    try {
+      const user = authService.getCurrentUser();
+      const response = await apiFetch('/messages', {
+        method: 'POST',
+        body: JSON.stringify({
+          ...data,
+          senderId: user.id
+        })
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error sending message:', error);
+      throw error;
+    }
+  },
+
+  markAsRead: async (messageId: string) => {
+    try {
+      const response = await apiFetch(`/messages/${messageId}/read`, {
+        method: 'PUT'
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error marking message as read:', error);
+      throw error;
+    }
+  },
+
+  getNeighborhoodMembers: async (neighborhoodId: string | number) => {
+    try {
+      const user = authService.getCurrentUser();
+      return await apiGet<User[]>(`/messages/neighborhood/${neighborhoodId}/members?currentUserId=${user.id}`);
+    } catch (error) {
+      console.error('Error fetching neighborhood members:', error);
+      return [];
+    }
+  }
 };
 
 // Location Service

@@ -258,18 +258,20 @@ create sequence "public"."verification_requests_id_seq";
 
 
 
-  create table "public"."posts" (
-    "id" integer not null default nextval('public.posts_id_seq'::regclass),
-    "author_id" character varying,
-    "content" text,
-    "image" text,
-    "likes" integer default 0,
-    "category" character varying(50),
-    "is_flagged" boolean default false,
-    "flag_reason" character varying(50),
-    "moderation_status" character varying(20) default 'approved'::character varying
-      );
-
+create table public.posts (
+  id serial not null,
+  author_id character varying null,
+  content text null,
+  image text null,
+  likes integer null default 0,
+  category character varying(50) null,
+  is_flagged boolean null default false,
+  flag_reason character varying(50) null,
+  moderation_status character varying(20) null default 'approved'::character varying,
+  neighborhod_id integer null,
+  constraint posts_pkey primary key (id),
+  constraint posts_neighborhod_id_fkey foreign KEY (neighborhod_id) references neighborhoods (id)
+) TABLESPACE pg_default;
 
 
   create table "public"."provider_applications" (
