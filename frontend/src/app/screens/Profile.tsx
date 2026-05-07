@@ -1,10 +1,10 @@
+
 import { useNavigate, Link } from "react-router";
 import { Shield, Award, Settings as SettingsIcon, Bell, MessageCircle, ChevronRight, MapPin, AlertCircle, TrendingUp, Star, User, Mail, Phone, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "../components/ui/button";
 import { BottomNav } from "../components/BottomNav";
 import { authService } from "../services/storage";
-
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -121,6 +121,7 @@ export default function Profile() {
             </Link>
           ))}
         </div>
+
 
         {/* Super Admin Dashboard Link */}
         {currentUser.isAdmin && (

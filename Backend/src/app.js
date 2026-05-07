@@ -2,6 +2,11 @@ import authRoutes from './routes/authRoutes.js';
 import mockDataRoutes from "./routes/mockDataRoutes.js";
 import supabaseNeighborhoodsRoutes from "./routes/supabaseNeighborhoodsRoutes.js";
 import supabaseProposalsRoutes from "./routes/supabaseProposalsRoutes.js";
+import supabaseProviderApplicationsRoutes from "./routes/supabaseProviderApplicationsRoutes.js";
+import supabaseServiceRequestsRoutes from "./routes/supabaseServiceRequestsRoutes.js";
+import supabaseServicesRoutes from "./routes/supabaseServicesRoutes.js";
+;
+
 import supabaseEventsRoutes from "./routes/supabaseEventsRoutes.js";
 import marketplaceRoutes from "./routes/marketplaceRoutes.js";
 import alertRoutes from "./routes/alertRoutes.js";
@@ -38,6 +43,10 @@ app.get("/", (req, res) => {
 // Supabase routes (neighborhoods and proposals) - MUST BE BEFORE MOCK DATA ROUTES
 app.use("/", supabaseNeighborhoodsRoutes);
 app.use("/", supabaseProposalsRoutes);
+app.use("/", supabaseProviderApplicationsRoutes);
+app.use("/", supabaseServiceRequestsRoutes);
+app.use("/", supabaseServicesRoutes);
+
 app.use("/", supabaseEventsRoutes);
 app.use("/", marketplaceRoutes);
 app.use("/", alertRoutes);
