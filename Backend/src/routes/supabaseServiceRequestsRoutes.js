@@ -52,23 +52,82 @@ router.post('/service-requests', async (req, res) => {
 router.get('/service-requests', async (req, res) => {
   try {
     const { userId, providerId } = req.query;
-    let query = supabase.from('service_requests').select('*').order('request_date', { ascending: false });
+    
+    // Join with services to get more info
+    let query = supabase
+      .from('service_requests')
+      .select(`
+        *,
+        services!service_requests_service_id_fkey (
+          title,
+          provider_id,
+          users!services_provider_id_fkey (
+            name
+          )
+        )
+      `)
+      .order('request_date', { ascending: false });
     
     if (userId) {
       const numericUserId = parseInt(String(userId).replace(/\D/g, ''), 10) || 0;
       query = query.eq('user_id', numericUserId);
     }
+
+    if (providerId) {
+      const numericProviderId = parseInt(String(providerId).replace(/\D/g, ''), 10) || 0;
+      query = query.eq('services.provider_id', numericProviderId);
+    }
     
-    // For providerId, we would normally join with services, but we can do that in the frontend 
-    // or pass multiple serviceIds. For simplicity, we just return all if providerId is passed and filter in frontend, 
-    // OR filter by service_id if provided.
     const { data, error } = await query;
     
     if (error) throw error;
     
-    res.json((data || []).map(transformRequest));
+    // Transform and flatten the data
+    const transformedData = (data || []).map(item => {
+      const base = transformRequest(item);
+      return {
+        ...base,
+        serviceName: item.services?.title || 'Unknown Service',
+        provider: item.services?.users?.name || 'Unknown Provider',
+        providerId: item.services?.provider_id
+      };
+    });
+
+    // If providerId was filtered, we need to manually filter out nulls because of how Supabase join filtering works 
+    // (Supabase returns the main record even if the joined record doesn't match the eq filter unless we use inner join)
+    let finalData = transformedData;
+    if (providerId) {
+      finalData = transformedData.filter(item => item.providerId === parseInt(providerId));
+    }
+    
+    res.json(finalData);
   } catch (error) {
     console.error('Error fetching service requests:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.put('/service-requests/:id/status', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    
+    if (!['pending', 'accepted', 'completed', 'rejected', 'cancelled'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+    
+    const { data, error } = await supabase
+      .from('service_requests')
+      .update({ status })
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    
+    res.json(transformRequest(data));
+  } catch (error) {
+    console.error('Error updating service request status:', error);
     res.status(500).json({ error: error.message });
   }
 });

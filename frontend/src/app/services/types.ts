@@ -77,10 +77,11 @@ export interface ServiceRequest {
   serviceId: string;
   serviceName: string;
   provider: string;
-  status: 'pending' | 'accepted' | 'completed' | 'cancelled';
+  status: 'pending' | 'accepted' | 'completed' | 'cancelled' | 'rejected';
   requestDate: string;
   scheduledDate?: string;
   description: string;
+  providerId?: string | number;
 }
 
 export interface Event {

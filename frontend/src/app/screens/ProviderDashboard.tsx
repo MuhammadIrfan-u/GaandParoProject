@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { TrendingUp, Star, CheckCircle2, MoreVertical, LayoutGrid, List, Trash2, Edit2, X } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { servicesService, authService } from "../services/storage";
-import { Service } from "../services/types";
+import { Service, ServiceRequest } from "../services/types";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Switch } from "../components/ui/switch";
@@ -14,6 +14,7 @@ const COLORS = ["#4f46e5", "#e2e8f0"];
 
 export default function ProviderDashboard() {
   const [myServices, setMyServices] = useState<Service[]>([]);
+  const [receivedRequests, setReceivedRequests] = useState<ServiceRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
@@ -21,16 +22,25 @@ export default function ProviderDashboard() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   useEffect(() => {
-    loadMyServices();
+    loadData();
   }, []);
 
-  const loadMyServices = async () => {
+  const loadData = async () => {
+    setLoading(true);
     try {
       const user = authService.getCurrentUser();
+      
+      // Load Services
       const allServices = await servicesService.getServices();
-      // Filter services provided by the current user
-      const filtered = allServices.filter(s => s.provider === user.name);
-      setMyServices(filtered);
+      const filteredServices = allServices.filter(s => s.provider === user.name || s.providerId === user.id);
+      setMyServices(filteredServices);
+
+      // Load Requests
+      const requests = await servicesService.getProviderRequests(user.id);
+      setReceivedRequests(requests);
+    } catch (error) {
+      console.error("Error loading provider data:", error);
+      toast.error("Failed to load dashboard data");
     } finally {
       setLoading(false);
     }
@@ -54,8 +64,28 @@ export default function ProviderDashboard() {
     toast.success(`Service is now ${newStatus}`);
   };
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending': return 'bg-yellow-100 text-yellow-700';
+      case 'accepted': return 'bg-blue-100 text-blue-700';
+      case 'completed': return 'bg-green-100 text-green-700';
+      case 'rejected': return 'bg-red-100 text-red-700';
+      default: return 'bg-gray-100 text-gray-700';
+    }
+  };
+
+  const handleRequestAction = async (requestId: string, action: 'accepted' | 'rejected') => {
+    try {
+      await servicesService.updateRequestStatus(requestId, action);
+      setReceivedRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: action } : r));
+      toast.success(`Request ${action === 'accepted' ? 'accepted' : 'rejected'}`);
+    } catch (error) {
+      toast.error("Failed to update request status");
+    }
+  };
+
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Metrics Section */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="glass-card rounded-3xl overflow-hidden border-none shadow-xl">
@@ -110,10 +140,86 @@ export default function ProviderDashboard() {
         </Card>
       </div>
 
+      {/* Incoming Requests Section */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xl font-black text-foreground flex items-center gap-2">
+            Incoming Requests
+            {receivedRequests.filter(r => r.status === 'pending').length > 0 && (
+              <span className="bg-primary text-white text-[10px] px-2 py-0.5 rounded-full">
+                {receivedRequests.filter(r => r.status === 'pending').length}
+              </span>
+            )}
+          </h3>
+          <Button variant="ghost" size="sm" className="text-primary text-xs font-bold" onClick={() => loadData()}>
+            Refresh
+          </Button>
+        </div>
+
+        {receivedRequests.length === 0 ? (
+          <Card className="border-dashed border-2 border-muted bg-muted/20 rounded-3xl p-8 text-center">
+            <p className="text-muted-foreground text-sm font-medium">No pending requests at the moment.</p>
+          </Card>
+        ) : (
+          <div className="space-y-3">
+            {receivedRequests.map((request) => (
+              <Card key={request.id} className="glass-card rounded-3xl border-none shadow-md overflow-hidden">
+                <CardContent className="p-5">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h4 className="font-bold text-lg">{request.serviceName}</h4>
+                      <p className="text-xs text-muted-foreground font-medium uppercase tracking-tighter">
+                        From User #{request.userId} • {new Date(request.requestDate).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase ${getStatusColor(request.status)}`}>
+                      {request.status}
+                    </span>
+                  </div>
+                  
+                  <div className="bg-black/5 rounded-2xl p-4 mb-4">
+                    <p className="text-sm text-foreground/80 leading-relaxed italic">"{request.description}"</p>
+                  </div>
+
+                  {request.status === 'pending' ? (
+                    <div className="flex gap-2">
+                      <Button 
+                        size="sm" 
+                        className="flex-1 rounded-xl bg-primary hover:bg-primary/90 font-bold"
+                        onClick={() => handleRequestAction(request.id, 'accepted')}
+                      >
+                        Accept Request
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="flex-1 rounded-xl font-bold border-red-200 text-red-600 hover:bg-red-50"
+                        onClick={() => handleRequestAction(request.id, 'rejected')}
+                      >
+                        Decline
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="w-full rounded-xl font-bold"
+                      onClick={() => toast.info("Messaging feature coming soon!")}
+                    >
+                      Message Client
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Active Listings List */}
       <div className="space-y-4">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-lg font-bold">My Active Services</h3>
+          <h3 className="text-xl font-black text-foreground">My Service Listings</h3>
           <div className="flex gap-2 bg-muted/50 p-1 rounded-xl shadow-inner">
             <Button 
               variant={viewMode === "grid" ? "default" : "ghost"} 
@@ -151,7 +257,7 @@ export default function ProviderDashboard() {
                       <CheckCircle2 className={`${viewMode === "list" ? "w-6 h-6" : "w-8 h-8"} text-primary`} />
                     </div>
                     
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 text-left">
                       <h4 className="font-bold text-sm truncate">{service.title}</h4>
                       <div className={`flex items-center gap-3 mt-1 ${viewMode === "grid" ? "justify-center" : ""}`}>
                         <span className="text-xs font-bold text-primary">{service.price.split('/')[0]}</span>
@@ -182,7 +288,6 @@ export default function ProviderDashboard() {
                         <AnimatePresence>
                           {activeMenuId === service.id && (
                             <>
-                              {/* Backdrop for easy closing */}
                               <div 
                                 className="fixed inset-0 z-40" 
                                 onClick={() => setActiveMenuId(null)}
@@ -225,13 +330,13 @@ export default function ProviderDashboard() {
         </div>
       </div>
 
-      <AddServiceDialog onServiceAdded={loadMyServices} disabled={myServices.length >= 5} />
+      <AddServiceDialog onServiceAdded={loadData} disabled={myServices.length >= 5} />
       
       <EditServiceDialog 
         service={editingService} 
         open={isEditDialogOpen} 
         onOpenChange={setIsEditDialogOpen} 
-        onServiceUpdated={loadMyServices} 
+        onServiceUpdated={loadData} 
       />
     </div>
   );

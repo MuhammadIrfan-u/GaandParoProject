@@ -26,10 +26,17 @@ const transformService = (data) => {
 // Get all services
 router.get('/services', async (req, res) => {
   try {
-    const { data, error } = await supabase
+    const { neighborhoodId } = req.query;
+    let query = supabase
       .from('services')
       .select('*, users(name, avatar, verified)')
       .order('id', { ascending: false });
+    
+    if (neighborhoodId) {
+      query = query.eq('neighborhood_id', neighborhoodId);
+    }
+    
+    const { data, error } = await query;
     
     if (error) throw error;
     

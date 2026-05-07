@@ -532,13 +532,20 @@ export const analyticsService = {
 // Services Service
 export const servicesService = {
   getServices: async () => {
-    const backendServices = await apiGet<Service[]>('/services');
-    // Merge backend services with overrides
-    const mergedBackend = backendServices.map(s => ({
-      ...s,
-      ...(serviceOverridesStore[s.id] || {})
-    }));
-    return [...servicesStore, ...mergedBackend];
+    try {
+      const user = authService.getCurrentUser();
+      const nId = user.neighborhoodId || 1;
+      const backendServices = await apiGet<Service[]>(`/services?neighborhoodId=${nId}`);
+      // Merge backend services with overrides
+      const mergedBackend = backendServices.map(s => ({
+        ...s,
+        ...(serviceOverridesStore[s.id] || {})
+      }));
+      return [...servicesStore, ...mergedBackend];
+    } catch (error) {
+      console.error('Error fetching services:', error);
+      return servicesStore;
+    }
   },
 
   getService: async (id: string) => {
@@ -597,27 +604,31 @@ export const servicesService = {
     }
   },
 
-  getProviderRequests: async (providerName: string) => {
+  getProviderRequests: async (providerId: string | number) => {
     try {
-      const services = await servicesService.getServices();
-      const myServices = services.filter(s => s.provider === providerName);
-      const myServiceIds = myServices.map(s => s.id);
-
-      const allRequests = await apiGet<ServiceRequest[]>('/service-requests');
-      // For local fallback compatibility, handle string vs int IDs properly 
-      return allRequests.filter(r => myServiceIds.includes(String(r.serviceId)) || myServiceIds.includes(r.serviceId));
+      return await apiGet<ServiceRequest[]>(`/service-requests?providerId=${providerId}`);
     } catch (error) {
-      return serviceRequestsStore.filter(r => r.provider === providerName);
+      console.error('Error fetching provider requests:', error);
+      return serviceRequestsStore.filter(r => String(r.providerId) === String(providerId));
     }
   },
 
-  updateRequestStatus: (requestId: string, status: ServiceRequest['status']) => {
-    const request = serviceRequestsStore.find(r => r.id === requestId);
-    if (request) {
-      request.status = status;
-      setStoredData('neighborhub_service_requests', serviceRequestsStore);
+  updateRequestStatus: async (requestId: string | number, status: ServiceRequest['status']) => {
+    try {
+      const response = await apiFetch(`/service-requests/${requestId}/status`, {
+        method: 'PUT',
+        body: JSON.stringify({ status })
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error updating request status:', error);
+      const request = serviceRequestsStore.find(r => String(r.id) === String(requestId));
+      if (request) {
+        request.status = status;
+        setStoredData('neighborhub_service_requests', serviceRequestsStore);
+      }
+      return request;
     }
-    return Promise.resolve(request);
   },
 
   createService: async (service: any) => {

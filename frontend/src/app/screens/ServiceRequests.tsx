@@ -23,7 +23,7 @@ export default function ServiceRequests() {
     try {
       let data: ServiceRequest[] = [];
       if (isProvider) {
-        data = await servicesService.getProviderRequests(currentUser.name);
+        data = await servicesService.getProviderRequests(currentUser.id);
       } else {
         data = await servicesService.getMyRequests();
       }
