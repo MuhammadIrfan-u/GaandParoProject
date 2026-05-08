@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
+import { useNavigate } from 'react-router';
 import { Button } from './ui/button';
 import { AlertCircle, CheckCircle, MapPin, Loader2, X, XCircle } from 'lucide-react';
 
@@ -38,11 +39,15 @@ export const JoinNeighborhoodModal: React.FC<JoinNeighborhoodModalProps> = ({
     neighborhoodName,
     onJoinSuccess,
 }) => {
+    const navigate = useNavigate();
     const [state, setState] = useState<ModalState>('idle');
     const [userLocation, setUserLocation] = useState<LocationData | null>(null);
     const [neighborhoodLocation, setNeighborhoodLocation] = useState<NeighborhoodLocationData | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [errorCode, setErrorCode] = useState<string | null>(null);
+    const [currentNeighborhoodId, setCurrentNeighborhoodId] = useState<number | null>(null);
     const [coordinates, setCoordinates] = useState<{ latitude: number; longitude: number } | null>(null);
+    const [isProcessing, setIsProcessing] = useState(false);
 
     const handleGetLocation = () => {
         setState('requesting-location');
@@ -79,7 +84,7 @@ export const JoinNeighborhoodModal: React.FC<JoinNeighborhoodModalProps> = ({
             const currentUserId = localStorage.getItem('user_id') || '11111111-1111-1111-1111-111111111111';
 
             const response = await fetch(
-                `http://localhost:3000/api/neighborhoods/${neighborhoodId}/join`,
+                `http://localhost:3000/neighborhoods/${neighborhoodId}/join`,
                 {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -99,7 +104,9 @@ export const JoinNeighborhoodModal: React.FC<JoinNeighborhoodModalProps> = ({
 
             // 400 = already a member elsewhere
             if (response.status === 400 && data.code === 'ALREADY_MEMBER_ELSEWHERE') {
-                setError(data.error || 'You are already a member of another neighborhood. Please leave it first.');
+                setError(data.error || 'You are already a member of another neighborhood.');
+                setErrorCode(data.code);
+                setCurrentNeighborhoodId(data.currentNeighborhoodId);
                 setState('error');
                 return;
             }
@@ -132,6 +139,8 @@ export const JoinNeighborhoodModal: React.FC<JoinNeighborhoodModalProps> = ({
         setUserLocation(null);
         setNeighborhoodLocation(null);
         setError(null);
+        setErrorCode(null);
+        setCurrentNeighborhoodId(null);
         setCoordinates(null);
         setState('idle');
     };
@@ -305,11 +314,58 @@ export const JoinNeighborhoodModal: React.FC<JoinNeighborhoodModalProps> = ({
                                     <div className="flex items-start gap-3">
                                         <AlertCircle size={20} className="text-red-600 flex-shrink-0 mt-0.5" />
                                         <div>
-                                            <p className="font-bold text-red-900">Something went wrong</p>
+                                            <p className="font-bold text-red-900">
+                                                {errorCode === 'ALREADY_MEMBER_ELSEWHERE' ? 'Membership Conflict' : 'Something went wrong'}
+                                            </p>
                                             <p className="text-sm text-red-800 mt-1">{error}</p>
                                         </div>
                                     </div>
                                 </div>
+
+                                {errorCode === 'ALREADY_MEMBER_ELSEWHERE' && (
+                                    <div className="space-y-2">
+                                        {currentNeighborhoodId && (
+                                            <Button
+                                                onClick={() => {
+                                                    handleClose();
+                                                    navigate(`/neighborhood/${currentNeighborhoodId}`);
+                                                }}
+                                                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white"
+                                            >
+                                                View My Neighborhood
+                                            </Button>
+                                        )}
+                                        <Button
+                                            onClick={async () => {
+                                                try {
+                                                    setIsProcessing(true);
+                                                    const userId = localStorage.getItem('user_id') || '11111111-1111-1111-1111-111111111111';
+                                                    const res = await fetch(`http://localhost:3000/neighborhoods/leave`, {
+                                                        method: 'POST',
+                                                        headers: { 'Content-Type': 'application/json' },
+                                                        body: JSON.stringify({ userId }),
+                                                    });
+                                                    if (res.ok) {
+                                                        handleRetry(); // Go back to idle to let them join this one now
+                                                    } else {
+                                                        const d = await res.json();
+                                                        setError(d.error || 'Failed to leave neighborhood');
+                                                    }
+                                                } catch (err) {
+                                                    setError('Network error');
+                                                } finally {
+                                                    setIsProcessing(false);
+                                                }
+                                            }}
+                                            disabled={isProcessing}
+                                            variant="outline"
+                                            className="w-full"
+                                        >
+                                            {isProcessing ? 'Leaving...' : 'Leave My Neighborhood'}
+                                        </Button>
+                                    </div>
+                                )}
+
                                 <div className="flex gap-2">
                                     <Button onClick={handleRetry} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white">
                                         Try Again

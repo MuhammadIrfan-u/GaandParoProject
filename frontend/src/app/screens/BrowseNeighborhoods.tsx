@@ -152,6 +152,48 @@ export default function BrowseNeighborhoods() {
       </div>
 
       <div className="max-w-lg mx-auto px-4 py-6">
+        {/* My Current Neighborhood Section */}
+        {userNeighborhood && !viewMyProposals && (
+          <div className="mb-8">
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4 px-1">Your Neighborhood</h2>
+            <div className="bg-gradient-to-br from-indigo-500 to-primary rounded-2xl p-6 shadow-md text-white">
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="text-xl font-bold">{userNeighborhood.name}</h3>
+                    {userNeighborhood.verified && (
+                      <div className="bg-white/20 backdrop-blur-md rounded-full p-1">
+                        <Shield className="w-3 h-3 text-white" />
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-indigo-100 text-sm line-clamp-2">{userNeighborhood.description}</p>
+                </div>
+                <div className="bg-white/10 backdrop-blur-md rounded-xl p-3">
+                  <HomeIcon className="w-6 h-6 text-white" />
+                </div>
+              </div>
+              
+              <div className="flex gap-3">
+                <Link to={`/neighborhood/${userNeighborhood.id}`} className="flex-1">
+                  <Button className="w-full bg-white text-primary hover:bg-indigo-50 font-semibold">
+                    View My Neighborhood
+                  </Button>
+                </Link>
+                <Button 
+                  onClick={handleLeaveNeighborhood}
+                  disabled={joiningNeighborhoodId === userNeighborhood.id}
+                  variant="outline" 
+                  className="bg-transparent border-white/30 text-white hover:bg-white/10"
+                >
+                  {joiningNeighborhoodId === userNeighborhood.id ? "Leaving..." : "Leave"}
+                </Button>
+              </div>
+            </div>
+            <div className="mt-8 border-b border-border" />
+          </div>
+        )}
+
         {loading ? (
           <div className="text-center py-8 text-muted-foreground">Loading...</div>
         ) : displayItems.length === 0 ? (

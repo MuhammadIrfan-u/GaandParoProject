@@ -987,7 +987,7 @@ export const neighborhoodsService = {
     // This method remains for legacy support or simpler use cases
     try {
       const userId = localStorage.getItem('user_id') || authService.getCurrentUser().id;
-      const response = await apiFetch(`/api/neighborhoods/${neighborhoodId}/join`, {
+      const response = await apiFetch(`/neighborhoods/${neighborhoodId}/join`, {
         method: 'POST',
         body: JSON.stringify({ userId }), // Note: Without lat/long this might fail if backend requires it
       });
@@ -1001,7 +1001,7 @@ export const neighborhoodsService = {
   leaveNeighborhood: async (neighborhoodId: number) => {
     try {
       const userId = localStorage.getItem('user_id') || authService.getCurrentUser().id;
-      const response = await apiFetch(`/api/neighborhoods/${neighborhoodId}/leave`, {
+      const response = await apiFetch(`/neighborhoods/${neighborhoodId}/leave`, {
         method: 'DELETE',
         body: JSON.stringify({ userId }),
       });

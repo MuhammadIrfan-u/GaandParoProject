@@ -13,6 +13,8 @@ import alertRoutes from "./routes/alertRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import postRoutes from "./routes/postRoutes.js";
 import messageRoutes from "./routes/messageRoutes.js";
+import membershipRoutes from "./routes/membershipRoutes.js";
+import verificationRoutes from "./routes/verificationRoutes.js";
 import express from 'express'
 import cors from 'cors'
 const app = express();
@@ -20,20 +22,13 @@ const app = express();
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Content-Type,Authorization,x-user-id");
-  next();
-});
-
-
-
 app.use(cors());
 app.use(express.json());
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api', membershipRoutes);
+app.use('/api', verificationRoutes);
 
 // Home route
 app.get("/", (req, res) => {
