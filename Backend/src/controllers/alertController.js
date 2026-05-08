@@ -21,6 +21,7 @@ export const getAlerts = async (req, res) => {
         const { data, error } = await supabase
             .from('alerts')
             .select('*, users(name)')
+            .eq('moderation_status', 'approved')
             .order('timestamp', { ascending: false });
 
         if (error) throw error;
@@ -91,7 +92,6 @@ export const createAlert = async (req, res) => {
             const { error: notifyError } = await supabase
                 .from('notifications')
                 .insert(notifications);
-            
             if (notifyError) {
                 console.error('Error creating notifications:', notifyError);
             }

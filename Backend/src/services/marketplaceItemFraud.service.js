@@ -3,6 +3,8 @@ import LinkDetector from '../classes/LinkDetector.js';
 import PriceAnomalyDetector from '../classes/PriceAnomalyDetector.js';
 import FlagAssigner from '../classes/FlagAssigner.js';
 import { supabaseAdmin } from '../../lib/supabaseAdmin.js';
+import { SupabaseClient } from '@supabase/supabase-js';
+import { supabase } from '../supabaseClient.js';
 
 const keywordDetector = new KeywordDetector();
 const linkDetector = new LinkDetector();
@@ -53,14 +55,16 @@ export const check = async (body) => {
   const finalResult = flagAssigner.assign(results);
 
   // Step 5 — Update database if ID provided
+  //finalResult.isFlagged
+  // console.log(finalResult);
   if (id && finalResult.isFlagged) {
     try {
       await supabaseAdmin
         .from('marketplace_items')
         .update({
           is_flagged: true,
-          flag_reason: finalResult.flagReason,
-          moderation_status: finalResult.moderationStatus
+          flag_reason: (finalResult.flagReason || '').substring(0, 50),
+          moderation_status: (finalResult.moderationStatus || '').substring(0, 20)
         })
         .eq('id', id);
     } catch (dbError) {

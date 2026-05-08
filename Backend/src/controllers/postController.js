@@ -14,7 +14,7 @@ const transformPost = (data) => ({
     category: data.category,
     time: data.created_at ? new Date(data.created_at).toLocaleString() : 'Just now',
     likedBy: data.post_likes?.map(l => l.user_id.toString()) || [],
-    comments: data.comments?.map(c => ({
+    comments: data.comments?.filter(c => c.moderation_status === 'approved').map(c => ({
         id: c.id.toString(),
         authorId: c.author_id?.toString(),
         author: c.users?.name || 'Unknown User',
@@ -49,6 +49,7 @@ export const getPosts = async (req, res) => {
                     author_id,
                     content,
                     time,
+                    moderation_status,
                     users (
                         name,
                         avatar
@@ -56,6 +57,7 @@ export const getPosts = async (req, res) => {
                 )
             `)
             .eq('neighborhod_id', parseInt(neighborhoodId))
+            .eq('moderation_status', 'approved')
             .order('id', { ascending: false });
 
         if (error) throw error;
@@ -95,6 +97,7 @@ export const getPostById = async (req, res) => {
                     author_id,
                     content,
                     time,
+                    moderation_status,
                     users (
                         name,
                         avatar
@@ -102,6 +105,7 @@ export const getPostById = async (req, res) => {
                 )
             `)
             .eq('id', numericId)
+            .eq('moderation_status', 'approved')
             .single();
 
         if (error) throw error;

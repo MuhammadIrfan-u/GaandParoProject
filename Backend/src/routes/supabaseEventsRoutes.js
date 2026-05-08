@@ -31,10 +31,11 @@ const transformEvent = (data) => {
 router.get('/events', async (req, res) => {
   try {
     const neighborhoodId = req.query.neighborhoodId;
-    
+
     let query = supabase
       .from('events')
       .select('*, users:events_organizer_id_fkey(name, avatar), event_attendees(user_id)')
+      .eq('moderation_status', 'approved')
       .order('date', { ascending: true });
 
     if (neighborhoodId) {
@@ -59,8 +60,9 @@ router.get('/events/:id', async (req, res) => {
       .from('events')
       .select('*, users:events_organizer_id_fkey(name, avatar), event_attendees(user_id)')
       .eq('id', req.params.id)
+      .eq('moderation_status', 'approved')
       .single();
-    
+
     if (error) throw error;
     if (!data) return res.status(404).json({ error: 'Event not found' });
 
@@ -251,7 +253,7 @@ router.post('/events/:id/rsvp', async (req, res) => {
         .delete()
         .eq('event_id', eventId)
         .eq('user_id', parseInt(userId));
-      
+
       if (removeError) throw removeError;
       return res.json({ rsvp: false });
     } else {
@@ -270,7 +272,7 @@ router.post('/events/:id/rsvp', async (req, res) => {
       const { error: addError } = await supabase
         .from('event_attendees')
         .insert([{ event_id: eventId, user_id: parseInt(userId) }]);
-      
+
       if (addError) throw addError;
       return res.json({ rsvp: true });
     }

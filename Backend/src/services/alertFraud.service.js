@@ -46,14 +46,15 @@ export const check = async (body) => {
   const finalResult = flagAssigner.assign(results);
 
   // Step 4 — Update database if ID provided
+  console.log(finalResult)
   if (id && finalResult.isFlagged) {
     try {
       await supabaseAdmin
         .from('alerts')
         .update({
           is_flagged: true,
-          flag_reason: finalResult.flagReason,
-          moderation_status: finalResult.moderationStatus
+          flag_reason: (finalResult.flagReason || '').substring(0, 50),
+          moderation_status: (finalResult.moderationStatus || '').substring(0, 20)
         })
         .eq('id', id);
     } catch (dbError) {

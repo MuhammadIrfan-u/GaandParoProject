@@ -31,6 +31,7 @@ router.get('/services', async (req, res) => {
     let query = supabase
       .from('services')
       .select('*, users(name, avatar, verified)')
+      .eq('moderation_status', 'approved')
       .order('id', { ascending: false });
     
     if (neighborhoodId) {
@@ -58,6 +59,7 @@ router.get('/services/:id', async (req, res) => {
       .from('services')
       .select('*, users(name, avatar, verified)')
       .eq('id', id)
+      .eq('moderation_status', 'approved')
       .single();
     
     if (error) throw error;

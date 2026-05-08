@@ -31,6 +31,7 @@ router.get('/reviews', async (req, res) => {
     let query = supabase
       .from('reviews')
       .select('*, users(name, avatar)')
+      .eq('moderation_status', 'approved')
       .order('created_at', { ascending: false });
     
     if (neighborhoodId) {

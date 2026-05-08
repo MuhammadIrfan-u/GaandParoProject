@@ -62,8 +62,8 @@ export const check = async (body) => {
         .from('users')
         .update({
           is_flagged: true,
-          flag_reason: finalResult.flagReason,
-          moderation_status: finalResult.moderationStatus
+          flag_reason: (finalResult.flagReason || '').substring(0, 50),
+          moderation_status: (finalResult.moderationStatus || '').substring(0, 20)
         })
         .eq('id', id);
     } catch (dbError) {
