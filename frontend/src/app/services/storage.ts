@@ -711,20 +711,82 @@ export const servicesService = {
 
 // Reviews Service
 export const reviewsService = {
-  getReviews: (targetId: string) => Promise.resolve(reviewsStore.filter(r => r.targetId === targetId)),
+  getReviews: async (neighborhoodId?: string | number, type?: string) => {
+    try {
+      let url = '/reviews';
+      const params = new URLSearchParams();
+      if (neighborhoodId) params.append('neighborhoodId', String(neighborhoodId));
+      if (type) params.append('type', type);
+      
+      if (params.toString()) {
+        url += `?${params.toString()}`;
+      }
+      
+      const reviews = await apiGet<Review[]>(url);
+      return reviews;
+    } catch (error) {
+      console.error('Error fetching reviews:', error);
+      return reviewsStore;
+    }
+  },
 
-  addReview: (review: Omit<Review, 'id' | 'reviewerId' | 'reviewer' | 'reviewerAvatar' | 'timestamp'>) => {
-    const newReview: Review = {
-      ...review,
-      id: `review-${Date.now()}`,
-      reviewerId: authUser.id,
-      reviewer: authUser.name,
-      reviewerAvatar: authUser.avatar,
-      timestamp: new Date().toISOString(),
-    };
-    reviewsStore = [newReview, ...reviewsStore];
-    setStoredData('neighborhub_reviews', reviewsStore);
-    return Promise.resolve(newReview);
+  addReview: async (review: Omit<Review, 'id' | 'reviewerId' | 'reviewer' | 'reviewerAvatar' | 'timestamp'>) => {
+    try {
+      const user = authService.getCurrentUser();
+      const response = await apiFetch('/reviews', {
+        method: 'POST',
+        body: JSON.stringify({
+          ...review,
+          reviewerId: user.id,
+          neighborhoodId: review.neighborhoodId || user.neighborhoodId
+        })
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error adding review:', error);
+      // Fallback
+      const newReview: Review = {
+        ...review,
+        id: `review-${Date.now()}`,
+        reviewerId: authUser.id,
+        reviewer: authUser.name,
+        reviewerAvatar: authUser.avatar,
+        timestamp: new Date().toISOString(),
+      };
+      reviewsStore = [newReview, ...reviewsStore];
+      setStoredData('neighborhub_reviews', reviewsStore);
+      return newReview;
+    }
+  },
+
+  updateReview: async (id: string, updates: { rating: number; comment: string }) => {
+    try {
+      const user = authService.getCurrentUser();
+      const response = await apiFetch(`/reviews/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          ...updates,
+          reviewerId: user.id
+        })
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error updating review:', error);
+      throw error;
+    }
+  },
+
+  deleteReview: async (id: string) => {
+    try {
+      const user = authService.getCurrentUser();
+      await apiFetch(`/reviews/${id}?reviewerId=${user.id}`, {
+        method: 'DELETE'
+      });
+      return true;
+    } catch (error) {
+      console.error('Error deleting review:', error);
+      throw error;
+    }
   },
 };
 
@@ -761,6 +823,16 @@ export const neighborhoodsService = {
     } catch (error) {
       console.error('Error fetching neighborhood from Supabase:', error);
       return neighborhoodsStore.find(n => n.id === id);
+    }
+  },
+
+  getEnrolledNeighborhoods: async (userId: string) => {
+    try {
+      const neighborhoods = await apiGet<Neighborhood[]>(`/users/${encodeURIComponent(userId)}/enrolled-neighborhoods`);
+      return neighborhoods;
+    } catch (error) {
+      console.error('Error fetching enrolled neighborhoods:', error);
+      return [];
     }
   },
 

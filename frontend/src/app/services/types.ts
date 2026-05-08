@@ -152,10 +152,12 @@ export interface Review {
   reviewer: string;
   reviewerAvatar: string;
   targetId: string;
-  targetType: 'user' | 'service';
+  targetType: 'marketplace' | 'service' | 'event' | 'post' | 'user';
   rating: number;
   comment: string;
   timestamp: string;
+  createdAt?: string;
+  neighborhoodId?: string;
 }
 
 export interface Notification {

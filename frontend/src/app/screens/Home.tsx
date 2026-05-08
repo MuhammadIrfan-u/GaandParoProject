@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router";
-import { Bell, Plus, Heart, MessageCircle, Share2, MoreVertical, AlertCircle, Calendar, ShoppingBag, MapPin, TrendingUp } from "lucide-react";
+import { Bell, Plus, Heart, MessageCircle, Share2, MoreVertical, AlertCircle, Calendar, ShoppingBag, MapPin, TrendingUp, Star } from "lucide-react";
 import { BottomNav } from "../components/BottomNav";
 import { postsService, neighborhoodsService, alertsService, eventsService, authService } from "../services/storage";
 import { Post, Neighborhood, Alert, Event } from "../services/types";
@@ -80,6 +80,7 @@ export default function Home() {
     { icon: Calendar, label: "Event", color: "text-blue-600", bg: "bg-blue-100", link: "/events" },
     { icon: ShoppingBag, label: "Sell", color: "text-green-600", bg: "bg-green-100", link: "/marketplace" },
     { icon: MapPin, label: "Service", color: "text-purple-600", bg: "bg-purple-100", link: "/services" },
+    { icon: Star, label: "Reviews", color: "text-orange-600", bg: "bg-orange-100", link: "/reputation" },
   ];
 
   return (
@@ -96,14 +97,20 @@ export default function Home() {
               {userNeighborhood ? userNeighborhood.name : 'Oak Valley Community'}
             </Link>
           </div>
-          <Link to="/notifications" className="relative">
-            <div className="bg-muted rounded-full p-2 hover:bg-muted/80 transition-colors">
-              <Bell className="w-6 h-6" />
-            </div>
-            <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
-              3
-            </div>
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link to="/reputation" className="bg-orange-50 text-orange-600 rounded-full px-3 py-1.5 flex items-center gap-1.5 hover:bg-orange-100 transition-colors">
+              <Star className="w-4 h-4 fill-orange-600" />
+              <span className="text-xs font-bold">{currentUser.reputation.toFixed(1)}</span>
+            </Link>
+            <Link to="/notifications" className="relative">
+              <div className="bg-muted rounded-full p-2 hover:bg-muted/80 transition-colors">
+                <Bell className="w-6 h-6" />
+              </div>
+              <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+                3
+              </div>
+            </Link>
+          </div>
         </div>
       </div>
 

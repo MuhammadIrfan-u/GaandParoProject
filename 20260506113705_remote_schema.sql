@@ -297,20 +297,35 @@ create table public.posts (
 
 
 
-  create table "public"."reviews" (
-    "id" integer not null default nextval('public.reviews_id_seq'::regclass),
-    "reviewer_id" integer,
-    "target_id" integer,
-    "target_type" character varying(20),
-    "rating" integer,
-    "comment" text,
-    "timestamp" timestamp without time zone default CURRENT_TIMESTAMP,
-    "is_flagged" boolean default false,
-    "flag_reason" character varying(50),
-    "moderation_status" character varying(20) default 'approved'::character varying,
-    "created_at" timestamp without time zone default now()
-      );
+create table public.reviews (
+  id serial not null,
+  reviewer_id integer null,
+  target_id integer null,
+  target_type character varying(20) null,
+  rating integer null,
+  comment text null,
+  timestamp timestamp without time zone null default CURRENT_TIMESTAMP,
+  is_flagged boolean null default false,
+  flag_reason character varying(50) null,
+  moderation_status character varying(20) null default 'approved'::character varying,
+  created_at timestamp without time zone null default now(),
+  neighborhod_id integer null,
+  constraint reviews_pkey primary key (id),
+  constraint reviews_neighborhod_id_fkey foreign KEY (neighborhod_id) references neighborhoods (id),
+  constraint reviews_reviewer_id_fkey foreign KEY (reviewer_id) references users (id),
+  constraint reviews_rating_range check (
+    (
+      (rating >= 1)
+      and (rating <= 5)
+    )
+  )
+) TABLESPACE pg_default;
 
+create unique INDEX IF not exists reviews_unique_reviewer_target on public.reviews using btree (reviewer_id, target_type, target_id) TABLESPACE pg_default;
+
+create index IF not exists idx_reviews_target_created on public.reviews using btree (target_type, target_id, created_at desc) TABLESPACE pg_default;
+
+create index IF not exists idx_reviews_target_rating on public.reviews using btree (target_type, target_id, rating) TABLESPACE pg_default;
 
 
   create table "public"."service_requests" (

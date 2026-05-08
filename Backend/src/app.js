@@ -5,7 +5,7 @@ import supabaseProposalsRoutes from "./routes/supabaseProposalsRoutes.js";
 import supabaseProviderApplicationsRoutes from "./routes/supabaseProviderApplicationsRoutes.js";
 import supabaseServiceRequestsRoutes from "./routes/supabaseServiceRequestsRoutes.js";
 import supabaseServicesRoutes from "./routes/supabaseServicesRoutes.js";
-;
+import supabaseReviewsRoutes from "./routes/supabaseReviewsRoutes.js";
 
 import supabaseEventsRoutes from "./routes/supabaseEventsRoutes.js";
 import marketplaceRoutes from "./routes/marketplaceRoutes.js";
@@ -46,6 +46,7 @@ app.use("/", supabaseProposalsRoutes);
 app.use("/", supabaseProviderApplicationsRoutes);
 app.use("/", supabaseServiceRequestsRoutes);
 app.use("/", supabaseServicesRoutes);
+app.use("/", supabaseReviewsRoutes);
 
 app.use("/", supabaseEventsRoutes);
 app.use("/", marketplaceRoutes);

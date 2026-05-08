@@ -16,6 +16,7 @@ import Notifications from "./screens/Notifications";
 import Analytics from "./screens/Analytics";
 import Settings from "./screens/Settings";
 import Reputation from "./screens/Reputation";
+import AddReview from "./screens/AddReview";
 import Alerts from "./screens/Alerts";
 import Report from "./screens/Report";
 import CreatePost from "./screens/CreatePost";
@@ -105,6 +106,10 @@ export const router = createBrowserRouter([
   {
     path: "/reputation",
     Component: Reputation,
+  },
+  {
+    path: "/add-review",
+    Component: AddReview,
   },
   {
     path: "/alerts",

@@ -628,4 +628,40 @@ router.get('/users/:userId/neighborhood', async (req, res) => {
   }
 });
 
+// Get all neighborhoods a user is enrolled in
+router.get('/users/:userId/enrolled-neighborhoods', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    // Get neighborhood IDs from neighborhood_members
+    const { data: memberships, error: membershipError } = await supabase
+      .from('neighborhood_members')
+      .select('neighborhood_id')
+      .eq('user_id', userId);
+    
+    if (membershipError) throw membershipError;
+    
+    if (!memberships || memberships.length === 0) {
+      return res.json([]);
+    }
+    
+    const neighborhoodIds = memberships.map(m => m.neighborhood_id);
+    
+    // Get neighborhood details
+    const { data: neighborhoods, error: neighborhoodsError } = await supabase
+      .from('neighborhoods')
+      .select('*')
+      .in('id', neighborhoodIds);
+    
+    if (neighborhoodsError) throw neighborhoodsError;
+    
+    // Transform data
+    const transformedData = (neighborhoods || []).map(transformNeighborhood);
+    res.json(transformedData);
+  } catch (error) {
+    console.error('Error fetching enrolled neighborhoods:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;
