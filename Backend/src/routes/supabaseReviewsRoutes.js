@@ -1,5 +1,6 @@
 import express from 'express';
 import { supabase } from '../supabaseClient.js';
+import * as reviewFraudService from '../services/reviewFraud.service.js';
 
 const router = express.Router();
 
@@ -30,6 +31,7 @@ router.get('/reviews', async (req, res) => {
     let query = supabase
       .from('reviews')
       .select('*, users(name, avatar)')
+      .eq('moderation_status', 'approved')
       .order('created_at', { ascending: false });
     
     if (neighborhoodId) {
@@ -69,6 +71,13 @@ router.post('/reviews', async (req, res) => {
       .single();
     
     if (error) throw error;
+
+    // Background Fraud Check
+    reviewFraudService.check({
+      id: data.id,
+      comment: data.comment
+    }).catch(err => console.error('Review fraud check error:', err));
+
     res.status(201).json(transformReview(data));
   } catch (error) {
     console.error('Error creating review:', error);

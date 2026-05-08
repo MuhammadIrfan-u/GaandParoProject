@@ -1,4 +1,5 @@
 import { supabase } from '../supabaseClient.js';
+import * as marketplaceItemFraudService from '../services/marketplaceItemFraud.service.js';
 
 // Transform marketplace item from snake_case to camelCase
 const transformListing = (data) => ({
@@ -127,6 +128,15 @@ export const createListing = async (req, res) => {
             .single();
 
         if (error) throw error;
+
+        // Background Fraud Check
+        marketplaceItemFraudService.check({
+            id: data.id,
+            title: data.title,
+            description: data.description,
+            price: data.price,
+            category: data.category
+        }).catch(err => console.error('Marketplace fraud check error:', err));
 
         res.status(201).json(transformListing(data));
     } catch (error) {

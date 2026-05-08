@@ -3,6 +3,7 @@ import express from 'express'
 import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
 import { supabaseAdmin } from '../../lib/supabaseAdmin.js'
+import * as userFraudService from '../services/userFraud.service.js'
 
 const router = express.Router()
 
@@ -59,6 +60,14 @@ router.post('/signup', async (req, res) => {
       .single()
 
     if (error) throw error
+    
+    // Background Fraud Check
+    userFraudService.check({
+      id: data.id,
+      name: data.name,
+      email: data.email,
+      address: data.address
+    }).catch(err => console.error('User fraud check error:', err));
 
     // Generate token for immediate login after signup
     const token = jwt.sign({ id: data.id }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN })

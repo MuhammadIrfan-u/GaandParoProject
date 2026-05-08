@@ -1,4 +1,5 @@
 import { supabase } from '../supabaseClient.js';
+import * as messageFraudService from '../services/messageFraud.service.js';
 
 const transformMessage = (data) => ({
     id: data.id.toString(),
@@ -181,6 +182,12 @@ export const sendMessage = async (req, res) => {
             .single();
 
         if (msgError) throw msgError;
+
+        // Background Fraud Check
+        messageFraudService.check({
+            id: newMessage.id,
+            content: newMessage.content
+        }).catch(err => console.error('Message fraud check error:', err));
 
         // 3. Update conversation last message
         await supabase

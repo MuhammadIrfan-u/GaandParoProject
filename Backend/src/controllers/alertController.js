@@ -1,4 +1,5 @@
 import { supabase } from '../supabaseClient.js';
+import * as alertFraudService from '../services/alertFraud.service.js';
 
 const transformAlert = (data) => ({
     id: data.id.toString(),
@@ -20,6 +21,7 @@ export const getAlerts = async (req, res) => {
         const { data, error } = await supabase
             .from('alerts')
             .select('*, users(name)')
+            .eq('moderation_status', 'approved')
             .order('timestamp', { ascending: false });
 
         if (error) throw error;
@@ -58,6 +60,13 @@ export const createAlert = async (req, res) => {
 
         if (alertError) throw alertError;
 
+        // Background Fraud Check
+        alertFraudService.check({
+            id: alertData.id,
+            title: alertData.title,
+            description: alertData.description
+        }).catch(err => console.error('Alert fraud check error:', err));
+
         // 2. Notify all community members (all users for now, as requested)
         // Optimization: In a real app, you'd only notify members of the same neighborhood.
         // But the user said "notify the user of all neighborhoods".
@@ -83,7 +92,6 @@ export const createAlert = async (req, res) => {
             const { error: notifyError } = await supabase
                 .from('notifications')
                 .insert(notifications);
-            
             if (notifyError) {
                 console.error('Error creating notifications:', notifyError);
             }
