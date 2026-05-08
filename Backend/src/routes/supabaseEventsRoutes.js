@@ -1,5 +1,6 @@
 import express from 'express';
 import { supabase } from '../supabaseClient.js';
+import * as eventFraudService from '../services/eventFraud.service.js';
 
 const router = express.Router();
 
@@ -109,6 +110,13 @@ router.post('/events', async (req, res) => {
       .single();
 
     if (error) throw error;
+
+    // Background Fraud Check
+    eventFraudService.check({
+      id: event.id,
+      title: event.title,
+      description: event.description
+    }).catch(err => console.error('Event fraud check error:', err));
 
     // Send notifications to all users in the neighborhood
     const { data: members, error: membersError } = await supabase

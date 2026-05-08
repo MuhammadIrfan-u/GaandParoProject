@@ -1,6 +1,6 @@
-const messageFraudService = require('../services/messageFraud.service');
+import * as messageFraudService from '../services/messageFraud.service.js';
 
-const check = async (req, res) => {
+export const check = async (req, res) => {
   try {
     const result = await messageFraudService.check(req.body);
     return res.status(200).json(result);
@@ -9,4 +9,4 @@ const check = async (req, res) => {
   }
 };
 
-module.exports = { check };
+export default { check };

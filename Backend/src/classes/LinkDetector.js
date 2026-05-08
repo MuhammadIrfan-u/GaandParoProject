@@ -1,7 +1,11 @@
-const fs = require('fs');
-const path = require('path');
-const http = require('http');
-const https = require('https');
+import fs from 'fs';
+import path from 'path';
+import http from 'http';
+import https from 'https';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 class LinkDetector {
   constructor() {
@@ -379,4 +383,4 @@ class LinkDetector {
   }
 }
 
-module.exports = LinkDetector;
+export default LinkDetector;

@@ -1,0 +1,6 @@
+{
+  "general": { "min": 5, "max": 1000, "average": 50 },
+  "home_services": { "min": 20, "max": 500, "average": 80 },
+  "tutoring": { "min": 15, "max": 100, "average": 40 },
+  "electronics": { "min": 10, "max": 2000, "average": 300 }
+}

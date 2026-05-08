@@ -1,15 +1,15 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
 
-const userFraudController = require('../controllers/userFraud.controller');
-const postFraudController = require('../controllers/postFraud.controller');
-const marketplaceItemFraudController = require('../controllers/marketplaceItemFraud.controller');
-const eventFraudController = require('../controllers/eventFraud.controller');
-const alertFraudController = require('../controllers/alertFraud.controller');
-const reviewFraudController = require('../controllers/reviewFraud.controller');
-const commentFraudController = require('../controllers/commentFraud.controller');
-const serviceFraudController = require('../controllers/serviceFraud.controller');
-const messageFraudController = require('../controllers/messageFraud.controller');
+import userFraudController from '../controllers/userFraud.controller.js';
+import postFraudController from '../controllers/postFraud.controller.js';
+import marketplaceItemFraudController from '../controllers/marketplaceItemFraud.controller.js';
+import eventFraudController from '../controllers/eventFraud.controller.js';
+import alertFraudController from '../controllers/alertFraud.controller.js';
+import reviewFraudController from '../controllers/reviewFraud.controller.js';
+import commentFraudController from '../controllers/commentFraud.controller.js';
+import serviceFraudController from '../controllers/serviceFraud.controller.js';
+import messageFraudController from '../controllers/messageFraud.controller.js';
 
 // POST /api/fraud/check/user
 router.post('/user', userFraudController.check);
@@ -38,4 +38,4 @@ router.post('/service', serviceFraudController.check);
 // POST /api/fraud/check/message
 router.post('/message', messageFraudController.check);
 
-module.exports = router;
+export default router;

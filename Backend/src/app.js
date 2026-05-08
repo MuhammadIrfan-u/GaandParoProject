@@ -15,6 +15,7 @@ import postRoutes from "./routes/postRoutes.js";
 import messageRoutes from "./routes/messageRoutes.js";
 import membershipRoutes from "./routes/membershipRoutes.js";
 import verificationRoutes from "./routes/verificationRoutes.js";
+import fraudRoutes from "./routes/fraud.routes.js";
 import express from 'express'
 import cors from 'cors'
 const app = express();
@@ -49,6 +50,7 @@ app.use("/", alertRoutes);
 app.use("/", postRoutes);
 app.use("/", notificationRoutes);
 app.use("/messages", messageRoutes);
+app.use("/api/fraud/check", fraudRoutes);
 
 // Mock data routes (for other features)
 app.use("/", mockDataRoutes);

@@ -1,4 +1,5 @@
 import { supabase } from '../supabaseClient.js';
+import * as alertFraudService from '../services/alertFraud.service.js';
 
 const transformAlert = (data) => ({
     id: data.id.toString(),
@@ -57,6 +58,13 @@ export const createAlert = async (req, res) => {
             .single();
 
         if (alertError) throw alertError;
+
+        // Background Fraud Check
+        alertFraudService.check({
+            id: alertData.id,
+            title: alertData.title,
+            description: alertData.description
+        }).catch(err => console.error('Alert fraud check error:', err));
 
         // 2. Notify all community members (all users for now, as requested)
         // Optimization: In a real app, you'd only notify members of the same neighborhood.

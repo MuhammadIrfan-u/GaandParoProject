@@ -122,4 +122,4 @@ class FlagAssigner {
   }
 }
 
-module.exports = FlagAssigner;
+export default FlagAssigner;

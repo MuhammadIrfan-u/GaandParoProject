@@ -1,6 +1,7 @@
-const KeywordDetector = require('../classes/KeywordDetector');
-const LinkDetector = require('../classes/LinkDetector');
-const FlagAssigner = require('../classes/FlagAssigner');
+import KeywordDetector from '../classes/KeywordDetector.js';
+import LinkDetector from '../classes/LinkDetector.js';
+import FlagAssigner from '../classes/FlagAssigner.js';
+import { supabaseAdmin } from '../../lib/supabaseAdmin.js';
 
 const keywordDetector = new KeywordDetector();
 const linkDetector = new LinkDetector();
@@ -10,8 +11,8 @@ const flagAssigner = new FlagAssigner();
  * Check a user entity for fraud indicators
  * Scans: name, bio, address for keywords; email, bio, address for links
  */
-const check = async (body) => {
-  const { name, email, bio, address } = body;
+export const check = async (body) => {
+  const { id, name, email, bio, address } = body;
   const results = [];
 
   // Step 1 — Keyword Detector: scan name, bio, address
@@ -52,7 +53,25 @@ const check = async (body) => {
   results.push(linkResult);
 
   // Step 3 — Flag Assigner
-  return flagAssigner.assign(results);
+  const finalResult = flagAssigner.assign(results);
+
+  // Step 4 — Update database if ID provided
+  if (id && finalResult.isFlagged) {
+    try {
+      await supabaseAdmin
+        .from('users')
+        .update({
+          is_flagged: true,
+          flag_reason: finalResult.flagReason,
+          moderation_status: finalResult.moderationStatus
+        })
+        .eq('id', id);
+    } catch (dbError) {
+      console.error(`Failed to update fraud status for user ${id}:`, dbError.message);
+    }
+  }
+
+  return finalResult;
 };
 
-module.exports = { check };
+export default { check };

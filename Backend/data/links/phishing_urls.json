@@ -1,0 +1,4 @@
+{
+  "domains": ["paypa1.com", "bank-secure-update.com", "login-microsoft.online"],
+  "patterns": ["/login/verify", "/account/security"]
+}

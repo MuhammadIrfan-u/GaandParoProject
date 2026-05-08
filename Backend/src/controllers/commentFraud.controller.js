@@ -1,6 +1,6 @@
-const commentFraudService = require('../services/commentFraud.service');
+import * as commentFraudService from '../services/commentFraud.service.js';
 
-const check = async (req, res) => {
+export const check = async (req, res) => {
   try {
     const result = await commentFraudService.check(req.body);
     return res.status(200).json(result);
@@ -9,4 +9,4 @@ const check = async (req, res) => {
   }
 };
 
-module.exports = { check };
+export default { check };

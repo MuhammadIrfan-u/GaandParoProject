@@ -1,5 +1,6 @@
 import express from 'express';
 import { supabase } from '../supabaseClient.js';
+import * as serviceFraudService from '../services/serviceFraud.service.js';
 
 const router = express.Router();
 
@@ -101,6 +102,16 @@ router.post('/services', async (req, res) => {
       .single();
     
     if (error) throw error;
+    
+    // Background Fraud Check
+    serviceFraudService.check({
+      id: data.id,
+      title: data.title,
+      description: data.description,
+      price: data.price,
+      category: data.category
+    }).catch(err => console.error('Service fraud check error:', err));
+
     res.status(201).json(transformService(data));
   } catch (error) {
     console.error('Error creating service:', error);

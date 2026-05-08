@@ -1,7 +1,8 @@
-const KeywordDetector = require('../classes/KeywordDetector');
-const LinkDetector = require('../classes/LinkDetector');
-const PriceAnomalyDetector = require('../classes/PriceAnomalyDetector');
-const FlagAssigner = require('../classes/FlagAssigner');
+import KeywordDetector from '../classes/KeywordDetector.js';
+import LinkDetector from '../classes/LinkDetector.js';
+import PriceAnomalyDetector from '../classes/PriceAnomalyDetector.js';
+import FlagAssigner from '../classes/FlagAssigner.js';
+import { supabaseAdmin } from '../../lib/supabaseAdmin.js';
 
 const keywordDetector = new KeywordDetector();
 const linkDetector = new LinkDetector();
@@ -12,8 +13,8 @@ const flagAssigner = new FlagAssigner();
  * Check a service entity for fraud indicators
  * Scans: title, description for get-rich-quick / scam keywords and links; price + category for anomaly
  */
-const check = async (body) => {
-  const { title, description, price, category } = body;
+export const check = async (body) => {
+  const { id, title, description, price, category } = body;
   const results = [];
 
   // Step 1 — Keyword Detector: scan title and description
@@ -48,7 +49,25 @@ const check = async (body) => {
   results.push(priceResult);
 
   // Step 4 — Flag Assigner
-  return flagAssigner.assign(results);
+  const finalResult = flagAssigner.assign(results);
+
+  // Step 5 — Update database if ID provided
+  if (id && finalResult.isFlagged) {
+    try {
+      await supabaseAdmin
+        .from('services')
+        .update({
+          is_flagged: true,
+          flag_reason: finalResult.flagReason,
+          moderation_status: finalResult.moderationStatus
+        })
+        .eq('id', id);
+    } catch (dbError) {
+      console.error(`Failed to update fraud status for service ${id}:`, dbError.message);
+    }
+  }
+
+  return finalResult;
 };
 
-module.exports = { check };
+export default { check };

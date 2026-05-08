@@ -1,4 +1,6 @@
 import { supabase } from '../supabaseClient.js';
+import * as postFraudService from '../services/postFraud.service.js';
+import * as commentFraudService from '../services/commentFraud.service.js';
 
 const transformPost = (data) => ({
     id: data.id.toString(),
@@ -141,6 +143,12 @@ export const createPost = async (req, res) => {
             .single();
 
         if (error) throw error;
+        
+        // Background Fraud Check
+        postFraudService.check({
+            id: data.id,
+            content: data.content
+        }).catch(err => console.error('Post fraud check error:', err));
 
         res.status(201).json(transformPost(data));
     } catch (error) {
@@ -261,6 +269,12 @@ export const addComment = async (req, res) => {
             .single();
 
         if (error) throw error;
+
+        // Background Fraud Check
+        commentFraudService.check({
+            id: data.id,
+            content: data.content
+        }).catch(err => console.error('Comment fraud check error:', err));
 
         res.status(201).json({
             id: data.id.toString(),

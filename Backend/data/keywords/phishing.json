@@ -1,0 +1,4 @@
+{
+  "keywords": ["password", "account", "login", "verify", "secure", "bank", "credit card", "ssn", "social security", "identity", "unauthorized", "suspended", "urgent"],
+  "highSeverity": ["bank", "credit card", "ssn", "social security"]
+}

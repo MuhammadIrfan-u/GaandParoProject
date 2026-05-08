@@ -1,6 +1,6 @@
-const reviewFraudService = require('../services/reviewFraud.service');
+import * as reviewFraudService from '../services/reviewFraud.service.js';
 
-const check = async (req, res) => {
+export const check = async (req, res) => {
   try {
     const result = await reviewFraudService.check(req.body);
     return res.status(200).json(result);
@@ -9,4 +9,4 @@ const check = async (req, res) => {
   }
 };
 
-module.exports = { check };
+export default { check };
