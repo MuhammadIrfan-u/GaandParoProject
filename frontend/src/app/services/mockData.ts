@@ -38,6 +38,8 @@ export interface Comment {
   avatar: string;
   content: string;
   time: string;
+  is_flagged?: boolean;
+  flag_reason?: string;
 }
 
 export interface MarketplaceItem {
@@ -145,6 +147,16 @@ export interface Report {
   timestamp: string;
 }
 
+export interface Notification {
+  id: string;
+  userId: string;
+  title: string;
+  message: string;
+  type: string;
+  read: boolean;
+  timestamp: string;
+}
+
 export interface Review {
   id: string;
   reviewerId: string;
@@ -181,6 +193,10 @@ export interface Neighborhood {
   verified: boolean;
   createdDate: string;
   coverPhoto?: string;
+  logo?: string;
+  boundary?: {
+    coordinates: { lat: number; lng: number }[];
+  };
   settings: NeighborhoodSettings;
   guidelines: string;
 }
@@ -273,6 +289,7 @@ export const users: User[] = [
   },
 ];
 
+
 // Posts
 export const posts: Post[] = [
   {
@@ -284,7 +301,18 @@ export const posts: Post[] = [
     time: '2h ago',
     content: 'Found a lost golden retriever near Oak Street Park. Very friendly, wearing a blue collar. Anyone know the owner?',
     likes: 24,
-    comments: [],
+    comments: [
+      {
+        id: 'comment-1',
+        authorId: 'user-5',
+        author: 'David Kim',
+        avatar: 'DK',
+        content: 'This is spam! Give me money.',
+        time: '1h ago',
+        is_flagged: true,
+        flag_reason: 'Spam/Scam attempt',
+      }
+    ],
     category: 'Lost & Found',
     categoryColor: 'bg-orange-100 text-orange-700',
     likedBy: [],
