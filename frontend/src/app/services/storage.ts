@@ -98,8 +98,20 @@ const localCurrentUser: User = {
   neighborhoodId: 11, // Reset to 1 for standard test data
 };
 
-let authUser: User = localCurrentUser;
-let isAuthenticated = false;
+const getInitialAuthUser = (): User => {
+  const storedUser = localStorage.getItem('user_data');
+  if (storedUser) {
+    try {
+      return JSON.parse(storedUser);
+    } catch (e) {
+      return localCurrentUser;
+    }
+  }
+  return localCurrentUser;
+};
+
+let authUser: User = getInitialAuthUser();
+let isAuthenticated = !!localStorage.getItem('auth_token');
 
 // Auth Service
 export const authService = {
@@ -129,7 +141,7 @@ export const authService = {
       localStorage.setItem('user_id', String(data.user.id));
       localStorage.setItem('user_name', data.user.name);
       localStorage.setItem('user_email', data.user.email);
-      localStorage.setItem('is_admin', String(data.user.is_admin));
+      localStorage.setItem('user_data', JSON.stringify(data.user));
     }
     return data;
   },
@@ -155,7 +167,7 @@ export const authService = {
       localStorage.setItem('user_id', String(data.user.id));
       localStorage.setItem('user_name', data.user.name);
       localStorage.setItem('user_email', data.user.email);
-      localStorage.setItem('is_admin', String(data.user.is_admin));
+      localStorage.setItem('user_data', JSON.stringify(data.user));
     }
     return data;
   },
