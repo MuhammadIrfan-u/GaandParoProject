@@ -6,6 +6,7 @@ import Onboarding from "./screens/Onboarding";
 import Login from "./screens/Login";
 import Signup from "./screens/Signup";
 import Verification, { VerificationStatus } from "./screens/Verification";
+import DocumentVerificationScreen from "./screens/DocumentVerificationScreen";
 import Home from "./screens/Home";
 import Marketplace from "./screens/Marketplace";
 import Services from "./screens/Services";
@@ -211,4 +212,8 @@ export const router = createBrowserRouter([
     path: "/reset-password/:token",
     Component: ResetPassword,
   },
+  {
+    path: "/verify-residence",
+    Component: DocumentVerificationScreen,
+  }
 ]);

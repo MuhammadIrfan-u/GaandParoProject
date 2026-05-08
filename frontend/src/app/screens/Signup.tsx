@@ -4,6 +4,7 @@ import { Home as HomeIcon, Mail, Lock, User, Phone, MapPin, Eye, EyeOff } from "
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { toast } from "sonner";
+import { authService } from "../services/storage";
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -23,61 +24,46 @@ export default function Signup() {
   };
 
   const handleSignup = async (e: React.FormEvent) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  if (
-    !formData.name ||
-    !formData.email ||
-    !formData.phone ||
-    !formData.address ||
-    !formData.password
-  ) {
-    toast.error("Please ill in all fields");
-    return;
-  }
-
-  if (formData.password !== formData.confirmPassword) {
-    toast.error("Passwords don't match");
-    return;
-  }
-
-  if (formData.password.length < 6) {
-    toast.error("Password must be at least 6 characters");
-    return;
-  }
-
-  setLoading(true);
-
-  try {
-    const res = await fetch("http://localhost:3000/api/auth/signup", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        name: formData.name,
-        email: formData.email,
-        password: formData.password,
-        confirmPassword: formData.confirmPassword,
-        phone: formData.phone,
-        address: formData.address,
-      }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      throw new Error(data.error || "Signup failed");
+    if (
+      !formData.name ||
+      !formData.email ||
+      !formData.phone ||
+      !formData.address ||
+      !formData.password
+    ) {
+      toast.error("Please fill in all fields");
+      return;
     }
 
-    toast.success("Account created successfully!");
-    navigate("/login"); // better flow
-  } catch (error: any) {
-    toast.error(error.message || "Signup failed");
-  } finally {
-    setLoading(false);
-  }
-};
+    if (formData.password !== formData.confirmPassword) {
+      toast.error("Passwords don't match");
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const data = await authService.signup(formData);
+
+      if (!data.success) {
+        throw new Error(data.error || "Signup failed");
+      }
+
+      toast.success("Account created successfully!");
+      navigate("/home"); 
+    } catch (error: any) {
+      toast.error(error.message || "Signup failed");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary via-indigo-600 to-purple-600 flex items-center justify-center p-4">
@@ -185,7 +171,7 @@ export default function Signup() {
 
             <Button 
               type="submit" 
-              className="w-full bg-gradient-to-r from-primary to-indigo-600 hover:opacity-90"
+              className="w-full bg-gradient-to-r from-primary to-indigo-600 hover:opacity-90 py-6 text-lg rounded-2xl"
               disabled={loading}
             >
               {loading ? "Creating Account..." : "Create Account"}

@@ -1,20 +1,21 @@
-import { Home, ShoppingBag, Briefcase, MessageCircle, User } from "lucide-react";
+import { Home, ShoppingBag, Briefcase, MessageCircle, User, ShieldCheck } from "lucide-react";
 import { Link, useLocation } from "react-router";
 import { motion } from "motion/react";
 
 export function BottomNav() {
   const location = useLocation();
-  
+
   const navItems = [
     { path: "/home", icon: Home, label: "Home" },
     { path: "/marketplace", icon: ShoppingBag, label: "Market" },
     { path: "/services", icon: Briefcase, label: "Services" },
     { path: "/messages", icon: MessageCircle, label: "Messages" },
     { path: "/profile", icon: User, label: "Profile" },
+    { path: "/verify-residence", icon: ShieldCheck, label: "Verify" }
   ];
 
   return (
-    <motion.nav 
+    <motion.nav
       initial={{ y: 100 }}
       animate={{ y: 0 }}
       className="fixed bottom-0 left-0 right-0 glass-header border-t border-white/20 z-50 pb-safe"
@@ -23,16 +24,15 @@ export function BottomNav() {
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
           const Icon = item.icon;
-          
+
           return (
             <Link
               key={item.path}
               to={item.path}
-              className={`relative flex flex-col items-center justify-center gap-1.5 px-4 py-2 transition-all duration-300 ${
-                isActive
+              className={`relative flex flex-col items-center justify-center gap-1.5 px-4 py-2 transition-all duration-300 ${isActive
                   ? "text-primary"
                   : "text-muted-foreground hover:text-foreground"
-              }`}
+                }`}
             >
               {isActive && (
                 <motion.div

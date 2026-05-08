@@ -22,13 +22,19 @@ import type {
 
 const API_BASE = 'http://localhost:3000';
 
+
+const getAuthToken = () => localStorage.getItem('auth_token');
+
 const apiFetch = async (path: string, init?: RequestInit) => {
+  const authToken = getAuthToken();
   const response = await fetch(`${API_BASE}${path}`, {
     headers: {
       'Content-Type': 'application/json',
+      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
     },
     ...init,
   });
+
   if (!response.ok) {
     throw new Error(`API request failed: ${response.status} ${response.statusText}`);
   }
@@ -110,23 +116,70 @@ export const authService = {
     }
   },
 
-  signup: (name: string, email: string, password: string, phone: string, address: string) => {
-    return new Promise<User>((resolve) => {
-      setTimeout(() => {
-        isAuthenticated = true;
-        authUser = localCurrentUser;
-        resolve(authUser);
-      }, 500);
+  signup: async (formData: any) => {
+    const response = await apiFetch('/api/auth/signup', {
+      method: 'POST',
+      body: JSON.stringify(formData)
     });
+    const data = await response.json();
+    if (data.success) {
+      isAuthenticated = true;
+      authUser = data.user;
+      localStorage.setItem('auth_token', data.token);
+      localStorage.setItem('user_id', String(data.user.id));
+      localStorage.setItem('user_name', data.user.name);
+      localStorage.setItem('user_email', data.user.email);
+      localStorage.setItem('is_admin', String(data.user.is_admin));
+    }
+    return data;
+  },
+
+  login: async (email: string, password: string) => {
+    const response = await apiFetch('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password })
+    });
+    return response.json();
+  },
+
+  verifyOtp: async (email: string, otp: string) => {
+    const response = await apiFetch('/api/auth/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email, otp })
+    });
+    const data = await response.json();
+    if (data.success) {
+      isAuthenticated = true;
+      authUser = data.user;
+      localStorage.setItem('auth_token', data.token);
+      localStorage.setItem('user_id', String(data.user.id));
+      localStorage.setItem('user_name', data.user.name);
+      localStorage.setItem('user_email', data.user.email);
+      localStorage.setItem('is_admin', String(data.user.is_admin));
+    }
+    return data;
+  },
+
+  resendOtp: async (email: string) => {
+    const response = await apiFetch('/api/auth/resend-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email })
+    });
+    return response.json();
   },
 
   logout: () => {
     isAuthenticated = false;
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('user_id');
+    localStorage.removeItem('user_name');
+    localStorage.removeItem('user_email');
+    localStorage.removeItem('is_admin');
   },
 
   getCurrentUser: () => authUser,
 
-  isAuthenticated: () => isAuthenticated,
+  isAuthenticated: () => isAuthenticated || !!localStorage.getItem('auth_token'),
 
   updateProfile: async (updates: Partial<User>) => {
     authUser = { ...authUser, ...updates };
@@ -717,11 +770,11 @@ export const reviewsService = {
       const params = new URLSearchParams();
       if (neighborhoodId) params.append('neighborhoodId', String(neighborhoodId));
       if (type) params.append('type', type);
-      
+
       if (params.toString()) {
         url += `?${params.toString()}`;
       }
-      
+
       const reviews = await apiGet<Review[]>(url);
       return reviews;
     } catch (error) {
@@ -929,32 +982,31 @@ export const neighborhoodsService = {
     }
   },
 
-  joinNeighborhood: async (neighborhoodId: string | number) => {
+  joinNeighborhood: async (neighborhoodId: number) => {
+    // Note: Most joining is now handled via JoinNeighborhoodModal.tsx which calls the API directly
+    // This method remains for legacy support or simpler use cases
     try {
-      const user = authService.getCurrentUser();
-      const response = await apiFetch(`/neighborhoods/${neighborhoodId}/join`, {
+      const userId = localStorage.getItem('user_id') || authService.getCurrentUser().id;
+      const response = await apiFetch(`/api/neighborhoods/${neighborhoodId}/join`, {
         method: 'POST',
-        body: JSON.stringify({ userId: user.id }),
+        body: JSON.stringify({ userId }), // Note: Without lat/long this might fail if backend requires it
       });
-      const result = await response.json();
-      // Update user's neighborhood ID
-      authUser = { ...authUser, neighborhoodId: parseInt(String(neighborhoodId)) };
-      return result;
+      return response.json();
     } catch (error) {
       console.error('Error joining neighborhood:', error);
       throw error;
     }
   },
 
-  leaveNeighborhood: async (neighborhoodId: string | number) => {
+  leaveNeighborhood: async (neighborhoodId: number) => {
     try {
-      const user = authService.getCurrentUser();
-      const response = await apiFetch(`/neighborhoods/${neighborhoodId}/leave`, {
-        method: 'POST',
-        body: JSON.stringify({ userId: user.id }),
+      const userId = localStorage.getItem('user_id') || authService.getCurrentUser().id;
+      const response = await apiFetch(`/api/neighborhoods/${neighborhoodId}/leave`, {
+        method: 'DELETE',
+        body: JSON.stringify({ userId }),
       });
       const result = await response.json();
-      // Clear user's neighborhood ID
+      // Clear user's neighborhood ID in local state
       authUser = { ...authUser, neighborhoodId: undefined };
       return result;
     } catch (error) {

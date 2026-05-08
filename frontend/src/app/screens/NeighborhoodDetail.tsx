@@ -7,20 +7,26 @@ import { Neighborhood, Post, Alert, Event } from "../services/types";
 import { toast } from "sonner";
 import { Heart, MessageCircle, Share2, MoreVertical, Plus } from "lucide-react";
 import { Link } from "react-router";
+import { JoinNeighborhoodModal } from "../components/JoinNeighborhoodModal";
 
 export default function NeighborhoodDetail() {
   const navigate = useNavigate();
   const { neighborhoodId } = useParams();
   const currentUser = authService.getCurrentUser();
+  const realUserId = localStorage.getItem("user_id") || currentUser.id
   const [neighborhood, setNeighborhood] = useState<Neighborhood | null>(null);
   const [loading, setLoading] = useState(true);
   const [userNeighborhood, setUserNeighborhood] = useState<Neighborhood | null>(null);
-  const [isJoining, setIsJoining] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [activeTab, setActiveTab] = useState<'about' | 'share' | 'alerts' | 'events'>('about');
   const [posts, setPosts] = useState<Post[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [loadingContent, setLoadingContent] = useState(false);
+
+  const [showJoinModal, setShowJoinModal] = useState(false);
+  const [memberCount, setMemberCount] = useState<number | null>(null);
+  const [isMember, setIsMember] = useState(false)
 
   useEffect(() => {
     loadNeighborhood();
@@ -31,10 +37,21 @@ export default function NeighborhoodDetail() {
     try {
       const [data, userNbh] = await Promise.all([
         neighborhoodsService.getNeighborhood(neighborhoodId),
-        neighborhoodsService.getUserNeighborhood(),
+        neighborhoodsService.getUserNeighborhood(realUserId),
       ]);
       setNeighborhood(data || null);
       setUserNeighborhood(userNbh);
+      
+      // Check if current neighborhood is the one the user is in
+      if (userNbh && String(userNbh.id) === String(neighborhoodId)) {
+        setIsMember(true);
+      } else {
+        setIsMember(false);
+      }
+
+      if (data) {
+        await fetchMemberCount(data.id);
+      }
       
       // Load initial content if needed
       if (activeTab === 'share') loadPosts(neighborhoodId);
@@ -64,12 +81,34 @@ export default function NeighborhoodDetail() {
     }
   };
 
+  const fetchMemberCount = async (nbrId: string) => {
+    try {
+      const response = await fetch(
+        `http://localhost:3000/api/neighborhoods/${nbrId}/members/count`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setMemberCount(data.count);
+      }
+    } catch (error) {
+      console.error("Failed to fetch member count:", error);
+    }
+  };
+
+  const handleJoinSuccess = () => {
+    // User successfully joined - reload neighborhood info and member count
+    if (neighborhood) {
+      setUserNeighborhood(neighborhood);
+      setIsMember(true);
+      fetchMemberCount(neighborhood.id);
+      toast.success("Successfully joined neighborhood!");
+    }
+  };
+
   const loadAlerts = async () => {
     setLoadingContent(true);
     try {
       const data = await alertsService.getAlerts();
-      // Backend doesn't support filtering alerts by neighborhoodId yet, 
-      // but we filter locally if needed or assume global for now
       setAlerts(data);
     } catch (error) {
       toast.error("Failed to load alerts");
@@ -90,31 +129,19 @@ export default function NeighborhoodDetail() {
     }
   };
 
-  const handleJoinNeighborhood = async () => {
-    if (!neighborhood) return;
-    try {
-      setIsJoining(true);
-      await neighborhoodsService.joinNeighborhood(neighborhood.id);
-      toast.success("Successfully joined neighborhood!");
-      setUserNeighborhood(neighborhood);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to join neighborhood");
-    } finally {
-      setIsJoining(false);
-    }
-  };
-
   const handleLeaveNeighborhood = async () => {
     if (!neighborhood) return;
     try {
-      setIsJoining(true);
-      await neighborhoodsService.leaveNeighborhood(neighborhood.id);
+      setIsProcessing(true);
+      await neighborhoodsService.leaveNeighborhood(parseInt(String(neighborhood.id)) as any);
       toast.success("You have left the neighborhood");
       setUserNeighborhood(null);
+      setIsMember(false);
+      fetchMemberCount(neighborhood.id);
     } catch (error: any) {
       toast.error(error.message || "Failed to leave neighborhood");
     } finally {
-      setIsJoining(false);
+      setIsProcessing(false);
     }
   };
 
@@ -148,7 +175,7 @@ export default function NeighborhoodDetail() {
           </button>
           <h1 className="text-xl flex-1">Neighborhood</h1>
           {isLead && (
-            <Button onClick={() => navigate("/hub-settings")} variant="outline" size="sm">
+            <Button onClick={() => navigate(`/hub-settings/${neighborhood.id}`)} variant="outline" size="sm">
               <SettingsIcon className="w-4 h-4" />
             </Button>
           )}
@@ -156,7 +183,6 @@ export default function NeighborhoodDetail() {
       </div>
 
       <div className="max-w-lg mx-auto">
-        {/* Header Image */}
         <div className="h-48 bg-gradient-to-br from-primary/20 to-indigo-100 flex items-center justify-center relative">
           {neighborhood.coverPhoto ? (
             <img src={neighborhood.coverPhoto} alt={neighborhood.name} className="w-full h-full object-cover" />
@@ -174,11 +200,9 @@ export default function NeighborhoodDetail() {
         </div>
 
         <div className="px-4 py-6">
-          {/* Title */}
           <h1 className="text-3xl mb-3">{neighborhood.name}</h1>
           <p className="text-muted-foreground mb-6">{neighborhood.description}</p>
 
-          {/* Tabs */}
           <div className="flex border-b border-border mb-6 overflow-x-auto no-scrollbar sticky top-[73px] bg-background/80 backdrop-blur-md z-30 -mx-4 px-4">
             {[
               { id: 'about', label: 'About' },
@@ -189,11 +213,10 @@ export default function NeighborhoodDetail() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-                  activeTab === tab.id
-                    ? "border-primary text-primary"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
-                }`}
+                className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === tab.id
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+                  }`}
               >
                 {tab.label}
               </button>
@@ -202,11 +225,10 @@ export default function NeighborhoodDetail() {
 
           {activeTab === 'about' && (
             <>
-              {/* Stats */}
               <div className="grid grid-cols-3 gap-3 mb-6">
                 <div className="bg-white rounded-2xl p-4 border border-border text-center">
                   <Users className="w-6 h-6 text-primary mx-auto mb-2" />
-                  <div className="text-2xl mb-1">{neighborhood.population}</div>
+                  <div className="text-2xl mb-1">{memberCount !== null ? memberCount : neighborhood.population}</div>
                   <div className="text-xs text-muted-foreground">Members</div>
                 </div>
                 <div className="bg-white rounded-2xl p-4 border border-border text-center">
@@ -221,12 +243,11 @@ export default function NeighborhoodDetail() {
                 </div>
               </div>
 
-              {/* Lead Info */}
               <div className="bg-white rounded-2xl p-4 border border-border mb-6">
                 <div className="text-sm text-muted-foreground mb-2">Neighborhood Lead</div>
                 <div className="flex items-center gap-3">
                   <div className="bg-gradient-to-br from-primary to-indigo-600 rounded-full w-12 h-12 flex items-center justify-center text-white text-lg">
-                    {(neighborhood.leadName && neighborhood.leadName.length > 0) ? neighborhood.leadName[0] : (neighborhood.leadName?.charAt(0) ?? '?')}
+                    {neighborhood.leadName?.charAt(0) || '?'}
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
@@ -242,7 +263,6 @@ export default function NeighborhoodDetail() {
                 </div>
               </div>
 
-              {/* Primary Landmark */}
               <div className="bg-white rounded-2xl p-4 border border-border mb-6">
                 <div className="text-sm text-muted-foreground mb-2">Primary Landmark</div>
                 <div className="flex items-center gap-2">
@@ -251,7 +271,6 @@ export default function NeighborhoodDetail() {
                 </div>
               </div>
 
-              {/* Features */}
               <div className="bg-white rounded-2xl p-4 border border-border mb-6">
                 <h3 className="text-sm mb-3">Active Features</h3>
                 <div className="grid grid-cols-2 gap-2">
@@ -283,7 +302,6 @@ export default function NeighborhoodDetail() {
                 </div>
               </div>
 
-              {/* Community Guidelines */}
               {neighborhood.guidelines && (
                 <div className="bg-white rounded-2xl p-4 border border-border mb-6">
                   <h3 className="text-sm mb-3">Community Guidelines</h3>
@@ -293,19 +311,18 @@ export default function NeighborhoodDetail() {
                 </div>
               )}
 
-              {/* Action Buttons */}
               <div className="space-y-3">
-                {userNeighborhood && userNeighborhood.id === neighborhood.id ? (
+                {isMember ? (
                   <>
-                    <Button 
-                      disabled={isJoining}
+                    <Button
+                      disabled={isProcessing}
                       onClick={handleLeaveNeighborhood}
-                      className="w-full" 
+                      className="w-full"
                       variant="outline"
                     >
-                      {isJoining ? "Leaving..." : "Leave Neighborhood"}
+                      {isProcessing ? "Leaving..." : "Leave Neighborhood"}
                     </Button>
-                    <Button 
+                    <Button
                       onClick={() => navigate("/home")}
                       className="w-full bg-primary hover:bg-primary/90"
                     >
@@ -314,14 +331,14 @@ export default function NeighborhoodDetail() {
                   </>
                 ) : userNeighborhood ? (
                   <>
-                    <Button 
-                      disabled={isJoining}
-                      onClick={handleJoinNeighborhood}
+                    <Button
+                      disabled={isProcessing}
+                      onClick={() => setShowJoinModal(true)}
                       className="w-full bg-orange-600 hover:bg-orange-700"
                     >
-                      {isJoining ? "Switching..." : "Switch to This Neighborhood"}
+                      Switch to This Neighborhood
                     </Button>
-                    <Button 
+                    <Button
                       onClick={() => navigate("/neighborhoods")}
                       variant="outline"
                       className="w-full"
@@ -331,14 +348,14 @@ export default function NeighborhoodDetail() {
                   </>
                 ) : (
                   <>
-                    <Button 
-                      disabled={isJoining}
-                      onClick={handleJoinNeighborhood}
+                    <Button
+                      disabled={isProcessing}
+                      onClick={() => setShowJoinModal(true)}
                       className="w-full bg-green-600 hover:bg-green-700"
                     >
-                      {isJoining ? "Joining..." : "Join This Neighborhood"}
+                      Join This Neighborhood
                     </Button>
-                    <Button 
+                    <Button
                       onClick={() => navigate("/neighborhoods")}
                       variant="outline"
                       className="w-full"
@@ -382,9 +399,7 @@ export default function NeighborhoodDetail() {
                             <span>{post.author}</span>
                             {post.verified && (
                               <div className="bg-blue-500 rounded-full w-4 h-4 flex items-center justify-center">
-                                <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                </svg>
+                                <Shield className="w-3 h-3 text-white" />
                               </div>
                             )}
                           </div>
@@ -491,6 +506,14 @@ export default function NeighborhoodDetail() {
           )}
         </div>
       </div>
+
+      <JoinNeighborhoodModal
+        isOpen={showJoinModal}
+        onOpenChange={setShowJoinModal}
+        neighborhoodId={parseInt(neighborhoodId || "0")}
+        neighborhoodName={neighborhood?.name || ""}
+        onJoinSuccess={handleJoinSuccess}
+      />
     </div>
   );
 }
