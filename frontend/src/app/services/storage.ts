@@ -89,10 +89,37 @@ let proposalsStore: NeighborhoodProposal[] = getStoredData('neighborhub_proposal
 let locationStore = getStoredData('neighborhub_location', { lat: 0, lng: 0 });
 let reportsStore: Report[] = getStoredData('neighborhub_reports', []);
 
-// ── Auth state (hydrated from localStorage on page load) ─────────────────────
-const storedUser = localStorage.getItem(USER_KEY);
-let authUser: User = storedUser ? JSON.parse(storedUser) : null;
-let isAuthenticated: boolean = !!tokenStorage.get() && !!authUser;
+// Auth State
+const localCurrentUser: User = {
+  id: '42', // Changed to numeric string to match DB integer
+  name: 'Alex Thompson',
+  email: 'alex.thompson@email.com',
+  phone: '+1 (555) 123-4567',
+  address: '123 Oak Street, Oak Valley',
+  avatar: 'AT',
+  verified: true,
+  reputation: 4.8,
+  joinedDate: '2024-01-15',
+  bio: 'Long-time resident of Oak Valley. Love our community!',
+  isAdmin: true,
+  isProvider: true,
+  neighborhoodId: 11, // Reset to 1 for standard test data
+};
+
+const getInitialAuthUser = (): User => {
+  const storedUser = localStorage.getItem('user_data');
+  if (storedUser) {
+    try {
+      return JSON.parse(storedUser);
+    } catch (e) {
+      return localCurrentUser;
+    }
+  }
+  return localCurrentUser;
+};
+
+let authUser: User = getInitialAuthUser();
+let isAuthenticated = !!localStorage.getItem('auth_token');
 
 // ── Auth Service — wired to real backend ─────────────────────────────────────
 export const authService = {
@@ -102,24 +129,21 @@ export const authService = {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
-    const data: AuthResponse = await res.json();
-    tokenStorage.set(data.token);
-    localStorage.setItem(USER_KEY, JSON.stringify(data.user));
-    authUser = data.user;
-    isAuthenticated = true;
-    return data.user;
+    const data = await response.json();
+    if (data.success) {
+      isAuthenticated = true;
+      authUser = data.user;
+      localStorage.setItem('auth_token', data.token);
+      localStorage.setItem('user_id', String(data.user.id));
+      localStorage.setItem('user_name', data.user.name);
+      localStorage.setItem('user_email', data.user.email);
+      localStorage.setItem('user_data', JSON.stringify(data.user));
+    }
+    return data;
   },
 
-  // REQ-1, REQ-2: register (isServiceProvider maps business owner role)
-  signup: async (
-    name: string,
-    email: string,
-    password: string,
-    phone: string,
-    address: string,
-    role: string = 'resident'
-  ): Promise<User> => {
-    const res = await apiFetch('/auth/register', {
+  login: async (email: string, password: string) => {
+    const response = await apiFetch('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ name, email, password, phone, address, role }),
     });
@@ -137,8 +161,17 @@ export const authService = {
       method: 'POST',
       body: JSON.stringify({ email }),
     });
-    const data = await res.json();
-    return data.message;
+    const data = await response.json();
+    if (data.success) {
+      isAuthenticated = true;
+      authUser = data.user;
+      localStorage.setItem('auth_token', data.token);
+      localStorage.setItem('user_id', String(data.user.id));
+      localStorage.setItem('user_name', data.user.name);
+      localStorage.setItem('user_email', data.user.email);
+      localStorage.setItem('user_data', JSON.stringify(data.user));
+    }
+    return data;
   },
 
   // REQ-7, REQ-8: reset password with token from email link
