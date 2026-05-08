@@ -1,18 +1,40 @@
-
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router";
-import { Shield, Award, Settings as SettingsIcon, Bell, MessageCircle, ChevronRight, MapPin, AlertCircle, TrendingUp, Star, User, Mail, Phone, LogOut } from "lucide-react";
+import { Shield, Settings as SettingsIcon, TrendingUp, Star, User, Mail, Phone, MapPin, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "../components/ui/button";
 import { BottomNav } from "../components/BottomNav";
 import { authService } from "../services/storage";
+import type { User as UserType } from "../services/types";
+
 
 export default function Profile() {
   const navigate = useNavigate();
-  const currentUser = authService.getCurrentUser();
+  const [currentUser, setCurrentUser] = useState<UserType | null>(authService.getCurrentUser());
+
+  useEffect(() => {
+    // Re-hydrate from API to get latest profile data
+    authService.validateSession()
+      .then((user) => {
+        if (user) setCurrentUser(user);
+        else navigate("/login");
+      })
+      .catch(() => navigate("/login"));
+  }, []);
+
+  if (!currentUser) return null;
+
+  // Read privacy prefs from localStorage (REQ-9)
+  const storedPrefs = (() => {
+    try { return JSON.parse(localStorage.getItem("neighborhub_prefs") || "{}"); }
+    catch { return {}; }
+  })();
+  const showPhone = storedPrefs.showPhone ?? false;
 
   const handleLogout = () => {
     authService.logout();
     toast.success("Logged out successfully");
+    navigate("/login");
   };
 
   const stats = [
@@ -80,13 +102,15 @@ export default function Profile() {
                 <div className="text-sm">{currentUser.email}</div>
               </div>
             </div>
+            {showPhone && (
             <div className="p-4 flex items-center gap-3">
               <Phone className="w-5 h-5 text-muted-foreground" />
               <div className="flex-1">
                 <div className="text-xs text-muted-foreground">Phone</div>
-                <div className="text-sm">{currentUser.phone}</div>
+                <div className="text-sm">{currentUser.phone || "Not set"}</div>
               </div>
             </div>
+            )}
             <div className="p-4 flex items-center gap-3">
               <MapPin className="w-5 h-5 text-muted-foreground" />
               <div className="flex-1">
@@ -121,7 +145,6 @@ export default function Profile() {
             </Link>
           ))}
         </div>
-
 
         {/* Super Admin Dashboard Link */}
         {currentUser.isAdmin && (

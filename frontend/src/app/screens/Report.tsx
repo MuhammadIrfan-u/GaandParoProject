@@ -1,13 +1,18 @@
 import { useState } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, AlertTriangle } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Textarea } from "../components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { toast } from "sonner";
+import { reportsService } from "../services/storage";
 
 export default function Report() {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const reportedItemId = (location.state as any)?.id || "unknown";
+
   const [reportType, setReportType] = useState("post");
   const [reason, setReason] = useState("");
   const [description, setDescription] = useState("");
@@ -36,10 +41,22 @@ export default function Report() {
     }
 
     setLoading(true);
-    setTimeout(() => {
+
+    try {
+      await reportsService.submitReport({
+        reportedItemId,
+        reportedItemType: reportType as any,
+        reason,
+        description,
+      });
+
       toast.success("Report submitted. Our team will review it shortly.");
       navigate(-1);
-    }, 1000);
+    } catch (err) {
+      toast.error("Failed to submit report");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -49,8 +66,10 @@ export default function Report() {
           <button onClick={() => navigate(-1)} className="p-2 hover:bg-muted rounded-full">
             <ArrowLeft className="w-6 h-6" />
           </button>
+
           <h1 className="text-xl">Report Issue</h1>
-          <Button onClick={handleSubmit} disabled={loading} className="bg-primary hover:bg-primary/90">
+
+          <Button onClick={handleSubmit} disabled={loading}>
             {loading ? "Submitting..." : "Submit"}
           </Button>
         </div>
@@ -58,24 +77,24 @@ export default function Report() {
 
       <div className="max-w-lg mx-auto px-4 py-6">
         <div className="bg-orange-50 border border-orange-200 rounded-2xl p-4 mb-6 flex gap-3">
-          <AlertTriangle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+          <AlertTriangle className="w-5 h-5 text-orange-600 mt-0.5" />
           <div className="text-sm text-orange-800">
-            <p className="mb-1"><strong>Report Responsibly</strong></p>
-            <p>False reports may result in action against your account. Only report genuine concerns.</p>
+            <p className="font-semibold">Report Responsibly</p>
+            <p>False reports may result in action against your account.</p>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-4 border border-border space-y-4">
+        <div className="bg-white rounded-2xl p-4 border space-y-4">
           <div>
-            <label className="block text-sm mb-2">What are you reporting?</label>
+            <label className="text-sm mb-2 block">What are you reporting?</label>
             <Select value={reportType} onValueChange={setReportType}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {reportTypes.map((type) => (
-                  <SelectItem key={type.value} value={type.value}>
-                    {type.label}
+                {reportTypes.map((t) => (
+                  <SelectItem key={t.value} value={t.value}>
+                    {t.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -83,10 +102,10 @@ export default function Report() {
           </div>
 
           <div>
-            <label className="block text-sm mb-2">Reason for report</label>
+            <label className="text-sm mb-2 block">Reason</label>
             <Select value={reason} onValueChange={setReason}>
               <SelectTrigger>
-                <SelectValue placeholder="Select a reason" />
+                <SelectValue placeholder="Select reason" />
               </SelectTrigger>
               <SelectContent>
                 {reasons.map((r) => (
@@ -99,17 +118,13 @@ export default function Report() {
           </div>
 
           <div>
-            <label className="block text-sm mb-2">Additional details</label>
+            <label className="text-sm mb-2 block">Details</label>
             <Textarea
-              placeholder="Please provide specific details about your report..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              placeholder="Explain the issue..."
               className="min-h-[150px]"
             />
-          </div>
-
-          <div className="text-xs text-muted-foreground">
-            Your report will be reviewed by our moderation team within 24 hours. You will receive a notification once the review is complete.
           </div>
         </div>
       </div>

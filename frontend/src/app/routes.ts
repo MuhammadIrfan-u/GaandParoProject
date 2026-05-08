@@ -6,7 +6,6 @@ import Onboarding from "./screens/Onboarding";
 import Login from "./screens/Login";
 import Signup from "./screens/Signup";
 import Verification, { VerificationStatus } from "./screens/Verification";
-import DocumentVerificationScreen from "./screens/DocumentVerificationScreen";
 import Home from "./screens/Home";
 import Marketplace from "./screens/Marketplace";
 import Services from "./screens/Services";
@@ -17,14 +16,11 @@ import Notifications from "./screens/Notifications";
 import Analytics from "./screens/Analytics";
 import Settings from "./screens/Settings";
 import Reputation from "./screens/Reputation";
-import AddReview from "./screens/AddReview";
 import Alerts from "./screens/Alerts";
 import Report from "./screens/Report";
 import CreatePost from "./screens/CreatePost";
 import CreateMarketplaceItem from "./screens/CreateMarketplaceItem";
-import EditMarketplaceItem from "./screens/EditMarketplaceItem";
 import CreateEvent from "./screens/CreateEvent";
-import EditEvent from "./screens/EditEvent";
 import CreateAlert from "./screens/CreateAlert";
 import ChatScreen from "./screens/ChatScreen";
 import PostDetail from "./screens/PostDetail";
@@ -38,10 +34,9 @@ import BrowseNeighborhoods from "./screens/BrowseNeighborhoods";
 import NeighborhoodProposalStatus from "./screens/NeighborhoodProposalStatus";
 import SuperAdminDashboard from "./screens/SuperAdminDashboard";
 import NeighborhoodDetail from "./screens/NeighborhoodDetail";
-import ApplyProvider from "./screens/ApplyProvider";
-import ServiceRequests from "./screens/ServiceRequests";
 import ForgotPassword from "./screens/ForgotPassword";
 import ResetPassword from "./screens/ResetPassword";
+import EditProfile from "./screens/EditProfile";
 
 export const router = createBrowserRouter([
   {
@@ -109,10 +104,6 @@ export const router = createBrowserRouter([
     Component: Reputation,
   },
   {
-    path: "/add-review",
-    Component: AddReview,
-  },
-  {
     path: "/alerts",
     Component: Alerts,
   },
@@ -129,16 +120,8 @@ export const router = createBrowserRouter([
     Component: CreateMarketplaceItem,
   },
   {
-    path: "/edit-marketplace-item/:itemId",
-    Component: EditMarketplaceItem,
-  },
-  {
     path: "/create-event",
     Component: CreateEvent,
-  },
-  {
-    path: "/edit-event/:eventId",
-    Component: EditEvent,
   },
   {
     path: "/create-alert",
@@ -163,14 +146,6 @@ export const router = createBrowserRouter([
   {
     path: "/service/:serviceId",
     Component: ServiceDetail,
-  },
-  {
-    path: "/apply-provider",
-    Component: ApplyProvider,
-  },
-  {
-    path: "/service-requests",
-    Component: ServiceRequests,
   },
   {
     path: "/neighborhood-discovery",
@@ -209,11 +184,11 @@ export const router = createBrowserRouter([
     Component: ForgotPassword,
   },
   {
-    path: "/reset-password/:token",
+    path: "/reset-password",
     Component: ResetPassword,
   },
   {
-    path: "/verify-residence",
-    Component: DocumentVerificationScreen,
-  }
+    path: "/edit-profile",
+    Component: EditProfile,
+  },
 ]);

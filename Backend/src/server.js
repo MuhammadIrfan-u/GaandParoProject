@@ -1,5 +1,7 @@
-import 'dotenv/config';
-import app from './app.js';
+import app from "./app.js";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const PORT = process.env.PORT || 3000;
 
@@ -8,7 +10,3 @@ app.listen(PORT, () => {
   console.log(`Supabase Database: ${process.env.SUPABASE_URL}`);
 });
 
-// Keep-alive to prevent premature exit
-setInterval(() => {
-  // console.log('Keep-alive ping');
-}, 1000 * 60 * 60);

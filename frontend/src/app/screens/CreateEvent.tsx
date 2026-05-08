@@ -5,7 +5,7 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Textarea } from "../components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
-import { eventsService, authService } from "../services/storage";
+import { eventsService } from "../services/storage";
 import { toast } from "sonner";
 
 export default function CreateEvent() {
@@ -31,10 +31,6 @@ export default function CreateEvent() {
 
     setLoading(true);
     try {
-      const currentUser = authService.getCurrentUser();
-      console.log('DEBUG: Creating event with Organizer ID:', currentUser.id);
-      console.log('DEBUG: Creating event for Neighborhood ID:', currentUser.neighborhoodId);
-      
       await eventsService.createEvent({
         title: formData.title,
         description: formData.description,

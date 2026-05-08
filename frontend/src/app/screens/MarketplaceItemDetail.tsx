@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router";
-import { ArrowLeft, DollarSign, MapPin, ShoppingBag, MessageCircle, Trash2, Edit } from "lucide-react";
+import { ArrowLeft, DollarSign, MapPin, ShoppingBag, MessageCircle } from "lucide-react";
 import { Button } from "../components/ui/button";
-import { marketplaceService, authService } from "../services/storage";
+import { marketplaceService } from "../services/storage";
 import { MarketplaceItem } from "../services/types";
 import { toast } from "sonner";
 
@@ -27,20 +27,6 @@ export default function MarketplaceItemDetail() {
       setLoading(false);
     }
   };
-
-  const handleDelete = async () => {
-    if (!window.confirm("Are you sure you want to delete this listing?")) return;
-    
-    try {
-      await marketplaceService.deleteItem(itemId!);
-      toast.success("Listing deleted successfully");
-      navigate("/marketplace");
-    } catch (error) {
-      toast.error("Failed to delete listing");
-    }
-  };
-
-  const currentUser = authService.getCurrentUser();
 
   const getConditionColor = (condition: string) => {
     switch (condition) {
@@ -73,25 +59,7 @@ export default function MarketplaceItemDetail() {
           <button onClick={() => navigate(-1)} className="p-2 hover:bg-muted rounded-full">
             <ArrowLeft className="w-6 h-6" />
           </button>
-          <h1 className="text-xl flex-1">Marketplace</h1>
-          {item && String(item.sellerId) === String(currentUser.id) && (
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => navigate(`/edit-marketplace-item/${item.id}`)}
-                className="p-2 text-blue-500 hover:bg-blue-50 rounded-full transition-colors"
-                title="Edit Listing"
-              >
-                <Edit className="w-5 h-5" />
-              </button>
-              <button
-                onClick={handleDelete}
-                className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors"
-                title="Delete Listing"
-              >
-                <Trash2 className="w-5 h-5" />
-              </button>
-            </div>
-          )}
+          <h1 className="text-xl">Marketplace</h1>
         </div>
       </div>
 
@@ -112,7 +80,7 @@ export default function MarketplaceItemDetail() {
           </div>
 
           <h1 className="text-2xl mb-2">{item.title}</h1>
-
+          
           <div className="flex items-center gap-2 text-3xl text-primary mb-4">
             <DollarSign className="w-8 h-8" />
             <span>{item.price}</span>

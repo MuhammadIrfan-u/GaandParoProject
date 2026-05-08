@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
-import { Home as HomeIcon, Mail, Lock, User, Phone, MapPin, Eye, EyeOff } from "lucide-react";
+import { Home as HomeIcon, Mail, Lock, User, Phone, MapPin, Eye, EyeOff, Briefcase } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
-import { toast } from "sonner";
 import { authService } from "../services/storage";
+import { validatePassword, validatePhone, getPasswordStrength } from "../services/validation";
+import { toast } from "sonner";
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -15,6 +16,7 @@ export default function Signup() {
     address: "",
     password: "",
     confirmPassword: "",
+    isServiceProvider: false,
   });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -26,40 +28,37 @@ export default function Signup() {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (
-      !formData.name ||
-      !formData.email ||
-      !formData.phone ||
-      !formData.address ||
-      !formData.password
-    ) {
+    if (!formData.name || !formData.email || !formData.phone || !formData.address || !formData.password) {
       toast.error("Please fill in all fields");
       return;
     }
+
+    const phoneError = validatePhone(formData.phone);
+    if (phoneError) { toast.error(phoneError); return; }
+
+    const passwordError = validatePassword(formData.password);
+    if (passwordError) { toast.error(passwordError); return; }
 
     if (formData.password !== formData.confirmPassword) {
       toast.error("Passwords don't match");
       return;
     }
 
-    if (formData.password.length < 6) {
-      toast.error("Password must be at least 6 characters");
-      return;
-    }
-
     setLoading(true);
 
     try {
-      const data = await authService.signup(formData);
-
-      if (!data.success) {
-        throw new Error(data.error || "Signup failed");
-      }
-
+      await authService.signup(
+        formData.name,
+        formData.email,
+        formData.password,
+        formData.phone,
+        formData.address,
+        formData.isServiceProvider ? 'business_owner' : 'resident',
+      );
       toast.success("Account created successfully!");
-      navigate("/home"); 
+      navigate("/neighborhood-discovery");
     } catch (error: any) {
-      toast.error(error.message || "Signup failed");
+      toast.error(error?.message ?? "Signup failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -78,6 +77,8 @@ export default function Signup() {
 
         <div className="bg-white rounded-3xl p-6 shadow-2xl max-h-[85vh] overflow-y-auto">
           <form onSubmit={handleSignup} className="space-y-4">
+
+            {/* Full Name */}
             <div>
               <label className="block text-sm mb-2 text-muted-foreground">Full Name</label>
               <div className="relative">
@@ -92,6 +93,7 @@ export default function Signup() {
               </div>
             </div>
 
+            {/* Email */}
             <div>
               <label className="block text-sm mb-2 text-muted-foreground">Email</label>
               <div className="relative">
@@ -106,20 +108,23 @@ export default function Signup() {
               </div>
             </div>
 
+            {/* Phone */}
             <div>
               <label className="block text-sm mb-2 text-muted-foreground">Phone Number</label>
               <div className="relative">
                 <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
                   type="tel"
-                  placeholder="+1 (555) 123-4567"
+                  placeholder="+92 300 1234567"
                   value={formData.phone}
                   onChange={(e) => handleChange("phone", e.target.value)}
                   className="pl-10"
                 />
               </div>
+              <p className="text-xs text-muted-foreground mt-1">Include country code e.g. +92 for Pakistan, +1 for USA</p>
             </div>
 
+            {/* Address */}
             <div>
               <label className="block text-sm mb-2 text-muted-foreground">Address</label>
               <div className="relative">
@@ -134,6 +139,25 @@ export default function Signup() {
               </div>
             </div>
 
+            {/* Service Provider toggle */}
+            <div className="flex items-center justify-between p-3 rounded-xl border border-border">
+              <div className="flex items-center gap-3">
+                <Briefcase className="w-5 h-5 text-muted-foreground" />
+                <div>
+                  <div className="text-sm">Local Business / Service Provider</div>
+                  <div className="text-xs text-muted-foreground">Enable to offer services in the community</div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setFormData(prev => ({ ...prev, isServiceProvider: !prev.isServiceProvider }))}
+                className={`w-11 h-6 rounded-full transition-colors flex-shrink-0 ${formData.isServiceProvider ? 'bg-primary' : 'bg-muted'}`}
+              >
+                <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform mx-0.5 ${formData.isServiceProvider ? 'translate-x-5' : 'translate-x-0'}`} />
+              </button>
+            </div>
+
+            {/* Password */}
             <div>
               <label className="block text-sm mb-2 text-muted-foreground">Password</label>
               <div className="relative">
@@ -153,8 +177,31 @@ export default function Signup() {
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
+              {/* Password strength bar */}
+              {formData.password.length > 0 && (() => {
+                const strength = getPasswordStrength(formData.password);
+                return (
+                  <div className="mt-2">
+                    <div className="flex gap-1 mb-1">
+                      {[1,2,3,4].map((i) => (
+                        <div
+                          key={i}
+                          className={`h-1 flex-1 rounded-full transition-colors ${
+                            i <= strength.score ? strength.color : "bg-muted"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Strength: <span className="font-medium">{strength.label}</span>
+                      {" · "}min 8 chars, 1 letter, 1 number
+                    </p>
+                  </div>
+                );
+              })()}
             </div>
 
+            {/* Confirm Password */}
             <div>
               <label className="block text-sm mb-2 text-muted-foreground">Confirm Password</label>
               <div className="relative">
@@ -169,9 +216,9 @@ export default function Signup() {
               </div>
             </div>
 
-            <Button 
-              type="submit" 
-              className="w-full bg-gradient-to-r from-primary to-indigo-600 hover:opacity-90 py-6 text-lg rounded-2xl"
+            <Button
+              type="submit"
+              className="w-full bg-gradient-to-r from-primary to-indigo-600 hover:opacity-90"
               disabled={loading}
             >
               {loading ? "Creating Account..." : "Create Account"}

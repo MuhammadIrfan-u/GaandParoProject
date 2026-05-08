@@ -3,14 +3,9 @@ import { Link, useNavigate } from "react-router";
 import { Search, MapPin, Users, Shield, Home as HomeIcon, Clock, CheckCircle, XCircle, ArrowLeft } from "lucide-react";
 import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
-import { JoinNeighborhoodModal } from "../components/JoinNeighborhoodModal";
 import { neighborhoodsService, proposalsService, authService } from "../services/storage";
 import { Neighborhood, NeighborhoodProposal } from "../services/types";
 import { toast } from "sonner";
-
-// Read real user ID from localStorage (set by actual login), fall back to mock
-const getRealUserId = () =>
-  localStorage.getItem("user_id") || authService.getCurrentUser().id;
 
 export default function BrowseNeighborhoods() {
   const navigate = useNavigate();
@@ -20,12 +15,7 @@ export default function BrowseNeighborhoods() {
   const [loading, setLoading] = useState(true);
   const [viewMyProposals, setViewMyProposals] = useState(false);
   const [userNeighborhood, setUserNeighborhood] = useState<Neighborhood | null>(null);
-  const [joiningNeighborhoodId, setJoiningNeighborhoodId] = useState<number | string | null>(null);
-  // Modal state
-  const [showJoinModal, setShowJoinModal] = useState(false);
-  const [pendingJoinId, setPendingJoinId] = useState<number | null>(null);
-  const [pendingJoinName, setPendingJoinName] = useState<string>("");
-
+  const [joiningNeighborhoodId, setJoiningNeighborhoodId] = useState<number | null>(null);
   const currentUser = authService.getCurrentUser();
 
   useEffect(() => {
@@ -34,11 +24,10 @@ export default function BrowseNeighborhoods() {
 
   const loadData = async () => {
     try {
-      const userId = getRealUserId();
       const [neighborhoodsData, proposalsData, userNeighborhoodData] = await Promise.all([
         neighborhoodsService.getNeighborhoods(),
         proposalsService.getProposals(),
-        neighborhoodsService.getUserNeighborhood(userId),
+        neighborhoodsService.getUserNeighborhood(),
       ]);
       setNeighborhoods(neighborhoodsData);
       setProposals(proposalsData);
@@ -51,7 +40,7 @@ export default function BrowseNeighborhoods() {
   };
 
   const userProposals = proposals.filter(p => p.proposerId === currentUser.id);
-
+  
   const displayNeighborhoods = viewMyProposals
     ? neighborhoods.filter(n => n.leadId === currentUser.id)
     : neighborhoods;
@@ -62,54 +51,71 @@ export default function BrowseNeighborhoods() {
     n.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Combine neighborhoods and proposals for display
   const displayItems = viewMyProposals
     ? [
-      ...filteredNeighborhoods.map(n => ({ type: 'neighborhood' as const, data: n })),
-      ...userProposals
-        .filter(p => p.status !== 'approved')
-        .filter(p =>
-          p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          p.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          p.description.toLowerCase().includes(searchQuery.toLowerCase())
-        )
-        .map(p => ({ type: 'proposal' as const, data: p })),
-    ]
+        // Approved proposals (as neighborhoods)
+        ...filteredNeighborhoods.map(n => ({ type: 'neighborhood' as const, data: n })),
+        // Pending/Rejected proposals
+        ...userProposals
+          .filter(p => p.status !== 'approved')
+          .filter(p =>
+            p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            p.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            p.description.toLowerCase().includes(searchQuery.toLowerCase())
+          )
+          .map(p => ({ type: 'proposal' as const, data: p })),
+      ]
     : filteredNeighborhoods.map(n => ({ type: 'neighborhood' as const, data: n }));
 
   const getStatusIcon = (status?: string) => {
     if (!status) return null;
     switch (status) {
-      case 'pending': return <Clock className="w-4 h-4 text-yellow-600" />;
-      case 'approved': return <CheckCircle className="w-4 h-4 text-green-600" />;
-      case 'rejected': return <XCircle className="w-4 h-4 text-red-600" />;
-      default: return null;
+      case 'pending':
+        return <Clock className="w-4 h-4 text-yellow-600" />;
+      case 'approved':
+        return <CheckCircle className="w-4 h-4 text-green-600" />;
+      case 'rejected':
+        return <XCircle className="w-4 h-4 text-red-600" />;
+      default:
+        return null;
     }
   };
 
-  // Open the location-capture modal instead of joining directly
-  const handleJoinClick = (neighborhoodId: number | string, neighborhoodName: string) => {
-    const id = typeof neighborhoodId === 'string' ? parseInt(neighborhoodId) : neighborhoodId;
-    setPendingJoinId(id);
-    setPendingJoinName(neighborhoodName);
-    setShowJoinModal(true);
-  };
+  const handleJoinNeighborhood = async (neighborhoodId: number | string) => {
+    const targetId = typeof neighborhoodId === 'number' ? neighborhoodId : parseInt(neighborhoodId as string);
+    try {
+      setJoiningNeighborhoodId(targetId);
 
-  const handleJoinSuccess = () => {
-    const joined = neighborhoods.find(n => String(n.id) === String(pendingJoinId));
-    if (joined) setUserNeighborhood(joined);
-    toast.success("Successfully joined neighbourhood!");
-    loadData();
+      // If user is already a member of another neighborhood, leave it first
+      if (userNeighborhood && userNeighborhood.id !== targetId) {
+        try {
+          await neighborhoodsService.leaveNeighborhood(userNeighborhood.id as any);
+        } catch (leaveErr) {
+          // Non-fatal: continue to attempt join
+          console.warn('Failed to leave existing neighborhood:', leaveErr);
+        }
+      }
+
+      await neighborhoodsService.joinNeighborhood(targetId);
+      toast.success("Successfully joined neighborhood!");
+      setUserNeighborhood(neighborhoods.find(n => n.id === targetId) || null);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to join neighborhood");
+    } finally {
+      setJoiningNeighborhoodId(null);
+    }
   };
 
   const handleLeaveNeighborhood = async () => {
     if (!userNeighborhood) return;
     try {
       setJoiningNeighborhoodId(userNeighborhood.id);
-      await neighborhoodsService.leaveNeighborhood(parseInt(String(userNeighborhood.id)) as any);
-      toast.success("You have left the neighbourhood");
+      await neighborhoodsService.leaveNeighborhood(userNeighborhood.id);
+      toast.success("You have left the neighborhood");
       setUserNeighborhood(null);
     } catch (error: any) {
-      toast.error(error.message || "Failed to leave neighbourhood");
+      toast.error(error.message || "Failed to leave neighborhood");
     } finally {
       setJoiningNeighborhoodId(null);
     }
@@ -152,48 +158,6 @@ export default function BrowseNeighborhoods() {
       </div>
 
       <div className="max-w-lg mx-auto px-4 py-6">
-        {/* My Current Neighborhood Section */}
-        {userNeighborhood && !viewMyProposals && (
-          <div className="mb-8">
-            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4 px-1">Your Neighborhood</h2>
-            <div className="bg-gradient-to-br from-indigo-500 to-primary rounded-2xl p-6 shadow-md text-white">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-xl font-bold">{userNeighborhood.name}</h3>
-                    {userNeighborhood.verified && (
-                      <div className="bg-white/20 backdrop-blur-md rounded-full p-1">
-                        <Shield className="w-3 h-3 text-white" />
-                      </div>
-                    )}
-                  </div>
-                  <p className="text-indigo-100 text-sm line-clamp-2">{userNeighborhood.description}</p>
-                </div>
-                <div className="bg-white/10 backdrop-blur-md rounded-xl p-3">
-                  <HomeIcon className="w-6 h-6 text-white" />
-                </div>
-              </div>
-              
-              <div className="flex gap-3">
-                <Link to={`/neighborhood/${userNeighborhood.id}`} className="flex-1">
-                  <Button className="w-full bg-white text-primary hover:bg-indigo-50 font-semibold">
-                    View My Neighborhood
-                  </Button>
-                </Link>
-                <Button 
-                  onClick={handleLeaveNeighborhood}
-                  disabled={joiningNeighborhoodId === userNeighborhood.id}
-                  variant="outline" 
-                  className="bg-transparent border-white/30 text-white hover:bg-white/10"
-                >
-                  {joiningNeighborhoodId === userNeighborhood.id ? "Leaving..." : "Leave"}
-                </Button>
-              </div>
-            </div>
-            <div className="mt-8 border-b border-border" />
-          </div>
-        )}
-
         {loading ? (
           <div className="text-center py-8 text-muted-foreground">Loading...</div>
         ) : displayItems.length === 0 ? (
@@ -233,7 +197,7 @@ export default function BrowseNeighborhoods() {
                         </div>
                       </div>
                       <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{proposal.description}</p>
-
+                      
                       <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
                         <div className="flex items-center gap-1">
                           <MapPin className="w-4 h-4" />
@@ -250,7 +214,7 @@ export default function BrowseNeighborhoods() {
               } else {
                 const neighborhood = item.data;
                 const isAdmin = neighborhood.leadId === currentUser.id;
-
+                
                 return (
                   <div
                     key={`neighborhood-${neighborhood.id}`}
@@ -258,7 +222,7 @@ export default function BrowseNeighborhoods() {
                   >
                     {!isAdmin && (
                       <Link to={`/neighborhood/${neighborhood.id}`} className="block">
-                        <div
+                        <div 
                           className="h-32 bg-gradient-to-br from-primary/20 to-indigo-100 flex items-center justify-center bg-cover bg-center"
                           style={neighborhood.coverPhoto ? { backgroundImage: `url(${neighborhood.coverPhoto})` } : {}}
                         >
@@ -269,7 +233,7 @@ export default function BrowseNeighborhoods() {
                       </Link>
                     )}
                     {isAdmin && (
-                      <div
+                      <div 
                         className="h-32 bg-gradient-to-br from-primary/20 to-indigo-100 flex items-center justify-center cursor-pointer hover:from-primary/30 hover:to-indigo-200 transition-colors bg-cover bg-center"
                         style={neighborhood.coverPhoto ? { backgroundImage: `url(${neighborhood.coverPhoto})` } : {}}
                         onClick={() => navigate(`/hub-settings/${neighborhood.id}`)}
@@ -298,7 +262,7 @@ export default function BrowseNeighborhoods() {
                         </div>
                       </div>
                       <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{neighborhood.description}</p>
-
+                      
                       <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
                         <div className="flex items-center gap-1">
                           <MapPin className="w-4 h-4" />
@@ -327,30 +291,30 @@ export default function BrowseNeighborhoods() {
                                   View My Neighborhood
                                 </Button>
                               </Link>
-                              <Button
+                              <Button 
                                 onClick={handleLeaveNeighborhood}
                                 disabled={joiningNeighborhoodId === neighborhood.id}
-                                className="w-full"
+                                className="w-full" 
                                 variant="outline"
                               >
                                 {joiningNeighborhoodId === neighborhood.id ? "Leaving..." : "Leave Neighborhood"}
                               </Button>
                             </div>
                           ) : userNeighborhood ? (
-                            <Button
-                              onClick={() => handleJoinClick(neighborhood.id, neighborhood.name)}
+                            <Button 
+                              onClick={() => handleJoinNeighborhood(neighborhood.id)}
                               disabled={joiningNeighborhoodId !== null}
                               className="w-full bg-orange-600 hover:bg-orange-700"
                             >
-                              Switch Neighborhood
+                              {joiningNeighborhoodId === neighborhood.id ? "Joining..." : "Switch Neighborhood"}
                             </Button>
                           ) : (
-                            <Button
-                              onClick={() => handleJoinClick(neighborhood.id, neighborhood.name)}
+                            <Button 
+                              onClick={() => handleJoinNeighborhood(neighborhood.id)}
                               disabled={joiningNeighborhoodId !== null}
                               className="w-full bg-green-600 hover:bg-green-700"
                             >
-                              Join Neighborhood
+                              {joiningNeighborhoodId === neighborhood.id ? "Joining..." : "Join Neighborhood"}
                             </Button>
                           )}
                         </>
@@ -375,17 +339,6 @@ export default function BrowseNeighborhoods() {
           </Link>
         )}
       </div>
-
-      {/* Location verification modal */}
-      {pendingJoinId !== null && (
-        <JoinNeighborhoodModal
-          isOpen={showJoinModal}
-          onOpenChange={setShowJoinModal}
-          neighborhoodId={pendingJoinId}
-          neighborhoodName={pendingJoinName}
-          onJoinSuccess={handleJoinSuccess}
-        />
-      )}
     </div>
   );
 }

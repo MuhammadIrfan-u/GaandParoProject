@@ -13,8 +13,7 @@ const transformNeighborhood = (data) => ({
   population: data.population,
   primaryLandmark: data.primary_landmark,
   adminId: data.admin_id,
-  leadId: data.admin_id, // Mapping admin_id to leadId for frontend compatibility
-  leadName: data.lead_name || 'System Admin', // Include lead name
+  leadId: data.lead_id,
   verified: data.verified,
   createdDate: data.created_date,
   coverPhoto: data.cover_photo,
@@ -22,133 +21,6 @@ const transformNeighborhood = (data) => ({
   guidelines: data.guidelines,
   settings: data.settings,
 });
-
-/**
- * Reverse geocode coordinates using Nominatim (free, no API key needed)
- * Returns { city, state, suburb, county, displayName } from the coordinates
- */
-async function reverseGeocode(latitude, longitude) {
-    try {
-        const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=en`,
-            {
-                headers: {
-                    'User-Agent': 'VNC-App/1.0',
-                    'Accept-Language': 'en',
-                },
-            }
-        );
-
-        if (!response.ok) {
-            throw new Error(`Nominatim API returned ${response.status}`);
-        }
-
-        const data = await response.json();
-        const address = data.address || {};
-
-        // Build a rich location object — Nominatim hierarchy varies by country
-        const city = address.city || address.town || address.village || address.municipality || '';
-        const suburb = address.suburb || address.neighbourhood || address.quarter || '';
-        const county = address.county || address.district || '';
-        const state = address.state || '';
-        const country = address.country || '';
-
-        return {
-            city: city.trim(),
-            suburb: suburb.trim(),
-            county: county.trim(),
-            state: state.trim(),
-            country: country.trim(),
-            displayName: data.display_name || '',
-            // All location tokens for flexible matching
-            allTokens: [city, suburb, county, state, country]
-                .filter(Boolean)
-                .map(s => s.toLowerCase().trim()),
-        };
-    } catch (error) {
-        console.error('Nominatim reverse geocoding error:', error.message);
-        throw new Error('Failed to retrieve location information');
-    }
-}
-
-/**
- * Smart location match.
- */
-function locationsMatch(geolocation, neighborhoodCity, neighborhoodState) {
-    if (!neighborhoodCity) return false;
-
-    const nbCity = neighborhoodCity.toLowerCase().trim();
-    const nbState = (neighborhoodState || '').toLowerCase().trim();
-    const display = geolocation.displayName.toLowerCase();
-
-    // Build full set of tokens from geocoded result
-    const tokens = geolocation.allTokens; // already lowercased
-
-    // 1. Exact city match
-    if (geolocation.city.toLowerCase() === nbCity) return true;
-
-    // 2. Any geocoded token exactly equals neighbourhood city
-    if (tokens.some(t => t === nbCity)) return true;
-
-    // 3. Any geocoded token CONTAINS the neighbourhood city as a word
-    if (tokens.some(t => t.includes(nbCity))) return true;
-
-    // 4. Neighbourhood city appears in the full Nominatim display name
-    if (display.includes(nbCity)) return true;
-
-    // 5. Handle state abbreviations
-    const stateAbbreviations = {
-        'is': 'islamabad',
-        'pb': 'punjab',
-        'kpk': 'khyber pakhtunkhwa',
-        'sd': 'sindh',
-        'bl': 'balochistan',
-        'gb': 'gilgit baltistan',
-        'ajk': 'azad kashmir',
-    };
-    const expandedState = stateAbbreviations[nbState] || nbState;
-    if (expandedState && (display.includes(expandedState) || tokens.some(t => t.includes(expandedState)))) {
-        if (!geolocation.city) return true;
-    }
-
-    return false;
-}
-
-/**
- * Sets users.verified = true when both document + location are verified
- */
-async function checkAndSetUserVerified(userId) {
-    try {
-        const userIdStr = String(userId);
-
-        const { data: docApproval } = await supabase
-            .from('verification_requests')
-            .select('id')
-            .eq('user_id', userId)
-            .eq('status', 'approved')
-            .limit(1)
-            .maybeSingle();
-
-        const { data: locVerified } = await supabase
-            .from('neighborhood_members')
-            .select('id')
-            .eq('user_id', userIdStr)
-            .eq('status', 'verified')
-            .limit(1)
-            .maybeSingle();
-
-        const bothVerified = !!docApproval && !!locVerified;
-
-        if (bothVerified) {
-            await supabase
-                .from('users')
-                .update({ verified: true })
-                .eq('id', userId);
-        }
-    } catch (err) {
-        console.error('[VERIFIED CHECK] error:', err.message);
-    }
-}
 
 // Get all neighborhoods
 router.get('/neighborhoods', async (req, res) => {
@@ -159,45 +31,31 @@ router.get('/neighborhoods', async (req, res) => {
     
     if (neighborhoodsError) throw neighborhoodsError;
     
-    // Fetch settings and lead name for each neighborhood
+    // Fetch settings for each neighborhood
     const enrichedData = await Promise.all(
       (neighborhoods || []).map(async (n) => {
-        // Fetch settings
         const { data: settings } = await supabase
           .from('neighborhood_settings')
           .select('*')
           .eq('neighborhood_id', n.id)
           .single();
         
-        // Fetch lead name from users table
-        let leadName = 'System Admin';
-        if (n.admin_id) {
-          const { data: userData } = await supabase
-            .from('users')
-            .select('name')
-            .eq('id', n.admin_id)
-            .single();
-          
-          if (userData) leadName = userData.name;
-        }
-        
         return {
           ...n,
-          lead_name: leadName,
           settings: settings ? {
             enableMarketplace: settings.enable_marketplace ?? true,
             enableResourceExchange: settings.enable_resource_exchange ?? true,
             enablePublicAlerts: settings.enable_public_alerts ?? true,
             enableEvents: settings.enable_events ?? true,
             enableServices: settings.enable_services ?? true,
-            require_verification: settings.require_verification ?? false,
+            requireVerification: settings.require_verification ?? false,
           } : { 
             enableMarketplace: true, 
             enableResourceExchange: true,
             enablePublicAlerts: true,
             enableEvents: true,
             enableServices: true,
-            require_verification: false,
+            requireVerification: false,
           },
         };
       })
@@ -226,42 +84,29 @@ router.get('/neighborhoods/:id', async (req, res) => {
       return res.status(404).json({ message: 'Neighborhood not found' });
     }
     
-    // Fetch settings and lead name
+    // Fetch settings for the neighborhood
     const { data: settings } = await supabase
       .from('neighborhood_settings')
       .select('*')
       .eq('neighborhood_id', data.id)
       .single();
     
-    // Fetch lead name
-    let leadName = 'System Admin';
-    if (data.admin_id) {
-      const { data: userData } = await supabase
-        .from('users')
-        .select('name')
-        .eq('id', data.admin_id)
-        .single();
-      
-      if (userData) leadName = userData.name;
-    }
-
     const enrichedData = {
       ...data,
-      lead_name: leadName,
       settings: settings ? {
         enableMarketplace: settings.enable_marketplace ?? true,
         enableResourceExchange: settings.enable_resource_exchange ?? true,
         enablePublicAlerts: settings.enable_public_alerts ?? true,
         enableEvents: settings.enable_events ?? true,
         enableServices: settings.enable_services ?? true,
-        require_verification: settings.require_verification ?? false,
+        requireVerification: settings.require_verification ?? false,
       } : { 
         enableMarketplace: true, 
         enableResourceExchange: true,
         enablePublicAlerts: true,
         enableEvents: true,
         enableServices: true,
-        require_verification: false,
+        requireVerification: false,
       },
     };
     
@@ -566,114 +411,36 @@ router.put('/neighborhoods/:id/hub-settings', async (req, res) => {
   }
 });
 
-// Join a neighborhood (with location verification)
+// Join a neighborhood
 router.post('/neighborhoods/:id/join', async (req, res) => {
   try {
-    const { userId, latitude, longitude } = req.body;
+    const { userId } = req.body;
     const neighborhoodId = parseInt(req.params.id);
 
     if (!userId) {
       return res.status(400).json({ error: 'userId is required' });
     }
 
-    console.log(`[JOIN] User ${userId} attempting to join neighborhood ${neighborhoodId}`);
+    console.log(`User ${userId} attempting to join neighborhood ${neighborhoodId}`);
 
-    // If coordinates are provided, perform advanced verification
-    if (latitude !== undefined && longitude !== undefined) {
-      // Fetch neighborhood data for location comparison
-      const { data: neighborhood, error: neighError } = await supabase
-        .from('neighborhoods')
-        .select('id, name, city, state')
-        .eq('id', neighborhoodId)
-        .single();
+    // First, check if user is already a member of another neighborhood
+    const { data: existingMembership, error: membershipError } = await supabase
+      .from('neighborhood_members')
+      .select('id, neighborhood_id')
+      .eq('user_id', userId);
 
-      if (neighError || !neighborhood) {
-        return res.status(404).json({ error: 'Neighborhood not found' });
-      }
+    if (membershipError && membershipError.code !== 'PGRST116') {
+      throw membershipError;
+    }
 
-      // 1. Check if already a member elsewhere
-      const { data: existingMembership } = await supabase
-        .from('neighborhood_members')
-        .select('neighborhood_id')
-        .eq('user_id', userId);
-
-      if (existingMembership && existingMembership.length > 0) {
-        const currentNbhId = existingMembership[0].neighborhood_id;
-        if (String(currentNbhId) !== String(neighborhoodId)) {
-          return res.status(400).json({
-            error: 'User is already a member of another neighborhood. Please leave that neighborhood first.',
-            code: 'ALREADY_MEMBER_ELSEWHERE',
-            currentNeighborhoodId: currentNbhId
-          });
-        }
-      }
-
-      // 2. Reverse geocode browser location
-      const geolocation = await reverseGeocode(latitude, longitude);
-
-      // 3. Smart location match
-      const locationMatches = locationsMatch(geolocation, neighborhood.city, neighborhood.state);
-
-      if (!locationMatches) {
-        return res.status(403).json({
-          success: false,
-          matched: false,
-          code: 'LOCATION_MISMATCH',
-          message: `Your location does not match ${neighborhood.name}. You must be physically located in ${neighborhood.city} to join.`,
-          neighborhoodLocation: { city: neighborhood.city, state: neighborhood.state },
-          userLocation: {
-            city: geolocation.city || geolocation.suburb || geolocation.county,
-            state: geolocation.state,
-            displayName: geolocation.displayName,
-          },
-        });
-      }
-
-      // 4. Location matched -> join as verified
-      const { data, error } = await supabase
-        .from('neighborhood_members')
-        .upsert({
-          user_id: userId,
-          neighborhood_id: neighborhoodId,
-          joined_date: new Date().toISOString(),
-          status: 'verified',
-          verified_at: new Date().toISOString(),
-          user_location_city: geolocation.city || geolocation.suburb || geolocation.county,
-          user_location_state: geolocation.state,
-        }, { onConflict: 'user_id, neighborhood_id' })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // Update member count
-      const { data: nbh } = await supabase.from('neighborhoods').select('member_count').eq('id', neighborhoodId).single();
-      const newCount = (nbh?.member_count || 0) + 1;
-      await supabase.from('neighborhoods').update({ member_count: newCount }).eq('id', neighborhoodId);
-
-      // Check for full user verification
-      await checkAndSetUserVerified(userId);
-
-      return res.json({
-        success: true,
-        matched: true,
-        status: 'verified',
-        message: `Welcome to ${neighborhood.name}!`,
-        userLocation: {
-          city: geolocation.city || geolocation.suburb || geolocation.county,
-          state: geolocation.state,
-          displayName: geolocation.displayName,
-        }
+    if (existingMembership && existingMembership.length > 0) {
+      return res.status(400).json({ 
+        error: 'User is already a member of another neighborhood. Please leave that neighborhood first.',
+        currentNeighborhoodId: existingMembership[0].neighborhood_id
       });
     }
 
-    // Fallback: simple join without location coordinates
-    // (Still check for membership conflict)
-    const { data: existing } = await supabase.from('neighborhood_members').select('id').eq('user_id', userId);
-    if (existing && existing.length > 0) {
-       return res.status(400).json({ error: 'Already a member of a neighborhood' });
-    }
-
+    // Add user to the neighborhood
     const { data, error } = await supabase
       .from('neighborhood_members')
       .insert({
@@ -684,12 +451,39 @@ router.post('/neighborhoods/:id/join', async (req, res) => {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Insert error details:', error);
+      throw error;
+    }
 
-    res.json({ message: 'Successfully joined neighborhood', membershipId: data.id });
+    console.log(`User ${userId} successfully joined neighborhood ${neighborhoodId}`);
+
+    // Update member count
+    const { data: neighborhood, error: countError } = await supabase
+      .from('neighborhoods')
+      .select('member_count')
+      .eq('id', neighborhoodId)
+      .single();
+
+    if (countError) {
+      console.error('Count fetch error:', countError);
+    }
+
+    const newCount = (neighborhood?.member_count || 0) + 1;
+    await supabase
+      .from('neighborhoods')
+      .update({ member_count: newCount })
+      .eq('id', neighborhoodId);
+
+    res.json({ 
+      message: 'Successfully joined neighborhood',
+      membershipId: data.id,
+      neighborhoodId
+    });
   } catch (error) {
     console.error('Error joining neighborhood:', error);
-    res.status(500).json({ error: error.message });
+    console.error('Error details:', error.message, error.code);
+    res.status(500).json({ error: error.message, details: error.code });
   }
 });
 
@@ -703,7 +497,7 @@ router.post('/neighborhoods/:id/leave', async (req, res) => {
       return res.status(400).json({ error: 'userId is required' });
     }
 
-    console.log(`[POST] User ${userId} attempting to leave neighborhood ${neighborhoodId}`);
+    console.log(`User ${userId} attempting to leave neighborhood ${neighborhoodId}`);
 
     // Remove user from the neighborhood
     const { error } = await supabase
@@ -741,69 +535,6 @@ router.post('/neighborhoods/:id/leave', async (req, res) => {
     console.error('Error leaving neighborhood:', error);
     console.error('Error details:', error.message, error.code);
     res.status(500).json({ error: error.message, details: error.code });
-  }
-});
-
-// Leave a neighborhood (DELETE method for REST compatibility)
-router.delete('/neighborhoods/:id/leave', async (req, res) => {
-  try {
-    const userId = req.body.userId || req.query.userId;
-    const neighborhoodId = parseInt(req.params.id);
-
-    if (!userId) {
-      return res.status(400).json({ error: 'userId is required' });
-    }
-
-    console.log(`[DELETE] User ${userId} attempting to leave neighborhood ${neighborhoodId}`);
-
-    // Remove user from the neighborhood
-    const { error } = await supabase
-      .from('neighborhood_members')
-      .delete()
-      .eq('user_id', userId)
-      .eq('neighborhood_id', neighborhoodId);
-
-    if (error) throw error;
-
-    // Update member count
-    const { data: neighborhood } = await supabase
-      .from('neighborhoods')
-      .select('member_count')
-      .eq('id', neighborhoodId)
-      .single();
-
-    const newCount = Math.max(0, (neighborhood?.member_count || 1) - 1);
-    await supabase
-      .from('neighborhoods')
-      .update({ member_count: newCount })
-      .eq('id', neighborhoodId);
-
-    res.json({ success: true, message: 'Successfully left neighborhood' });
-  } catch (error) {
-    console.error('Error leaving neighborhood:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Leave current neighborhood (Generic POST)
-router.post('/neighborhoods/leave', async (req, res) => {
-  try {
-    const { userId } = req.body;
-    if (!userId) return res.status(400).json({ error: 'userId is required' });
-
-    console.log(`[POST GENERIC] User ${userId} leaving their current neighborhood`);
-
-    const { error } = await supabase
-      .from('neighborhood_members')
-      .delete()
-      .eq('user_id', userId);
-
-    if (error) throw error;
-
-    res.json({ success: true, message: 'Successfully left neighborhood' });
-  } catch (error) {
-    console.error('Error in generic leave:', error);
-    res.status(500).json({ error: error.message });
   }
 });
 
@@ -866,42 +597,6 @@ router.get('/users/:userId/neighborhood', async (req, res) => {
     console.error('Error fetching user neighborhood:', error);
     console.error('Error details:', error.message, error.code);
     res.status(500).json({ error: error.message, details: error.code });
-  }
-});
-
-// Get all neighborhoods a user is enrolled in
-router.get('/users/:userId/enrolled-neighborhoods', async (req, res) => {
-  try {
-    const { userId } = req.params;
-    
-    // Get neighborhood IDs from neighborhood_members
-    const { data: memberships, error: membershipError } = await supabase
-      .from('neighborhood_members')
-      .select('neighborhood_id')
-      .eq('user_id', userId);
-    
-    if (membershipError) throw membershipError;
-    
-    if (!memberships || memberships.length === 0) {
-      return res.json([]);
-    }
-    
-    const neighborhoodIds = memberships.map(m => m.neighborhood_id);
-    
-    // Get neighborhood details
-    const { data: neighborhoods, error: neighborhoodsError } = await supabase
-      .from('neighborhoods')
-      .select('*')
-      .in('id', neighborhoodIds);
-    
-    if (neighborhoodsError) throw neighborhoodsError;
-    
-    // Transform data
-    const transformedData = (neighborhoods || []).map(transformNeighborhood);
-    res.json(transformedData);
-  } catch (error) {
-    console.error('Error fetching enrolled neighborhoods:', error);
-    res.status(500).json({ error: error.message });
   }
 });
 

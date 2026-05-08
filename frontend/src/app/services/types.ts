@@ -1,17 +1,28 @@
+export type ModerationStatus = 'active' | 'suspended' | 'banned';
+
 export interface User {
-  id: string;
+  id: number;
   name: string;
   email: string;
   phone: string;
   address: string;
   avatar: string;
+  bio?: string;
   verified: boolean;
   reputation: number;
   joinedDate: string;
-  bio?: string;
   isAdmin?: boolean;
+  isFlagged?: boolean;
+  flagReason?: string;
+  moderationStatus?: ModerationStatus;
+  isServiceProvider?: boolean;
   neighborhoodId?: number;
-  isProvider?: boolean;
+}
+
+export interface AuthResponse {
+  message: string;
+  token: string;
+  user: User;
 }
 
 export interface Post {
@@ -68,7 +79,6 @@ export interface Service {
   reviewCount: number;
   price: string;
   availability: string;
-  status?: 'active' | 'inactive';
 }
 
 export interface ServiceRequest {
@@ -77,11 +87,10 @@ export interface ServiceRequest {
   serviceId: string;
   serviceName: string;
   provider: string;
-  status: 'pending' | 'accepted' | 'completed' | 'cancelled' | 'rejected';
+  status: 'pending' | 'accepted' | 'completed' | 'cancelled';
   requestDate: string;
   scheduledDate?: string;
   description: string;
-  providerId?: string | number;
 }
 
 export interface Event {
@@ -137,7 +146,7 @@ export interface Conversation {
 
 export interface Report {
   id: string;
-  reporterId: string;
+  reporterId: number;
   reportedItemId: string;
   reportedItemType: 'post' | 'user' | 'message' | 'marketplace';
   reason: string;
@@ -152,12 +161,10 @@ export interface Review {
   reviewer: string;
   reviewerAvatar: string;
   targetId: string;
-  targetType: 'marketplace' | 'service' | 'event' | 'post' | 'user';
+  targetType: 'user' | 'service';
   rating: number;
   comment: string;
   timestamp: string;
-  createdAt?: string;
-  neighborhoodId?: string;
 }
 
 export interface Notification {
@@ -229,15 +236,4 @@ export interface AnalyticsData {
 export interface Location {
   lat: number;
   lng: number;
-}
-
-export interface ProviderApplication {
-  id: string;
-  userId: string;
-  fullName: string;
-  experience: string;
-  category: string;
-  description: string;
-  status: 'pending' | 'approved' | 'rejected';
-  submittedDate: string;
 }
