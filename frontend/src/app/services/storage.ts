@@ -393,7 +393,8 @@ export const marketplaceService = {
         method: 'POST',
         body: JSON.stringify({
           ...item,
-          sellerId: user.id
+          sellerId: user.id,
+          neighborhoodId: user.neighborhoodId
         })
       });
       return response.json();
@@ -559,11 +560,13 @@ export const alertsService = {
 
   createAlert: async (alert: Omit<Alert, 'id' | 'authorId' | 'author' | 'timestamp' | 'resolved'>) => {
     try {
+      const authUser = authService.getCurrentUser();
       const response = await apiFetch('/alerts', {
         method: 'POST',
         body: JSON.stringify({
           ...alert,
-          authorId: authUser.id
+          authorId: authUser.id,
+          neighborhood_id: authUser.neighborhoodId
         })
       });
       return response.json();

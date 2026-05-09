@@ -37,6 +37,7 @@ import HubSettings from "./screens/HubSettings";
 import BrowseNeighborhoods from "./screens/BrowseNeighborhoods";
 import NeighborhoodProposalStatus from "./screens/NeighborhoodProposalStatus";
 import SuperAdminDashboard from "./screens/SuperAdminDashboard";
+import AdminDashboard from "./screens/AdminDashboard";
 import NeighborhoodDetail from "./screens/NeighborhoodDetail";
 import ApplyProvider from "./screens/ApplyProvider";
 import ServiceRequests from "./screens/ServiceRequests";
@@ -184,11 +185,11 @@ export const router = createBrowserRouter([
   },
   {
     path: "/hub-settings/:neighborhoodId",
-    Component: HubSettings,
+    Component: AdminDashboard,
   },
   {
     path: "/hub-settings",
-    Component: HubSettings,
+    Component: AdminDashboard,
   },
   {
     path: "/neighborhoods",
@@ -205,6 +206,10 @@ export const router = createBrowserRouter([
   {
     path: "/super-admin-dashboard",
     Component: SuperAdminDashboard,
+  },
+  {
+    path: "/admin-dashboard",
+    Component: AdminDashboard,
   },
   {
     path: "/forgot-password",

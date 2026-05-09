@@ -251,23 +251,7 @@ export default function Profile() {
           </div>
         )}
 
-        {/* Super Admin Dashboard Link */}
-        {currentUser.isAdmin && (
-          <Link to="/super-admin-dashboard" className="block mb-4">
-            <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-2xl p-4 flex items-center gap-4 hover:shadow-xl transition-shadow">
-              <div className="bg-white/20 backdrop-blur-sm rounded-full p-3">
-                <Shield className="w-6 h-6" />
-              </div>
-              <div className="flex-1">
-                <div className="text-lg font-bold mb-0.5">Super Admin Dashboard</div>
-                <div className="text-sm opacity-90">Manage neighborhoods & proposals</div>
-              </div>
-              <div className="bg-yellow-400 text-purple-900 rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">
-                1
-              </div>
-            </div>
-          </Link>
-        )}
+
 
         <Button
           onClick={handleLogout}

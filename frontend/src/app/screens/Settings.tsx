@@ -112,28 +112,6 @@ export default function Settings() {
       </div>
 
       <div className="max-w-lg mx-auto px-4 py-6">
-        {/* Super Admin Dashboard (for Super Admins) */}
-        {currentUser.isAdmin && (
-          <div className="mb-6">
-            <Link
-              to="/super-admin-dashboard"
-              className="block bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-2xl p-6 mb-6 hover:shadow-xl transition-shadow"
-            >
-              <div className="flex items-center gap-4">
-                <div className="bg-white/20 backdrop-blur-sm rounded-full p-3">
-                  <Shield className="w-8 h-8" />
-                </div>
-                <div className="flex-1">
-                  <div className="text-xl mb-1">Super Admin Dashboard</div>
-                  <div className="text-sm opacity-90">Review proposals & manage neighborhoods</div>
-                </div>
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
-            </Link>
-          </div>
-        )}
 
         {/* Neighborhood Management (for Moderators/Admins) */}
         {currentUser.isAdmin && (
@@ -141,13 +119,13 @@ export default function Settings() {
             <h3 className="text-sm px-4 mb-2 text-muted-foreground">Neighborhood Management</h3>
             <div className="bg-white rounded-2xl border border-border overflow-hidden">
               <Link
-                to="/hub-settings"
+                to="/admin-dashboard"
                 className="flex items-center gap-3 p-4 hover:bg-muted/30 transition-colors border-b border-border"
               >
                 <Settings2 className="w-5 h-5 text-muted-foreground" />
                 <div className="flex-1">
-                  <div>Hub Settings</div>
-                  <div className="text-xs text-muted-foreground">Configure neighborhood settings</div>
+                  <div>Neighborhood Admin Dashboard</div>
+                  <div className="text-xs text-muted-foreground">Manage posts, events, members, and settings</div>
                 </div>
                 <svg className="w-5 h-5 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />

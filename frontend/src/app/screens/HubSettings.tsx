@@ -34,7 +34,7 @@ export default function HubSettings() {
       
       if (neighborhoodId) {
         // If neighborhood ID is provided via URL, load that specific neighborhood
-        userNeighborhood = neighborhoods.find(n => n.id === parseInt(neighborhoodId));
+        userNeighborhood = neighborhoods.find(n => String(n.id) === String(neighborhoodId));
         
         // Check if current user is the admin
         if (userNeighborhood && userNeighborhood.adminId !== currentUser.id) {

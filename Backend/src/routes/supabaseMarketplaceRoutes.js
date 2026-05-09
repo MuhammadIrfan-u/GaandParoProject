@@ -50,6 +50,7 @@ router.post('/marketplace', async (req, res) => {
       .from('marketplace_items')
       .insert([{
         seller_id: numericSellerId,
+        neighborhood_id: item.neighborhoodId,
         title: item.title,
         description: item.description,
         price: numericPrice,

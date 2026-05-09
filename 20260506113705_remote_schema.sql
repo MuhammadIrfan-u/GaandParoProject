@@ -39,19 +39,23 @@ create sequence "public"."users_id_seq";
 create sequence "public"."verification_requests_id_seq";
 
 
-  create table "public"."alerts" (
-    "id" integer not null default nextval('public.alerts_id_seq'::regclass),
-    "author_id" integer,
-    "type" character varying(30),
-    "title" character varying(150),
-    "description" text,
-    "timestamp" timestamp without time zone default CURRENT_TIMESTAMP,
-    "severity" character varying(20),
-    "resolved" boolean default false,
-    "is_flagged" boolean default false,
-    "flag_reason" character varying(50),
-    "moderation_status" character varying(20) default 'approved'::character varying
-      );
+create table public.alerts (
+  id serial not null,
+  author_id integer null,
+  type character varying(30) null,
+  title character varying(150) null,
+  description text null,
+  timestamp timestamp without time zone null default CURRENT_TIMESTAMP,
+  severity character varying(20) null,
+  resolved boolean null default false,
+  is_flagged boolean null default false,
+  flag_reason character varying(50) null,
+  moderation_status character varying(20) null default 'approved'::character varying,
+  neighborhood_id integer null,
+  constraint alerts_pkey primary key (id),
+  constraint alerts_author_id_fkey foreign KEY (author_id) references users (id),
+  constraint alerts_neighborhood_id_fkey foreign KEY (neighborhood_id) references neighborhoods (id)
+) TABLESPACE pg_default;
 
 
 
@@ -136,21 +140,25 @@ create sequence "public"."verification_requests_id_seq";
 
 
 
-  create table "public"."marketplace_items" (
-    "id" integer not null default nextval('public.marketplace_items_id_seq'::regclass),
-    "seller_id" integer,
-    "title" character varying(200),
-    "description" text,
-    "price" numeric,
-    "condition" character varying(20),
-    "category" character varying(50),
-    "image" text,
-    "posted_date" timestamp without time zone default CURRENT_TIMESTAMP,
-    "status" character varying(20) default 'available'::character varying,
-    "is_flagged" boolean default false,
-    "flag_reason" character varying(50),
-    "moderation_status" character varying(20) default 'approved'::character varying
-      );
+create table public.marketplace_items (
+  id serial not null,
+  seller_id integer null,
+  title character varying(200) null,
+  description text null,
+  price numeric null,
+  condition character varying(20) null,
+  category character varying(50) null,
+  image text null,
+  posted_date timestamp without time zone null default CURRENT_TIMESTAMP,
+  status character varying(20) null default 'available'::character varying,
+  is_flagged boolean null default false,
+  flag_reason character varying(50) null,
+  moderation_status character varying(20) null default 'approved'::character varying,
+  neighborhood_id integer null,
+  constraint marketplace_items_pkey primary key (id),
+  constraint marketplace_items_neighborhood_id_fkey foreign KEY (neighborhood_id) references neighborhoods (id) on delete CASCADE,
+  constraint marketplace_items_seller_id_fkey foreign KEY (seller_id) references users (id)
+) TABLESPACE pg_default;
 
 
 
@@ -236,18 +244,22 @@ create sequence "public"."verification_requests_id_seq";
 ) TABLESPACE pg_default;
 
 
-  create table "public"."notifications" (
-    "id" integer not null default nextval('public.notifications_id_seq'::regclass),
-    "user_id" integer,
-    "type" character varying(50),
-    "title" character varying(150),
-    "message" text,
-    "timestamp" timestamp without time zone default CURRENT_TIMESTAMP,
-    "read" boolean default false,
-    "action_url" text,
-    "item_id" integer,
-    "item_type" character varying(30)
-      );
+create table public.notifications (
+  id serial not null,
+  user_id integer null,
+  type character varying(50) null,
+  title character varying(150) null,
+  message text null,
+  timestamp timestamp without time zone null default CURRENT_TIMESTAMP,
+  read boolean null default false,
+  action_url text null,
+  item_id integer null,
+  item_type character varying(30) null,
+  neighborhood_id integer null,
+  constraint notifications_pkey primary key (id),
+  constraint notifications_neighborhood_id_fkey foreign KEY (neighborhood_id) references neighborhoods (id),
+  constraint notifications_user_id_fkey foreign KEY (user_id) references users (id)
+) TABLESPACE pg_default;
 
 
 

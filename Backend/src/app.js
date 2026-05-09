@@ -1,4 +1,5 @@
 import authRoutes from './routes/authRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
 import mockDataRoutes from "./routes/mockDataRoutes.js";
 import supabaseNeighborhoodsRoutes from "./routes/supabaseNeighborhoodsRoutes.js";
 import supabaseProposalsRoutes from "./routes/supabaseProposalsRoutes.js";
@@ -43,6 +44,7 @@ app.use('/api', membershipRoutes);
 app.use('/api', verificationRoutes);
 app.use('/api', userSettingsRoutes);
 app.use('/api', statsRoutes);
+app.use('/api', adminRoutes);
 
 // Home route
 app.get("/", (req, res) => {

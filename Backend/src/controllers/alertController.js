@@ -36,7 +36,7 @@ export const getAlerts = async (req, res) => {
 
 export const createAlert = async (req, res) => {
     try {
-        const { authorId, type, title, description, severity } = req.body;
+        const { authorId, neighborhood_id, type, title, description, severity } = req.body;
 
         if (!authorId || !title || !description) {
             return res.status(400).json({ error: 'Missing required fields: authorId, title, description' });
@@ -47,6 +47,7 @@ export const createAlert = async (req, res) => {
             .from('alerts')
             .insert([{
                 author_id: parseInt(authorId),
+                neighborhood_id: neighborhood_id,
                 type,
                 title,
                 description,
@@ -86,7 +87,8 @@ export const createAlert = async (req, res) => {
                 timestamp: new Date().toISOString(),
                 read: false,
                 item_id: alertData.id,
-                item_type: 'alert'
+                item_type: 'alert',
+                neighborhood_id: neighborhood_id
             }));
 
             const { error: notifyError } = await supabase

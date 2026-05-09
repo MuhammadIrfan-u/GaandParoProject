@@ -46,6 +46,7 @@ router.post('/alerts', async (req, res) => {
       .from('alerts')
       .insert([{
         author_id: numericAuthorId,
+        neighborhood_id: alert.neighborhood_id,
         type: alert.type,
         title: alert.title,
         description: alert.description,

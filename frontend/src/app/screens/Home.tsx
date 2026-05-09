@@ -158,7 +158,7 @@ export default function Home() {
 
         {(currentUser?.isAdmin || (userNeighborhood?.adminId && String(userNeighborhood.adminId) === String(currentUser?.id))) && (
           <Link
-            to="/super-admin-dashboard"
+            to="/admin-dashboard"
             className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl p-4 mb-6 text-white flex items-center justify-between group hover:shadow-lg shadow-md shadow-purple-500/20 transition-all active:scale-[0.98]"
           >
             <div className="flex items-center gap-4">
