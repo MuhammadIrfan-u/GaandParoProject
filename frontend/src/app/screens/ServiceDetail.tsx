@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router";
-import { ArrowLeft, Star, Clock, DollarSign, Calendar, ShieldCheck, MapPin } from "lucide-react";
+import { ArrowLeft, Star, Clock, DollarSign, Calendar, ShieldCheck, MapPin, MessageCircle, Send } from "lucide-react";
 import { motion } from "motion/react";
 import { Button } from "../components/ui/button";
 import { Textarea } from "../components/ui/textarea";
@@ -18,6 +18,9 @@ export default function ServiceDetail() {
   const [requestDescription, setRequestDescription] = useState("");
   const [scheduledDate, setScheduledDate] = useState("");
   const [showRequestDialog, setShowRequestDialog] = useState(false);
+  const [showMessageDialog, setShowMessageDialog] = useState(false);
+  const [message, setMessage] = useState("");
+  const [sending, setSending] = useState(false);
 
   useEffect(() => {
     loadService();
@@ -35,6 +38,27 @@ export default function ServiceDetail() {
     }
   };
 
+  const handleSendMessage = async () => {
+    if (!message.trim() || !service) return;
+    
+    setSending(true);
+    try {
+      const result = await messagesService.sendMessage({
+        recipientId: String(service.providerId),
+        content: `Question about: ${service.title}\n\n${message}`
+      });
+      
+      toast.success("Message sent!");
+      setShowMessageDialog(false);
+      setMessage("");
+      navigate(`/chat/${result.conversationId}`);
+    } catch (error) {
+      toast.error("Failed to send message");
+    } finally {
+      setSending(false);
+    }
+  };
+
   const handleRequestService = async () => {
     if (!service || !requestDescription.trim()) {
       toast.error("Please provide a description");
@@ -46,23 +70,18 @@ export default function ServiceDetail() {
       await servicesService.requestService(serviceId!, requestDescription, scheduledDate);
       
       // 2. Start a conversation with the provider
-      const providerId = `provider-${service.provider.replace(/\s+/g, '-').toLowerCase()}`;
-      const conversation = await messagesService.getOrCreateConversation(
-        providerId,
-        service.provider,
-        service.providerAvatar
-      );
-      
-      // 3. Send the description as the initial message
-      await messagesService.sendMessage(conversation.id, `Service Request: ${service.title}\n\n${requestDescription}`);
+      const result = await messagesService.sendMessage({
+        recipientId: String(service.providerId),
+        content: `Service Request: ${service.title}\n\n${requestDescription}${scheduledDate ? `\nPreferred Date: ${scheduledDate}` : ''}`
+      });
       
       toast.success("Service request sent and message delivered!");
       setShowRequestDialog(false);
       setRequestDescription("");
       setScheduledDate("");
       
-      // 4. Navigate to the chat page
-      navigate(`/chat/${conversation.id}`);
+      // 3. Navigate to the chat page
+      navigate(`/chat/${result.conversationId}`);
     } catch (error) {
       console.error("Failed to process request:", error);
       toast.error("Failed to request service. Please check if the service exists in the database.");
@@ -181,14 +200,49 @@ export default function ServiceDetail() {
                   <div className="text-sm text-muted-foreground">Community Member</div>
                 </div>
               </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="rounded-xl border-primary/20 text-primary"
-                onClick={() => navigate('/profile')}
-              >
-                View Profile
-              </Button>
+              <div className="flex gap-2">
+                <Dialog open={showMessageDialog} onOpenChange={setShowMessageDialog}>
+                  <DialogTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="rounded-xl border-primary/20 text-primary"
+                    >
+                      <MessageCircle className="w-4 h-4 mr-1" />
+                      Message
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Message {service.provider}</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 pt-4">
+                      <Textarea
+                        placeholder="Ask a question or express interest..."
+                        value={message}
+                        onChange={(e) => setMessage(e.target.value)}
+                        className="min-h-[120px] resize-none"
+                      />
+                      <Button 
+                        onClick={handleSendMessage} 
+                        className="w-full" 
+                        disabled={!message.trim() || sending}
+                      >
+                        {sending ? "Sending..." : "Send Message"}
+                        <Send className="w-4 h-4 ml-2" />
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="rounded-xl border-primary/20 text-primary"
+                  onClick={() => navigate('/profile')}
+                >
+                  Profile
+                </Button>
+              </div>
             </div>
           </div>
         </div>

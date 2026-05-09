@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router";
-import { ArrowLeft, DollarSign, MapPin, ShoppingBag, MessageCircle, Trash2, Edit } from "lucide-react";
+import { ArrowLeft, DollarSign, MapPin, ShoppingBag, MessageCircle, Trash2, Edit, Send } from "lucide-react";
 import { Button } from "../components/ui/button";
-import { marketplaceService, authService } from "../services/storage";
+import { Textarea } from "../components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../components/ui/dialog";
+import { marketplaceService, authService, messagesService } from "../services/storage";
 import { MarketplaceItem } from "../services/types";
 import { toast } from "sonner";
 
@@ -11,6 +13,9 @@ export default function MarketplaceItemDetail() {
   const navigate = useNavigate();
   const [item, setItem] = useState<MarketplaceItem | null>(null);
   const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState("");
+  const [showMessageDialog, setShowMessageDialog] = useState(false);
+  const [sending, setSending] = useState(false);
 
   useEffect(() => {
     loadItem();
@@ -28,9 +33,30 @@ export default function MarketplaceItemDetail() {
     }
   };
 
+  const handleSendMessage = async () => {
+    if (!message.trim() || !item) return;
+    
+    setSending(true);
+    try {
+      const result = await messagesService.sendMessage({
+        recipientId: String(item.sellerId),
+        content: `Inquiry about: ${item.title}\n\n${message}`
+      });
+      
+      toast.success("Message sent!");
+      setShowMessageDialog(false);
+      setMessage("");
+      navigate(`/chat/${result.conversationId}`);
+    } catch (error) {
+      toast.error("Failed to send message");
+    } finally {
+      setSending(false);
+    }
+  };
+
   const handleDelete = async () => {
     if (!window.confirm("Are you sure you want to delete this listing?")) return;
-    
+
     try {
       await marketplaceService.deleteItem(itemId!);
       toast.success("Listing deleted successfully");
@@ -144,9 +170,12 @@ export default function MarketplaceItemDetail() {
                   <div className="text-sm text-muted-foreground">Posted {item.postedDate}</div>
                 </div>
               </div>
-              <Link to="/messages" className="text-primary">
+              <button 
+                onClick={() => setShowMessageDialog(true)}
+                className="text-primary hover:bg-primary/5 p-2 rounded-full transition-colors"
+              >
                 <MessageCircle className="w-6 h-6" />
-              </Link>
+              </button>
             </div>
           </div>
 
@@ -166,12 +195,34 @@ export default function MarketplaceItemDetail() {
           >
             Save
           </Button>
-          <Link to="/messages" className="w-full">
-            <Button className="w-full bg-primary hover:bg-primary/90">
-              <MessageCircle className="w-5 h-5 mr-2" />
-              Message Seller
-            </Button>
-          </Link>
+          <Dialog open={showMessageDialog} onOpenChange={setShowMessageDialog}>
+            <DialogTrigger asChild>
+              <Button className="w-full bg-primary hover:bg-primary/90">
+                Message Seller
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Message {item.seller}</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 pt-4">
+                <Textarea
+                  placeholder="Ask a question or express interest..."
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  className="min-h-[120px] resize-none"
+                />
+                <Button 
+                  onClick={handleSendMessage} 
+                  className="w-full" 
+                  disabled={!message.trim() || sending}
+                >
+                  {sending ? "Sending..." : "Send Message"}
+                  <Send className="w-4 h-4 ml-2" />
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
     </div>
