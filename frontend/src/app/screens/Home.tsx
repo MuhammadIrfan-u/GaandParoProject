@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router";
-import { Bell, Plus, Heart, MessageCircle, Share2, MoreVertical, AlertCircle, Calendar, ShoppingBag, MapPin, TrendingUp, Star } from "lucide-react";
+import { Bell, Plus, Heart, MessageCircle, Share2, MoreVertical, AlertCircle, Calendar, ShoppingBag, MapPin, TrendingUp, Star, Users, FileText } from "lucide-react";
 import { BottomNav } from "../components/BottomNav";
 import { postsService, neighborhoodsService, alertsService, eventsService, authService } from "../services/storage";
 import { Post, Neighborhood, Alert, Event } from "../services/types";
@@ -81,6 +81,8 @@ export default function Home() {
     { icon: ShoppingBag, label: "Sell", color: "text-green-600", bg: "bg-green-100", link: "/marketplace" },
     { icon: MapPin, label: "Service", color: "text-purple-600", bg: "bg-purple-100", link: "/services" },
     { icon: Star, label: "Reviews", color: "text-orange-600", bg: "bg-orange-100", link: "/reputation" },
+    { icon: Users, label: "Community", color: "text-yellow-800", bg: "bg-yellow-100", link: "/neighborhoods" },
+    { icon: FileText, label: "Proposal", color: "text-cyan-600", bg: "bg-cyan-100", link: "/propose-neighborhood" },
   ];
 
   return (
@@ -205,7 +207,7 @@ export default function Home() {
                     {/* Post Header */}
                     <div className="p-4 flex items-start justify-between">
                       <div className="flex gap-3">
-                        <Link 
+                        <Link
                           to={`/user-profile/${post.authorId}`}
                           className="bg-gradient-to-br from-primary to-indigo-600 rounded-full w-12 h-12 flex items-center justify-center text-white flex-shrink-0 transition-transform active:scale-95"
                         >
@@ -213,7 +215,7 @@ export default function Home() {
                         </Link>
                         <div>
                           <div className="flex items-center gap-2">
-                            <Link 
+                            <Link
                               to={`/user-profile/${post.authorId}`}
                               className="font-semibold hover:text-primary transition-colors"
                             >
