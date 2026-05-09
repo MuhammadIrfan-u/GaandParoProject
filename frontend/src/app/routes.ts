@@ -42,6 +42,7 @@ import ApplyProvider from "./screens/ApplyProvider";
 import ServiceRequests from "./screens/ServiceRequests";
 import ForgotPassword from "./screens/ForgotPassword";
 import ResetPassword from "./screens/ResetPassword";
+import EditProfile from "./screens/EditProfile";
 
 export const router = createBrowserRouter([
   {
@@ -215,5 +216,9 @@ export const router = createBrowserRouter([
   {
     path: "/verify-residence",
     Component: DocumentVerificationScreen,
+  },
+  {
+    path: "/edit-profile",
+    Component: EditProfile,
   }
 ]);

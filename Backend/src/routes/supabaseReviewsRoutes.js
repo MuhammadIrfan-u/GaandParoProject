@@ -27,7 +27,7 @@ const transformReview = (data) => {
 // Get reviews with filters
 router.get('/reviews', async (req, res) => {
   try {
-    const { neighborhoodId, type } = req.query;
+    const { neighborhoodId, type, targetId } = req.query;
     let query = supabase
       .from('reviews')
       .select('*, users(name, avatar)')
@@ -40,6 +40,10 @@ router.get('/reviews', async (req, res) => {
     
     if (type && type !== 'all') {
       query = query.eq('target_type', type);
+    }
+
+    if (targetId) {
+      query = query.eq('target_id', targetId);
     }
     
     const { data, error } = await query;

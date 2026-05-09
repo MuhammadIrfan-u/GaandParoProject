@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import {
   ArrowLeft, User, Phone, MapPin, FileText,
-  Lock, Eye, EyeOff, Save, Briefcase,
+  Lock, Eye, EyeOff, Save, Briefcase, Mail
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -16,28 +16,13 @@ export default function EditProfile() {
 
   const [formData, setFormData] = useState({
     name: currentUser?.name ?? "",
+    email: currentUser?.email ?? "",
     phone: currentUser?.phone ?? "",
     address: currentUser?.address ?? "",
     bio: currentUser?.bio ?? "",
-    isServiceProvider: currentUser?.isServiceProvider ?? false,
+    isServiceProvider: currentUser?.isProvider ?? false,
   });
 
-  // Re-hydrate from API on mount to get latest data
-  useEffect(() => {
-    authService.validateSession().then((user) => {
-      if (user) {
-        setFormData({
-          name: user.name ?? "",
-          phone: user.phone ?? "",
-          address: user.address ?? "",
-          bio: user.bio ?? "",
-          isServiceProvider: user.isServiceProvider ?? false,
-        });
-      } else {
-        navigate("/login");
-      }
-    }).catch(() => navigate("/login"));
-  }, []);
 
   // Change password section
   const [passwordData, setPasswordData] = useState({
@@ -80,33 +65,6 @@ export default function EditProfile() {
     }
   };
 
-  const handleChangePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
-      toast.error("Please fill in all password fields");
-      return;
-    }
-
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      toast.error("New passwords don't match");
-      return;
-    }
-
-    const passwordError = validatePassword(passwordData.newPassword);
-    if (passwordError) { toast.error(passwordError); return; }
-
-    setSavingPassword(true);
-    try {
-      await authService.changePassword(passwordData.currentPassword, passwordData.newPassword);
-      toast.success("Password changed successfully!");
-      setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
-    } catch (error: any) {
-      toast.error(error?.message ?? "Failed to change password. Please try again.");
-    } finally {
-      setSavingPassword(false);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -159,6 +117,22 @@ export default function EditProfile() {
                   placeholder="Your full name"
                   value={formData.name}
                   onChange={(e) => handleChange("name", e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm mb-2 text-muted-foreground">
+                Email Address
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Input
+                  type="email"
+                  placeholder="your@email.com"
+                  value={formData.email}
+                  onChange={(e) => handleChange("email", e.target.value)}
                   className="pl-10"
                 />
               </div>
@@ -242,99 +216,6 @@ export default function EditProfile() {
           </form>
         </div>
 
-        {/* Change password form */}
-        <div className="bg-white rounded-2xl border border-border overflow-hidden">
-          <div className="p-4 border-b border-border">
-            <h3 className="text-sm">Change Password</h3>
-          </div>
-          <form onSubmit={handleChangePassword} className="p-4 space-y-4">
-
-            <div>
-              <label className="block text-sm mb-2 text-muted-foreground">
-                Current Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <Input
-                  type={showPasswords ? "text" : "password"}
-                  placeholder="Enter current password"
-                  value={passwordData.currentPassword}
-                  onChange={(e) => handlePasswordChange("currentPassword", e.target.value)}
-                  className="pl-10 pr-10"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPasswords(!showPasswords)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                >
-                  {showPasswords ? (
-                    <EyeOff className="w-5 h-5" />
-                  ) : (
-                    <Eye className="w-5 h-5" />
-                  )}
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm mb-2 text-muted-foreground">
-                New Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <Input
-                  type={showPasswords ? "text" : "password"}
-                  placeholder="Enter new password"
-                  value={passwordData.newPassword}
-                  onChange={(e) => handlePasswordChange("newPassword", e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              {passwordData.newPassword.length > 0 && (() => {
-                const strength = getPasswordStrength(passwordData.newPassword);
-                return (
-                  <div className="mt-2">
-                    <div className="flex gap-1 mb-1">
-                      {[1,2,3,4].map((i) => (
-                        <div key={i} className={`h-1 flex-1 rounded-full transition-colors ${i <= strength.score ? strength.color : "bg-muted"}`} />
-                      ))}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Strength: <span className="font-medium">{strength.label}</span>
-                      {" · "}min 8 chars, 1 letter, 1 number
-                    </p>
-                  </div>
-                );
-              })()}
-            </div>
-
-            <div>
-              <label className="block text-sm mb-2 text-muted-foreground">
-                Confirm New Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <Input
-                  type={showPasswords ? "text" : "password"}
-                  placeholder="Confirm new password"
-                  value={passwordData.confirmPassword}
-                  onChange={(e) => handlePasswordChange("confirmPassword", e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-
-            <Button
-              type="submit"
-              variant="outline"
-              className="w-full"
-              disabled={savingPassword}
-            >
-              <Lock className="w-4 h-4 mr-2" />
-              {savingPassword ? "Updating..." : "Update Password"}
-            </Button>
-          </form>
-        </div>
 
       </div>
     </div>

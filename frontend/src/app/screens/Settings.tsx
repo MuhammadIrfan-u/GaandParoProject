@@ -1,28 +1,94 @@
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router";
 import { ArrowLeft, Bell, Lock, Shield, Moon, Globe, HelpCircle, MapPin, Home as HomeIcon, Settings2 } from "lucide-react";
 import { Switch } from "../components/ui/switch";
-import { authService } from "../services/storage";
+import { authService, settingsService } from "../services/storage";
 import { toast } from "sonner";
 
 export default function Settings() {
   const navigate = useNavigate();
   const currentUser = authService.getCurrentUser();
+  const [loading, setLoading] = useState(true);
+  const [settings, setSettings] = useState({
+    push_notifications: true,
+    community_alerts: true,
+    profile_visibility: true,
+    show_phone_number: false
+  });
+
+  useEffect(() => {
+    loadSettings();
+  }, []);
+
+  const loadSettings = async () => {
+    try {
+      const data = await settingsService.getSettings(currentUser.id);
+      if (data) {
+        setSettings({
+          push_notifications: data.push_notifications ?? true,
+          community_alerts: data.community_alerts ?? true,
+          profile_visibility: data.profile_visibility ?? true,
+          show_phone_number: data.show_phone_number ?? false
+        });
+      }
+    } catch (error) {
+      console.error("Failed to load settings:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleToggle = async (field: keyof typeof settings, label: string) => {
+    const newValue = !settings[field];
+    
+    // Optimistic update
+    setSettings(prev => ({ ...prev, [field]: newValue }));
+
+    try {
+      await settingsService.updateSettings(currentUser.id, {
+        [field]: newValue
+      });
+      toast.success(`${label} ${newValue ? 'enabled' : 'disabled'}`);
+    } catch (error) {
+      // Revert on error
+      setSettings(prev => ({ ...prev, [field]: !newValue }));
+      toast.error(`Failed to update ${label}`);
+    }
+  };
 
   const settingsSections = [
     {
       title: "Notifications",
       items: [
-        { icon: Bell, label: "Push Notifications", value: true },
-        { icon: Bell, label: "Email Notifications", value: true },
-        { icon: Bell, label: "Community Alerts", value: true },
+        { 
+          icon: Bell, 
+          label: "Push Notifications", 
+          field: "push_notifications" as const,
+          value: settings.push_notifications 
+        },
+        { 
+          icon: Bell, 
+          label: "Community Alerts", 
+          field: "community_alerts" as const,
+          value: settings.community_alerts 
+        },
       ],
     },
     {
       title: "Privacy & Security",
       items: [
-        { icon: Lock, label: "Two-Factor Authentication", value: false },
-        { icon: Shield, label: "Profile Visibility", value: true },
-        { icon: Lock, label: "Show Phone Number", value: false },
+        { 
+          icon: Shield, 
+          label: "Profile Visibility", 
+          field: "profile_visibility" as const,
+          value: settings.profile_visibility 
+        },
+        { 
+          icon: Lock, 
+          label: "Show Phone Number", 
+          field: "show_phone_number" as const,
+          value: settings.show_phone_number 
+        },
       ],
     },
     {
@@ -105,34 +171,43 @@ export default function Settings() {
           </div>
         )}
 
-        {settingsSections.map((section) => (
-          <div key={section.title} className="mb-6">
-            <h3 className="text-sm px-4 mb-2 text-muted-foreground">{section.title}</h3>
-            <div className="bg-white rounded-2xl border border-border overflow-hidden">
-              {section.items.map((item, index) => (
-                <div
-                  key={item.label}
-                  className={`flex items-center justify-between p-4 ${
-                    index < section.items.length - 1 ? 'border-b border-border' : ''
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <item.icon className="w-5 h-5 text-muted-foreground" />
-                    <span>{item.label}</span>
+        {loading ? (
+          <div className="text-center py-8 text-muted-foreground">Loading settings...</div>
+        ) : (
+          settingsSections.map((section) => (
+            <div key={section.title} className="mb-6">
+              <h3 className="text-sm px-4 mb-2 text-muted-foreground">{section.title}</h3>
+              <div className="bg-white rounded-2xl border border-border overflow-hidden">
+                {section.items.map((item, index) => (
+                  <div
+                    key={item.label}
+                    className={`flex items-center justify-between p-4 ${index < section.items.length - 1 ? 'border-b border-border' : ''
+                      }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <item.icon className="w-5 h-5 text-muted-foreground" />
+                      <span>{item.label}</span>
+                    </div>
+                    {typeof item.value === 'boolean' ? (
+                      <Switch
+                        checked={item.value}
+                        onCheckedChange={() => {
+                          if ('field' in item) {
+                            handleToggle(item.field, item.label);
+                          } else {
+                            toast.success(`${item.label} changed`);
+                          }
+                        }}
+                      />
+                    ) : (
+                      <span className="text-muted-foreground text-sm">{item.value}</span>
+                    )}
                   </div>
-                  {typeof item.value === 'boolean' ? (
-                    <Switch
-                      checked={item.value}
-                      onCheckedChange={() => toast.success(`${item.label} ${item.value ? 'disabled' : 'enabled'}`)}
-                    />
-                  ) : (
-                    <span className="text-muted-foreground text-sm">{item.value}</span>
-                  )}
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          ))
+        )}
 
         <div className="bg-white rounded-2xl border border-border overflow-hidden">
           <button
@@ -150,4 +225,4 @@ export default function Settings() {
       </div>
     </div>
   );
-}
+}

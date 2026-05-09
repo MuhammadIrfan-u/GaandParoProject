@@ -203,6 +203,7 @@ export const authService = {
 
   updateProfile: async (updates: Partial<User>) => {
     authUser = { ...authUser, ...updates };
+    localStorage.setItem('user_data', JSON.stringify(authUser));
     await authService.syncUser(authUser);
     return authUser;
   },
@@ -219,6 +220,16 @@ export const postsService = {
     } catch (error) {
       console.error('Error fetching posts:', error);
       return postsStore;
+    }
+  },
+  
+  getPostsCount: async (userId: string | number, neighborhoodId: string | number) => {
+    try {
+      const data = await apiGet<{ count: number }>(`/posts/count?userId=${userId}&neighborhoodId=${neighborhoodId}`);
+      return data.count;
+    } catch (error) {
+      console.error('Error fetching posts count:', error);
+      return 0;
     }
   },
 
@@ -797,12 +808,13 @@ export const servicesService = {
 
 // Reviews Service
 export const reviewsService = {
-  getReviews: async (neighborhoodId?: string | number, type?: string) => {
+  getReviews: async (neighborhoodId?: string | number, type?: string, targetId?: string | number) => {
     try {
       let url = '/reviews';
       const params = new URLSearchParams();
       if (neighborhoodId) params.append('neighborhoodId', String(neighborhoodId));
       if (type) params.append('type', type);
+      if (targetId) params.append('targetId', String(targetId));
 
       if (params.toString()) {
         url += `?${params.toString()}`;
@@ -887,6 +899,36 @@ export const usersService = {
     const user = await apiGet<User>(`/users/${encodeURIComponent(id)}`);
     return user;
   },
+};
+
+// Settings Service
+export const settingsService = {
+  getSettings: async (userId: string | number) => {
+    try {
+      return await apiGet<any>(`/api/settings/${userId}`);
+    } catch (error) {
+      console.error('Error fetching settings:', error);
+      return {
+        push_notifications: true,
+        community_alerts: true,
+        profile_visibility: true,
+        show_phone_number: false
+      };
+    }
+  },
+
+  updateSettings: async (userId: string | number, settings: any) => {
+    try {
+      const response = await apiFetch('/api/settings', {
+        method: 'POST',
+        body: JSON.stringify({ userId, ...settings })
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error updating settings:', error);
+      throw error;
+    }
+  }
 };
 
 // Neighborhoods Service

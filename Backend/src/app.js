@@ -16,10 +16,13 @@ import messageRoutes from "./routes/messageRoutes.js";
 import membershipRoutes from "./routes/membershipRoutes.js";
 import verificationRoutes from "./routes/verificationRoutes.js";
 import fraudRoutes from "./routes/fraud.routes.js";
+import supabaseUsersRoutes from "./routes/supabaseUsersRoutes.js";
 import express from 'express'
 import cors from 'cors'
 import path from 'path'
 import { fileURLToPath } from 'url'
+
+import userSettingsRoutes from "./routes/userSettingsRoutes.js";
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -37,6 +40,7 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use('/api/auth', authRoutes);
 app.use('/api', membershipRoutes);
 app.use('/api', verificationRoutes);
+app.use('/api', userSettingsRoutes);
 
 // Home route
 app.get("/", (req, res) => {
@@ -50,6 +54,7 @@ app.use("/", supabaseProviderApplicationsRoutes);
 app.use("/", supabaseServiceRequestsRoutes);
 app.use("/", supabaseServicesRoutes);
 app.use("/", supabaseReviewsRoutes);
+app.use("/", supabaseUsersRoutes);
 
 app.use("/", supabaseEventsRoutes);
 app.use("/", marketplaceRoutes);

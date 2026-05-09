@@ -321,6 +321,27 @@ create table public.reviews (
   )
 ) TABLESPACE pg_default;
 
+
+
+CREATE TABLE user_settings (
+    id SERIAL PRIMARY KEY,
+
+    user_id INTEGER NOT NULL UNIQUE,
+
+    push_notifications BOOLEAN DEFAULT TRUE,
+    community_alerts BOOLEAN DEFAULT TRUE,
+    profile_visibility BOOLEAN DEFAULT TRUE,
+    show_phone_number BOOLEAN DEFAULT FALSE,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(id)
+        ON DELETE CASCADE
+);
+
 create unique INDEX IF not exists reviews_unique_reviewer_target on public.reviews using btree (reviewer_id, target_type, target_id) TABLESPACE pg_default;
 
 create index IF not exists idx_reviews_target_created on public.reviews using btree (target_type, target_id, created_at desc) TABLESPACE pg_default;

@@ -381,3 +381,27 @@ export const toggleLike = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+
+export const getPostsCount = async (req, res) => {
+    try {
+        const { userId, neighborhoodId } = req.query;
+
+        if (!userId || !neighborhoodId) {
+            return res.status(400).json({ error: 'userId and neighborhoodId are required' });
+        }
+
+        const { count, error } = await supabase
+            .from('posts')
+            .select('*', { count: 'exact', head: true })
+            .eq('author_id', userId.toString())
+            .eq('neighborhod_id', parseInt(neighborhoodId));
+
+        if (error) throw error;
+
+        res.json({ count: count || 0 });
+    } catch (error) {
+        console.error('Error fetching posts count:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+

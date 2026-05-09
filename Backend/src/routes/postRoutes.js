@@ -8,7 +8,8 @@ import {
     updatePost,
     deletePost,
     addComment,
-    toggleLike
+    toggleLike,
+    getPostsCount
 } from '../controllers/postController.js';
 
 const router = express.Router();
@@ -16,7 +17,7 @@ const router = express.Router();
 // Configure multer storage
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, 'uploads/');
+        cb(null, 'public/uploads');
     },
     filename: (req, file, cb) => {
         const time = Date.now();
@@ -28,6 +29,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 router.get('/posts', getPosts);
+router.get('/posts/count', getPostsCount);
 router.get('/posts/:id', getPostById);
 router.post('/posts', upload.single('image'), createPost);
 router.post('/posts/:postId/comments', addComment);
