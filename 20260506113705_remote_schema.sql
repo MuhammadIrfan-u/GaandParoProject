@@ -216,23 +216,24 @@ create sequence "public"."verification_requests_id_seq";
 
 
 
-  create table "public"."neighborhoods" (
-    "id" integer not null default nextval('public.neighborhoods_id_seq'::regclass),
-    "name" character varying(100),
-    "city" character varying(100),
-    "state" character varying(100),
-    "description" text,
-    "population" integer,
-    "primary_landmark" character varying(150),
-    "admin_id" character varying,
-    "verified" boolean default false,
-    "created_date" timestamp without time zone default CURRENT_TIMESTAMP,
-    "cover_photo" text,
-    "logo" text,
-    "guidelines" text,
-    "member_count" integer default 0
-      );
-
+ create table public.neighborhoods (
+  id serial not null,
+  name character varying(100) null,
+  city character varying(100) null,
+  state character varying(100) null,
+  description text null,
+  population integer null,
+  primary_landmark character varying(150) null,
+  verified boolean null default false,
+  created_date timestamp without time zone null default CURRENT_TIMESTAMP,
+  cover_photo text null,
+  logo text null,
+  guidelines text null,
+  member_count integer null default 0,
+  admin_id integer null,
+  constraint neighborhoods_pkey primary key (id),
+  constraint neighborhoods_admin_id_fkey foreign KEY (admin_id) references users (id)
+) TABLESPACE pg_default;
 
 
   create table "public"."notifications" (

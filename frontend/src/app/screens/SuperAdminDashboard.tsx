@@ -21,13 +21,18 @@ export default function SuperAdminDashboard() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
 
   useEffect(() => {
-    // Check if user is super admin
-    if (!currentUser?.isAdmin) {
-      toast.error("Access denied. Super Admin only.");
-      navigate("/home");
-      return;
-    }
-    loadData();
+    const checkAccess = async () => {
+      const userNeighborhood = await neighborhoodsService.getUserNeighborhood();
+      const isNeighborhoodAdmin = userNeighborhood?.adminId && String(userNeighborhood.adminId) === String(currentUser?.id);
+
+      if (!currentUser?.isAdmin && !isNeighborhoodAdmin) {
+        toast.error("Access denied. Authorized admins only.");
+        navigate("/home");
+        return;
+      }
+      loadData();
+    };
+    checkAccess();
   }, []);
 
   const loadData = async () => {
@@ -37,8 +42,15 @@ export default function SuperAdminDashboard() {
         proposalsService.getProposals(),
         neighborhoodsService.getNeighborhoods(),
       ]);
+      
+      if (!currentUser?.isAdmin) {
+        // If neighborhood admin, only show their own neighborhood
+        const userNeighborhood = await neighborhoodsService.getUserNeighborhood();
+        setNeighborhoods(neighborhoodsData.filter(n => String(n.id) === String(userNeighborhood?.id)));
+      } else {
+        setNeighborhoods(neighborhoodsData);
+      }
       setProposals(proposalsData);
-      setNeighborhoods(neighborhoodsData);
     } catch (error) {
       toast.error("Failed to load data");
     } finally {

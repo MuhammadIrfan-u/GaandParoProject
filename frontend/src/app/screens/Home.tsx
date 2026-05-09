@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router";
-import { Bell, Plus, Heart, MessageCircle, Share2, MoreVertical, AlertCircle, Calendar, ShoppingBag, MapPin, TrendingUp, Star, Users, FileText } from "lucide-react";
+import { Bell, Plus, Heart, MessageCircle, Share2, MoreVertical, AlertCircle, Calendar, ShoppingBag, MapPin, TrendingUp, Star, Users, FileText, Shield, ChevronRight } from "lucide-react";
 import { BottomNav } from "../components/BottomNav";
 import { postsService, neighborhoodsService, alertsService, eventsService, authService, statsService } from "../services/storage";
 import { Post, Neighborhood, Alert, Event } from "../services/types";
@@ -155,6 +155,28 @@ export default function Home() {
             ))}
           </div>
         </div>
+
+        {(currentUser?.isAdmin || (userNeighborhood?.adminId && String(userNeighborhood.adminId) === String(currentUser?.id))) && (
+          <Link
+            to="/super-admin-dashboard"
+            className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl p-4 mb-6 text-white flex items-center justify-between group hover:shadow-lg shadow-md shadow-purple-500/20 transition-all active:scale-[0.98]"
+          >
+            <div className="flex items-center gap-4">
+              <div className="bg-white/20 rounded-xl p-2.5">
+                <Shield className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="text-base font-bold">Admin Dashboard</div>
+                <div className="text-[10px] opacity-80 uppercase tracking-wider font-bold">
+                  {currentUser?.isAdmin ? "System Management & Moderation" : "Manage Your Neighborhood"}
+                </div>
+              </div>
+            </div>
+            <div className="bg-white/10 rounded-full p-1 group-hover:translate-x-1 transition-transform">
+              <ChevronRight className="w-5 h-5" />
+            </div>
+          </Link>
+        )}
 
         {/* Community Stats */}
         <div className="space-y-3 mb-6">
