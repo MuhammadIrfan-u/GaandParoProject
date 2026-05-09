@@ -31,12 +31,14 @@ router.post('/signup', async (req, res) => {
     return res.status(400).json({ success: false, error: 'Passwords do not match' })
   }
 
+  const cleanEmail = email.trim().toLowerCase();
+
   try {
     // Check if user already exists
     const { data: existingUser } = await supabaseAdmin
       .from('users')
       .select('id')
-      .eq('email', email)
+      .eq('email', cleanEmail)
       .single()
 
     if (existingUser) {
@@ -49,7 +51,7 @@ router.post('/signup', async (req, res) => {
       .from('users')
       .insert([{
         name,
-        email,
+        email: cleanEmail,
         phone,
         address,
         password_hash: hashedPassword,
@@ -95,20 +97,31 @@ router.post('/login', async (req, res) => {
   }
 
   try {
+    const cleanEmail = email.trim().toLowerCase();
+    console.log(`[Login Attempt] Email: ${cleanEmail}`);
     const { data: user, error } = await supabaseAdmin
       .from('users')
       .select('*')
-      .eq('email', email)
+      .eq('email', cleanEmail)
       .single()
 
     if (error || !user) {
+      console.log(`[Login Failed] User not found for email: ${email.toLowerCase()}. Error:`, error?.message || 'No user record');
       return res.status(401).json({ success: false, error: 'Invalid credentials' })
     }
 
+    console.log(`[Login Info] User found: ${user.name} (ID: ${user.id})`);
+    
     const isMatch = await bcrypt.compare(password, user.password_hash)
+    console.log(`[Login Info] Bcrypt match: ${isMatch}`);
+    
     if (!isMatch) {
-      // Fallback for plain text passwords if they exist (for transition)
-      if (password !== user.password_hash) {
+      // Fallback for plain text passwords
+      const isPlainMatch = password === user.password_hash;
+      console.log(`[Login Info] Plain text match: ${isPlainMatch}`);
+      
+      if (!isPlainMatch) {
+        console.log(`[Login Failed] Password mismatch for user: ${email}`);
         return res.status(401).json({ success: false, error: 'Invalid credentials' })
       }
     }
@@ -116,9 +129,9 @@ router.post('/login', async (req, res) => {
     // Generate OTP
     const otp = generateOtp()
     const expiresAt = Date.now() + OTP_EXPIRES_MIN * 60 * 1000
-    otpStore.set(email.toLowerCase(), { otp, expiresAt, userId: user.id })
+    otpStore.set(cleanEmail, { otp, expiresAt, userId: user.id })
 
-    console.log(`[OTP] For ${email}: ${otp}`)
+    console.log(`[OTP] For ${cleanEmail}: ${otp}`)
 
     // In dev mode, we return the OTP to the frontend so it can be shown in toast
     res.json({ 
@@ -128,8 +141,8 @@ router.post('/login', async (req, res) => {
       _devOtp: otp 
     })
   } catch (error) {
-    console.error('Login error:', error)
-    res.status(500).json({ success: false, error: 'Login failed' })
+    console.error('Login error:', error);
+    res.status(500).json({ success: false, error: 'Login failed: ' + error.message })
   }
 })
 

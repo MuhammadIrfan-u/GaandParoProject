@@ -22,7 +22,7 @@ export default function SuperAdminDashboard() {
 
   useEffect(() => {
     // Check if user is super admin
-    if (!currentUser.isAdmin) {
+    if (!currentUser?.isAdmin) {
       toast.error("Access denied. Super Admin only.");
       navigate("/home");
       return;
@@ -116,22 +116,20 @@ export default function SuperAdminDashboard() {
           <div className="flex gap-2">
             <button
               onClick={() => setActiveTab('proposals')}
-              className={`flex-1 py-3 px-4 rounded-xl transition-all ${
-                activeTab === 'proposals'
+              className={`flex-1 py-3 px-4 rounded-xl transition-all ${activeTab === 'proposals'
                   ? 'bg-white text-purple-600 shadow-lg'
                   : 'bg-white/10 text-white hover:bg-white/20'
-              }`}
+                }`}
             >
               <div className="text-sm">Proposals</div>
               <div className="text-xl mt-1">{pendingProposals.length}</div>
             </button>
             <button
               onClick={() => setActiveTab('neighborhoods')}
-              className={`flex-1 py-3 px-4 rounded-xl transition-all ${
-                activeTab === 'neighborhoods'
+              className={`flex-1 py-3 px-4 rounded-xl transition-all ${activeTab === 'neighborhoods'
                   ? 'bg-white text-purple-600 shadow-lg'
                   : 'bg-white/10 text-white hover:bg-white/20'
-              }`}
+                }`}
             >
               <div className="text-sm">Neighborhoods</div>
               <div className="text-xl mt-1">{neighborhoods.length}</div>
@@ -166,7 +164,7 @@ export default function SuperAdminDashboard() {
                               <div className="flex-1">
                                 <h3 className="text-xl mb-2">{proposal.name}</h3>
                                 <p className="text-sm text-muted-foreground mb-3">{proposal.description}</p>
-                                
+
                                 <div className="grid grid-cols-2 gap-3 mb-3">
                                   <div className="flex items-center gap-2 text-sm">
                                     <MapPin className="w-4 h-4 text-muted-foreground" />
@@ -260,11 +258,10 @@ export default function SuperAdminDashboard() {
                       {reviewedProposals.map((proposal) => (
                         <div
                           key={proposal.id}
-                          className={`bg-white rounded-xl border p-4 ${
-                            proposal.status === 'approved' 
-                              ? 'border-green-200 bg-green-50/30' 
+                          className={`bg-white rounded-xl border p-4 ${proposal.status === 'approved'
+                              ? 'border-green-200 bg-green-50/30'
                               : 'border-red-200 bg-red-50/30'
-                          }`}
+                            }`}
                         >
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
@@ -334,7 +331,7 @@ export default function SuperAdminDashboard() {
                               )}
                             </div>
                             <p className="text-sm text-muted-foreground mb-3">{neighborhood.description}</p>
-                            
+
                             <div className="grid grid-cols-3 gap-3 mb-4">
                               <div className="bg-muted/30 rounded-xl p-3 text-center">
                                 <Users className="w-5 h-5 text-muted-foreground mx-auto mb-1" />
@@ -368,7 +365,7 @@ export default function SuperAdminDashboard() {
                               <div>
                                 <div className="text-sm mb-1"><strong>Confirm Deletion</strong></div>
                                 <p className="text-xs text-red-800">
-                                  This will permanently delete "{neighborhood.name}" and all associated data. 
+                                  This will permanently delete "{neighborhood.name}" and all associated data.
                                   This action cannot be undone.
                                 </p>
                               </div>

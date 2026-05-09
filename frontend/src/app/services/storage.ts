@@ -44,7 +44,8 @@ const apiFetch = async (path: string, init?: RequestInit) => {
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({}));
     console.error(`API Error: ${response.status}`, errorBody);
-    throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+    const message = errorBody.error || errorBody.message || `API request failed: ${response.status} ${response.statusText}`;
+    throw new Error(message);
   }
   return response;
 };
