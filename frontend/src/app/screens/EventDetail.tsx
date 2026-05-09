@@ -136,15 +136,24 @@ export default function EventDetail() {
           <div className="bg-white rounded-2xl p-4 border border-border mb-4">
             <h3 className="text-sm mb-3">Organizer</h3>
             <div className="flex items-center gap-3">
-              <div className="bg-gradient-to-br from-primary to-indigo-600 rounded-full w-12 h-12 flex items-center justify-center text-white">
+              <button 
+                onClick={() => navigate(`/user-profile/${event.organizerId}`)}
+                className="bg-gradient-to-br from-primary to-indigo-600 rounded-full w-12 h-12 flex items-center justify-center text-white flex-shrink-0 transition-transform active:scale-95"
+              >
                 {event.organizerAvatar}
-              </div>
+              </button>
               <div>
-                <div>{event.organizer}</div>
+                <button 
+                  onClick={() => navigate(`/user-profile/${event.organizerId}`)}
+                  className="hover:text-primary transition-colors font-semibold"
+                >
+                  {event.organizer}
+                </button>
                 <div className="text-sm text-muted-foreground">Event Organizer</div>
               </div>
             </div>
           </div>
+
 
           {event.attendees.length > 0 && (
             <div className="bg-white rounded-2xl p-4 border border-border">

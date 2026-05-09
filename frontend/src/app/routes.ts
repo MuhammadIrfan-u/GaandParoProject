@@ -43,6 +43,7 @@ import ServiceRequests from "./screens/ServiceRequests";
 import ForgotPassword from "./screens/ForgotPassword";
 import ResetPassword from "./screens/ResetPassword";
 import EditProfile from "./screens/EditProfile";
+import PublicProfile from "./screens/PublicProfile";
 
 export const router = createBrowserRouter([
   {
@@ -220,5 +221,9 @@ export const router = createBrowserRouter([
   {
     path: "/edit-profile",
     Component: EditProfile,
+  },
+  {
+    path: "/user-profile/:userId",
+    Component: PublicProfile,
   }
 ]);

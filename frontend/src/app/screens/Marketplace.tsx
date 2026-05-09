@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { Plus, Search, Filter, DollarSign, ShoppingBag } from "lucide-react";
 import { BottomNav } from "../components/BottomNav";
 import { Button } from "../components/ui/button";
@@ -10,6 +10,7 @@ import { toast } from "sonner";
 
 export default function Marketplace() {
   const [items, setItems] = useState<MarketplaceItem[]>([]);
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
 
@@ -106,7 +107,14 @@ export default function Marketplace() {
                     <DollarSign className="w-4 h-4" />
                     <span>{item.price}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <div 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      navigate(`/user-profile/${item.sellerId}`);
+                    }}
+                    className="flex items-center gap-2 text-xs text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+                  >
                     <div className="bg-gradient-to-br from-primary to-indigo-600 rounded-full w-5 h-5 flex items-center justify-center text-white text-[10px]">
                       {item.sellerAvatar}
                     </div>
@@ -114,6 +122,7 @@ export default function Marketplace() {
                   </div>
                 </div>
               </Link>
+
             ))}
           </div>
         )}

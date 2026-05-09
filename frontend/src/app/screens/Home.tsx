@@ -205,12 +205,20 @@ export default function Home() {
                     {/* Post Header */}
                     <div className="p-4 flex items-start justify-between">
                       <div className="flex gap-3">
-                        <div className="bg-gradient-to-br from-primary to-indigo-600 rounded-full w-12 h-12 flex items-center justify-center text-white">
+                        <Link 
+                          to={`/user-profile/${post.authorId}`}
+                          className="bg-gradient-to-br from-primary to-indigo-600 rounded-full w-12 h-12 flex items-center justify-center text-white flex-shrink-0 transition-transform active:scale-95"
+                        >
                           {post.avatar}
-                        </div>
+                        </Link>
                         <div>
                           <div className="flex items-center gap-2">
-                            <span>{post.author}</span>
+                            <Link 
+                              to={`/user-profile/${post.authorId}`}
+                              className="font-semibold hover:text-primary transition-colors"
+                            >
+                              {post.author}
+                            </Link>
                             {post.verified && (
                               <div className="bg-blue-500 rounded-full w-4 h-4 flex items-center justify-center">
                                 <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
@@ -222,6 +230,7 @@ export default function Home() {
                           <div className="text-sm text-muted-foreground">{post.time}</div>
                         </div>
                       </div>
+
                       <button className="text-muted-foreground p-1 hover:bg-muted rounded-full">
                         <MoreVertical className="w-5 h-5" />
                       </button>

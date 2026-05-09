@@ -153,12 +153,20 @@ export default function MarketplaceItemDetail() {
             <h3 className="text-sm mb-3">Seller</h3>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="bg-gradient-to-br from-primary to-indigo-600 rounded-full w-12 h-12 flex items-center justify-center text-white">
+                <button 
+                  onClick={() => navigate(`/user-profile/${item.sellerId}`)}
+                  className="bg-gradient-to-br from-primary to-indigo-600 rounded-full w-12 h-12 flex items-center justify-center text-white flex-shrink-0 transition-transform active:scale-95"
+                >
                   {item.sellerAvatar}
-                </div>
+                </button>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span>{item.seller}</span>
+                    <button 
+                      onClick={() => navigate(`/user-profile/${item.sellerId}`)}
+                      className="hover:text-primary transition-colors font-semibold"
+                    >
+                      {item.seller}
+                    </button>
                     {item.verified && (
                       <div className="bg-blue-500 rounded-full w-4 h-4 flex items-center justify-center">
                         <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
@@ -170,6 +178,7 @@ export default function MarketplaceItemDetail() {
                   <div className="text-sm text-muted-foreground">Posted {item.postedDate}</div>
                 </div>
               </div>
+
               <button 
                 onClick={() => setShowMessageDialog(true)}
                 className="text-primary hover:bg-primary/5 p-2 rounded-full transition-colors"

@@ -185,7 +185,10 @@ export default function ServiceDetail() {
             <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-4">Service Provider</h3>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className="relative">
+                <button 
+                  onClick={() => navigate(`/user-profile/${service.providerId}`)}
+                  className="relative transition-transform active:scale-95"
+                >
                   <div className="bg-gradient-to-br from-primary to-indigo-600 rounded-2xl w-14 h-14 flex items-center justify-center text-white text-xl font-bold shadow-lg">
                     {service.providerAvatar}
                   </div>
@@ -194,9 +197,14 @@ export default function ServiceDetail() {
                       <ShieldCheck className="w-4 h-4 text-blue-500 fill-blue-500" />
                     </div>
                   )}
-                </div>
+                </button>
                 <div>
-                  <div className="font-bold text-lg">{service.provider}</div>
+                  <button 
+                    onClick={() => navigate(`/user-profile/${service.providerId}`)}
+                    className="font-bold text-lg hover:text-primary transition-colors block text-left"
+                  >
+                    {service.provider}
+                  </button>
                   <div className="text-sm text-muted-foreground">Community Member</div>
                 </div>
               </div>
@@ -238,11 +246,12 @@ export default function ServiceDetail() {
                   variant="outline" 
                   size="sm" 
                   className="rounded-xl border-primary/20 text-primary"
-                  onClick={() => navigate('/profile')}
+                  onClick={() => navigate(`/user-profile/${service.providerId}`)}
                 >
                   Profile
                 </Button>
               </div>
+
             </div>
           </div>
         </div>

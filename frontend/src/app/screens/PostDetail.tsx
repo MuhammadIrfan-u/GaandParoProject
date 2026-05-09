@@ -120,13 +120,19 @@ export default function PostDetail() {
         {/* Post */}
         <div className="bg-white border-b border-border">
           <div className="p-4 flex items-start gap-3">
-            <div className="bg-gradient-to-br from-primary to-indigo-600 rounded-full w-12 h-12 flex items-center justify-center text-white flex-shrink-0">
+            <button 
+              onClick={() => navigate(`/user-profile/${post.authorId}`)}
+              className="bg-gradient-to-br from-primary to-indigo-600 rounded-full w-12 h-12 flex items-center justify-center text-white flex-shrink-0 transition-transform active:scale-95"
+            >
               {post.avatar}
-            </div>
+            </button>
             <div className="flex-1">
               <div className="flex items-center justify-between gap-2 mb-1">
-                <div className="flex items-center gap-2">
-                  <span>{post.author}</span>
+                <button 
+                  onClick={() => navigate(`/user-profile/${post.authorId}`)}
+                  className="flex items-center gap-2 hover:text-primary transition-colors"
+                >
+                  <span className="font-semibold">{post.author}</span>
                   {post.verified && (
                     <div className="bg-blue-500 rounded-full w-4 h-4 flex items-center justify-center">
                       <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
@@ -134,7 +140,8 @@ export default function PostDetail() {
                       </svg>
                     </div>
                   )}
-                </div>
+                </button>
+
                 {post.authorId === currentUser.id && (
                   <div className="flex gap-1">
                     <button onClick={startEditing} className="p-2 hover:bg-muted rounded-full text-muted-foreground">

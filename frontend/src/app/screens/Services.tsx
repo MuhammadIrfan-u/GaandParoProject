@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { Search, Star, Wrench, Home, Dog, Zap, Scissors, Car, CheckCircle2, ClipboardList } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { BottomNav } from "../components/BottomNav";
@@ -13,6 +13,7 @@ import { toast } from "sonner";
 
 export default function Services() {
   const [services, setServices] = useState<Service[]>([]);
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
@@ -239,9 +240,16 @@ export default function Services() {
                           </p>
 
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
+                            <div 
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                navigate(`/user-profile/${service.providerId}`);
+                              }}
+                              className="flex items-center gap-2 hover:text-primary transition-colors cursor-pointer group/provider"
+                            >
                               <div className="relative">
-                                <div className="bg-gradient-to-br from-primary to-indigo-600 rounded-full w-8 h-8 flex items-center justify-center text-white text-xs font-bold shadow-sm">
+                                <div className="bg-gradient-to-br from-primary to-indigo-600 rounded-full w-8 h-8 flex items-center justify-center text-white text-xs font-bold shadow-sm group-hover/provider:scale-110 transition-transform">
                                   {service.providerAvatar}
                                 </div>
                                 {service.verified && (
@@ -250,8 +258,9 @@ export default function Services() {
                                   </div>
                                 )}
                               </div>
-                              <span className="text-sm font-medium text-foreground/80">{service.provider}</span>
+                              <span className="text-sm font-medium text-foreground/80 group-hover/provider:text-primary">{service.provider}</span>
                             </div>
+
                             <span className="text-primary font-bold text-base">{service.price}</span>
                           </div>
                         </div>
