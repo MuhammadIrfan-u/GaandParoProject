@@ -23,6 +23,7 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 
 import userSettingsRoutes from "./routes/userSettingsRoutes.js";
+import statsRoutes from "./routes/statsRoutes.js";
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -41,6 +42,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api', membershipRoutes);
 app.use('/api', verificationRoutes);
 app.use('/api', userSettingsRoutes);
+app.use('/api', statsRoutes);
 
 // Home route
 app.get("/", (req, res) => {

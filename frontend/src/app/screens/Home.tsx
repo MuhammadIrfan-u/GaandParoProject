@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router";
 import { Bell, Plus, Heart, MessageCircle, Share2, MoreVertical, AlertCircle, Calendar, ShoppingBag, MapPin, TrendingUp, Star, Users, FileText } from "lucide-react";
 import { BottomNav } from "../components/BottomNav";
-import { postsService, neighborhoodsService, alertsService, eventsService, authService } from "../services/storage";
+import { postsService, neighborhoodsService, alertsService, eventsService, authService, statsService } from "../services/storage";
 import { Post, Neighborhood, Alert, Event } from "../services/types";
 import { toast } from "sonner";
 
@@ -15,9 +15,18 @@ export default function Home() {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [loadingContent, setLoadingContent] = useState(false);
+  const [stats, setStats] = useState({
+    users: 0,
+    alerts: 0,
+    events: 0,
+    marketplaceItems: 0,
+    services: 0,
+    reviews: 0
+  });
 
   useEffect(() => {
     loadPosts();
+    loadStats();
   }, []);
 
   useEffect(() => {
@@ -63,6 +72,15 @@ export default function Home() {
       toast.error("Failed to load posts");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadStats = async () => {
+    try {
+      const data = await statsService.getStats();
+      setStats(data);
+    } catch (error) {
+      console.error('Failed to load stats:', error);
     }
   };
 
@@ -139,22 +157,44 @@ export default function Home() {
         </div>
 
         {/* Community Stats */}
-        <div className="grid grid-cols-3 gap-3 mb-4">
-          <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl p-4 text-white">
-            <TrendingUp className="w-5 h-5 mb-2 opacity-80" />
-            <div className="text-2xl mb-1">248</div>
-            <div className="text-xs opacity-90">Active Members</div>
+        <div className="space-y-3 mb-6">
+          {/* Row 1 */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl p-4 text-white shadow-lg shadow-blue-500/20">
+              <Users className="w-5 h-5 mb-2 opacity-80" />
+              <div className="text-2xl mb-1">{stats.users}</div>
+              <div className="text-sm opacity-90">Active Members</div>
+            </div>
+            <div className="bg-gradient-to-br from-red-500 to-rose-600 rounded-2xl p-4 text-white shadow-lg shadow-red-500/20">
+              <AlertCircle className="w-5 h-5 mb-2 opacity-80" />
+              <div className="text-2xl mb-1">{stats.alerts}</div>
+              <div className="text-sm opacity-90">Alerts</div>
+            </div>
+            <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-4 text-white shadow-lg shadow-green-500/20">
+              <Calendar className="w-5 h-5 mb-2 opacity-80" />
+              <div className="text-2xl mb-1">{stats.events}</div>
+              <div className="text-sm opacity-90">Events</div>
+            </div>
           </div>
-          <Link to="/events" className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-4 text-white hover:opacity-90 transition-opacity">
-            <Calendar className="w-5 h-5 mb-2 opacity-80" />
-            <div className="text-2xl mb-1">12</div>
-            <div className="text-xs opacity-90">This Week</div>
-          </Link>
-          <Link to="/alerts" className="bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl p-4 text-white hover:opacity-90 transition-opacity">
-            <AlertCircle className="w-5 h-5 mb-2 opacity-80" />
-            <div className="text-2xl mb-1">2</div>
-            <div className="text-xs opacity-90">Active Alerts</div>
-          </Link>
+
+          {/* Row 2 */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-gradient-to-br from-orange-500 to-amber-600 rounded-2xl p-4 text-white shadow-lg shadow-orange-500/20">
+              <ShoppingBag className="w-5 h-5 mb-1 opacity-80" />
+              <div className="text-2xl mb-1">{stats.marketplaceItems}</div>
+              <div className="text-sm opacity-90">Market Items</div>
+            </div>
+            <div className="bg-gradient-to-br from-purple-500 to-violet-600 rounded-2xl p-4 text-white shadow-lg shadow-purple-500/20">
+              <MapPin className="w-5 h-5 mb-2 opacity-80" />
+              <div className="text-2xl mb-1">{stats.services}</div>
+              <div className="text-sm opacity-90">Services</div>
+            </div>
+            <div className="bg-gradient-to-br from-pink-500 to-rose-500 rounded-2xl px-3 py-3 text-white shadow-lg shadow-pink-500/20">
+              <Star className="w-5 h-5 mb-2 opacity-80" />
+              <div className="text-2xl mb-1">{stats.reviews}</div>
+              <div className="text-sm opacity-90">Reviews</div>
+            </div>
+          </div>
         </div>
 
         {/* Tabs */}

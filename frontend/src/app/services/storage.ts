@@ -209,6 +209,33 @@ export const authService = {
   },
 };
 
+// Stats Service
+export const statsService = {
+  getStats: async (neighborhoodId?: string | number) => {
+    try {
+      const url = neighborhoodId ? `/api/stats?neighborhoodId=${neighborhoodId}` : '/api/stats';
+      return await apiGet<{
+        users: number;
+        alerts: number;
+        events: number;
+        marketplaceItems: number;
+        services: number;
+        reviews: number;
+      }>(url);
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+      return {
+        users: 0,
+        alerts: 0,
+        events: 0,
+        marketplaceItems: 0,
+        services: 0,
+        reviews: 0
+      };
+    }
+  },
+};
+
 // Posts Service
 export const postsService = {
   getPosts: async (neighborhoodId?: string | number) => {
