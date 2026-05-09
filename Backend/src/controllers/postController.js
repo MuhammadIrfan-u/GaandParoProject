@@ -120,10 +120,18 @@ export const getPostById = async (req, res) => {
 
 export const createPost = async (req, res) => {
     try {
-        const { authorId, content, category, image, neighborhoodId } = req.body;
+        const { authorId, content, category, neighborhoodId } = req.body;
+        let { image } = req.body;
 
         if (!authorId || !content) {
             return res.status(400).json({ error: 'authorId and content are required' });
+        }
+
+        // If a file was uploaded, use its path as the image URL
+        if (req.file) {
+            const protocol = req.protocol;
+            const host = req.get('host');
+            image = `${protocol}://${host}/uploads/${req.file.filename}`;
         }
 
         const { data, error } = await supabase
@@ -134,7 +142,8 @@ export const createPost = async (req, res) => {
                 category,
                 image,
                 neighborhod_id: neighborhoodId ? parseInt(neighborhoodId) : null,
-                likes: 0
+                likes: 0,
+                moderation_status: 'approved'
             }])
             .select(`
                 *,
@@ -255,13 +264,22 @@ export const addComment = async (req, res) => {
             return res.status(400).json({ error: 'authorId and content are required' });
         }
 
+        const pId = parseInt(postId);
+        const aId = parseInt(authorId);
+
+        if (isNaN(pId) || isNaN(aId)) {
+            console.error('Invalid ID in addComment:', { postId, authorId });
+            return res.status(400).json({ error: 'Invalid post or author ID' });
+        }
+
         const { data, error } = await supabase
             .from('comments')
             .insert([{
-                post_id: parseInt(postId),
-                author_id: parseInt(authorId),
+                post_id: pId,
+                author_id: aId,
                 content,
-                time: new Date().toISOString()
+                time: new Date().toISOString(),
+                moderation_status: 'approved'
             }])
             .select(`
                 *,
@@ -282,6 +300,7 @@ export const addComment = async (req, res) => {
 
         res.status(201).json({
             id: data.id.toString(),
+            postId: data.post_id.toString(),
             authorId: data.author_id?.toString(),
             author: data.users?.name || 'Unknown User',
             avatar: data.users?.avatar || (data.users?.name ? data.users.name.charAt(0) : 'U'),
@@ -290,6 +309,75 @@ export const addComment = async (req, res) => {
         });
     } catch (error) {
         console.error('Error adding comment:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+export const toggleLike = async (req, res) => {
+    try {
+        const { id: postId } = req.params;
+        const { userId } = req.body;
+
+        const pId = parseInt(postId);
+        const uId = parseInt(userId);
+
+        if (isNaN(pId) || isNaN(uId)) {
+            console.error('Invalid ID in toggleLike:', { postId, userId });
+            return res.status(400).json({ error: 'Invalid post or user ID' });
+        }
+
+        // Check if like exists
+        const { data: existingLike, error: fetchError } = await supabase
+            .from('post_likes')
+            .select('*')
+            .eq('post_id', pId)
+            .eq('user_id', uId)
+            .maybeSingle();
+
+        if (fetchError) throw fetchError;
+
+        if (existingLike) {
+            // Unlike: Remove from post_likes
+            const { error: deleteError } = await supabase
+                .from('post_likes')
+                .delete()
+                .eq('post_id', pId)
+                .eq('user_id', uId);
+
+            if (deleteError) throw deleteError;
+
+            // Decrement likes count in posts table
+            const { error: updateError } = await supabase.rpc('decrement_likes', { post_id_val: pId });
+            
+            // If RPC fails (e.g. not defined), fallback to manual update
+            if (updateError) {
+                const { data: postData } = await supabase.from('posts').select('likes').eq('id', pId).single();
+                await supabase.from('posts').update({ likes: Math.max(0, (postData?.likes || 0) - 1) }).eq('id', pId);
+            }
+
+            return res.json({ liked: false });
+        } else {
+            // Like: Add to post_likes
+            const { error: insertError } = await supabase
+                .from('post_likes')
+                .insert([{
+                    post_id: pId,
+                    user_id: uId
+                }]);
+
+            if (insertError) throw insertError;
+
+            // Increment likes count in posts table
+            const { error: updateError } = await supabase.rpc('increment_likes', { post_id_val: pId });
+
+            if (updateError) {
+                const { data: postData } = await supabase.from('posts').select('likes').eq('id', pId).single();
+                await supabase.from('posts').update({ likes: (postData?.likes || 0) + 1 }).eq('id', pId);
+            }
+
+            return res.json({ liked: true });
+        }
+    } catch (error) {
+        console.error('Error toggling like:', error);
         res.status(500).json({ error: error.message });
     }
 };

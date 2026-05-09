@@ -166,11 +166,10 @@ export default function Home() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-                activeTab === tab.id
-                  ? "border-primary text-primary"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-              }`}
+              className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === tab.id
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
             >
               {tab.label}
             </button>
@@ -233,11 +232,23 @@ export default function Home() {
                       <span className={`inline-block px-3 py-1 rounded-full text-xs mb-3 ${post.categoryColor}`}>
                         {post.category}
                       </span>
-                      <p className="text-sm leading-relaxed">{post.content}</p>
+                      <p className="text-sm leading-relaxed mb-3">{post.content}</p>
+                      {post.image && (
+                        <div className="rounded-xl overflow-hidden border border-border mb-3">
+                          <img
+                            src={post.image}
+                            alt="Post content"
+                            className="w-full h-auto object-cover max-h-[300px]"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                            }}
+                          />
+                        </div>
+                      )}
                     </Link>
 
                     {/* Post Actions */}
-                    <div className="px-4 py-3 border-t border-border flex items-center justify-around">
+                    <div className="px-4 py-3 border-t gap-4 border-border flex items-center justify-right">
                       <button
                         onClick={() => handleLike(post.id)}
                         className={`flex items-center gap-2 transition-colors py-2 px-4 rounded-xl ${post.likedBy.includes(currentUser.id)
@@ -255,13 +266,7 @@ export default function Home() {
                         <MessageCircle className="w-5 h-5" />
                         <span className="text-sm">{post.comments.length}</span>
                       </Link>
-                      <button
-                        onClick={() => toast.success("Post shared!")}
-                        className="flex items-center gap-2 text-muted-foreground hover:text-green-500 transition-colors py-2 px-4 rounded-xl hover:bg-green-50"
-                      >
-                        <Share2 className="w-5 h-5" />
-                        <span className="text-sm">Share</span>
-                      </button>
+
                     </div>
                   </div>
                 ))

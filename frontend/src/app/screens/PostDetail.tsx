@@ -59,7 +59,7 @@ export default function PostDetail() {
   const handleDelete = async () => {
     if (!postId) return;
     if (!window.confirm("Are you sure you want to delete this post?")) return;
-    
+
     try {
       await postsService.deletePost(postId);
       toast.success("Post deleted");
@@ -147,7 +147,7 @@ export default function PostDetail() {
                 )}
               </div>
               <div className="text-sm text-muted-foreground mb-3">{post.time}</div>
-              
+
               {isEditing ? (
                 <div className="space-y-3 mb-4">
                   <Textarea
@@ -166,18 +166,29 @@ export default function PostDetail() {
                     {post.category}
                   </span>
                   <p className="text-sm leading-relaxed mb-4">{post.content}</p>
+                  {post.image && (
+                    <div className="rounded-2xl overflow-hidden border border-border mb-6">
+                      <img
+                        src={post.image}
+                        alt="Post content"
+                        className="w-full h-auto object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  )}
                 </>
               )}
 
               {/* Actions */}
-              <div className="flex items-center gap-4 pt-2 border-t border-border">
-                <button 
+              <div className="flex justify-right items-center gap-2 pt-2 border-t border-border">
+                <button
                   onClick={handleLike}
-                  className={`flex items-center gap-2 transition-colors py-2 px-3 rounded-xl ${
-                    post.likedBy.includes(currentUser.id) 
-                      ? 'text-red-500 bg-red-50' 
-                      : 'text-muted-foreground hover:text-red-500 hover:bg-red-50'
-                  }`}
+                  className={`flex items-center gap-2 transition-colors py-2 px-3 rounded-xl ${post.likedBy.includes(currentUser.id)
+                    ? 'text-red-500 bg-red-50'
+                    : 'text-muted-foreground hover:text-red-500 hover:bg-red-50'
+                    }`}
                 >
                   <Heart className={`w-5 h-5 ${post.likedBy.includes(currentUser.id) ? 'fill-current' : ''}`} />
                   <span className="text-sm">{post.likes}</span>
@@ -186,35 +197,53 @@ export default function PostDetail() {
                   <MessageCircle className="w-5 h-5" />
                   <span className="text-sm">{post.comments.length}</span>
                 </button>
-                <button 
-                  onClick={() => toast.success("Post shared!")}
-                  className="flex items-center gap-2 text-muted-foreground hover:text-green-500 transition-colors py-2 px-3 rounded-xl hover:bg-green-50"
-                >
-                  <Share2 className="w-5 h-5" />
-                  <span className="text-sm">Share</span>
-                </button>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Comments */}
-        <div className="px-4 py-4">
-          <h3 className="text-sm mb-4">Comments ({post.comments.length})</h3>
-          <div className="space-y-4">
-            {post.comments.map((comment) => (
-              <div key={comment.id} className="flex gap-3">
-                <div className="bg-gradient-to-br from-primary to-indigo-600 rounded-full w-10 h-10 flex items-center justify-center text-white flex-shrink-0 text-sm">
-                  {comment.avatar}
-                </div>
-                <div className="flex-1 bg-muted/30 rounded-2xl p-3">
-                  <div className="text-sm mb-1">{comment.author}</div>
-                  <div className="text-sm text-muted-foreground mb-2">{comment.time}</div>
-                  <p className="text-sm">{comment.content}</p>
-                </div>
-              </div>
-            ))}
+        {/* Comments Section */}
+        <div className="px-4 py-6 border-t border-border">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold">Comments</h3>
+            <span className="bg-muted px-2.5 py-0.5 rounded-full text-xs font-medium text-muted-foreground">
+              {post.comments.length}
+            </span>
           </div>
+
+          {post.comments.length === 0 ? (
+            <div className="text-center py-10 bg-muted/20 rounded-2xl border border-dashed border-border">
+              <MessageCircle className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
+              <p className="text-sm text-muted-foreground">No comments yet. Be the first to share your thoughts!</p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {post.comments.map((comment) => (
+                <div key={comment.id} className="group">
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0">
+                      {comment.avatar && comment.avatar.length > 2 ? (
+                        <img src={comment.avatar} alt={comment.author} className="w-10 h-10 rounded-full object-cover border border-border" />
+                      ) : (
+                        <div className="bg-gradient-to-br from-primary/80 to-indigo-600 rounded-full w-10 h-10 flex items-center justify-center text-white font-medium text-sm">
+                          {comment.avatar}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-sm">{comment.author}</span>
+                        <span className="text-[10px] text-muted-foreground">{comment.time}</span>
+                      </div>
+                      <div className="bg-muted/40 rounded-2xl rounded-tl-none p-3 text-sm leading-relaxed text-foreground/90">
+                        {comment.content}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

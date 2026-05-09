@@ -27,7 +27,13 @@ const getAuthToken = () => localStorage.getItem('auth_token');
 
 const apiFetch = async (path: string, init?: RequestInit) => {
   const authToken = getAuthToken();
-  const response = await fetch(`${API_BASE}${path}`, {
+  const url = `${API_BASE}${path}`;
+  
+  if (init?.method === 'POST' || init?.method === 'PUT') {
+    console.log(`API ${init.method} Request:`, url, init.body);
+  }
+
+  const response = await fetch(url, {
     headers: {
       'Content-Type': 'application/json',
       ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
@@ -36,6 +42,8 @@ const apiFetch = async (path: string, init?: RequestInit) => {
   });
 
   if (!response.ok) {
+    const errorBody = await response.json().catch(() => ({}));
+    console.error(`API Error: ${response.status}`, errorBody);
     throw new Error(`API request failed: ${response.status} ${response.statusText}`);
   }
   return response;
@@ -224,17 +232,33 @@ export const postsService = {
     }
   },
 
-  createPost: async (content: string, category: string) => {
+  createPost: async (content: string, category: string, imageFile?: File) => {
     try {
-      const response = await apiFetch('/posts', {
+      const formData = new FormData();
+      formData.append('authorId', String(authUser.id));
+      formData.append('neighborhoodId', String(authUser.neighborhoodId));
+      formData.append('content', content);
+      formData.append('category', category);
+      
+      if (imageFile) {
+        formData.append('image', imageFile);
+      }
+
+      const authToken = getAuthToken();
+      const response = await fetch(`${API_BASE}/posts`, {
         method: 'POST',
-        body: JSON.stringify({
-          authorId: authUser.id,
-          neighborhoodId: authUser.neighborhoodId,
-          content,
-          category
-        })
+        headers: {
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+          // Note: Do NOT set Content-Type header when sending FormData, 
+          // the browser will set it automatically with the boundary.
+        },
+        body: formData
       });
+
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+      }
+      
       return response.json();
     } catch (error) {
       console.error('Error creating post:', error);
@@ -259,20 +283,17 @@ export const postsService = {
     }
   },
 
-  likePost: (postId: string) => {
-    const post = postsStore.find(p => p.id === postId);
-    if (post) {
-      const index = post.likedBy.indexOf(authUser.id);
-      if (index > -1) {
-        post.likedBy.splice(index, 1);
-        post.likes--;
-      } else {
-        post.likedBy.push(authUser.id);
-        post.likes++;
-      }
-      setStoredData('neighborhub_posts', postsStore);
+  likePost: async (postId: string) => {
+    try {
+      const response = await apiFetch(`/posts/${postId}/like`, {
+        method: 'POST',
+        body: JSON.stringify({ userId: authUser.id })
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error liking post:', error);
+      throw error;
     }
-    return Promise.resolve(post);
   },
 
   addComment: async (postId: string, content: string) => {
