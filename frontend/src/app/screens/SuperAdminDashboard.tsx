@@ -5,7 +5,7 @@ import { Button } from "../components/ui/button";
 import { Textarea } from "../components/ui/textarea";
 import { proposalsService, neighborhoodsService, authService, superadminService } from "../services/storage";
 import { supabase } from "../services/supabaseClient";
-import { NeighborhoodProposal, Neighborhood } from "../services/types";
+import { NeighborhoodProposal, Neighborhood, User } from "../services/types";
 import { toast } from "sonner";
 
 type Tab = 'proposals' | 'neighborhoods' | 'superadmins';
@@ -26,6 +26,13 @@ export default function SuperAdminDashboard() {
   const [selectedAdmin, setSelectedAdmin] = useState<any | null>(null);
   const [promotionDescription, setPromotionDescription] = useState("");
   const [isPromoting, setIsPromoting] = useState(false);
+
+  // Admin Change States
+  const [selectedNeighborhoodForAdminChange, setSelectedNeighborhoodForAdminChange] = useState<Neighborhood | null>(null);
+  const [neighborhoodMembers, setNeighborhoodMembers] = useState<User[]>([]);
+  const [newAdmin, setNewAdmin] = useState<User | null>(null);
+  const [adminChangeDescription, setAdminChangeDescription] = useState("");
+  const [isChangingAdmin, setIsChangingAdmin] = useState(false);
 
   useEffect(() => {
     const checkAccess = async () => {
@@ -62,15 +69,9 @@ export default function SuperAdminDashboard() {
         neighborhoodsService.getNeighborhoods(),
         superadminService.getAdmins()
       ]);
-      
+
       setNbAdmins(adminsData);
-      if (!currentUser?.isAdmin) {
-        // If neighborhood admin, only show their own neighborhood
-        const userNeighborhood = await neighborhoodsService.getUserNeighborhood();
-        setNeighborhoods(neighborhoodsData.filter(n => String(n.id) === String(userNeighborhood?.id)));
-      } else {
-        setNeighborhoods(neighborhoodsData);
-      }
+      setNeighborhoods(neighborhoodsData);
       setProposals(proposalsData);
     } catch (error) {
       toast.error("Failed to load data");
@@ -152,6 +153,44 @@ export default function SuperAdminDashboard() {
     }
   };
 
+  const handleOpenAdminChange = async (neighborhood: Neighborhood) => {
+    setLoading(true);
+    try {
+      const members = await neighborhoodsService.getMembers(neighborhood.id);
+      setNeighborhoodMembers(members);
+      setSelectedNeighborhoodForAdminChange(neighborhood);
+    } catch (error) {
+      toast.error("Failed to load neighborhood members");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleChangeAdmin = async () => {
+    if (!selectedNeighborhoodForAdminChange || !newAdmin) return;
+    if (!adminChangeDescription.trim()) {
+      toast.error("Please provide a description for the change");
+      return;
+    }
+
+    setIsChangingAdmin(true);
+    try {
+      await neighborhoodsService.changeAdmin(selectedNeighborhoodForAdminChange.id, {
+        newAdminId: newAdmin.id,
+        description: adminChangeDescription
+      });
+      toast.success(`Admin for ${selectedNeighborhoodForAdminChange.name} updated successfully`);
+      setSelectedNeighborhoodForAdminChange(null);
+      setNewAdmin(null);
+      setAdminChangeDescription("");
+      await loadData();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update admin");
+    } finally {
+      setIsChangingAdmin(false);
+    }
+  };
+
   const pendingProposals = proposals.filter(p => p.status === 'pending');
   const reviewedProposals = proposals.filter(p => p.status !== 'pending');
 
@@ -178,8 +217,8 @@ export default function SuperAdminDashboard() {
             <button
               onClick={() => setActiveTab('proposals')}
               className={`flex-1 py-3 px-4 rounded-xl transition-all ${activeTab === 'proposals'
-                  ? 'bg-white text-purple-600 shadow-lg'
-                  : 'bg-white/10 text-white hover:bg-white/20'
+                ? 'bg-white text-purple-600 shadow-lg'
+                : 'bg-white/10 text-white hover:bg-white/20'
                 }`}
             >
               <div className="text-sm">Proposals</div>
@@ -188,8 +227,8 @@ export default function SuperAdminDashboard() {
             <button
               onClick={() => setActiveTab('neighborhoods')}
               className={`flex-1 py-3 px-4 rounded-xl transition-all ${activeTab === 'neighborhoods'
-                  ? 'bg-white text-purple-600 shadow-lg'
-                  : 'bg-white/10 text-white hover:bg-white/20'
+                ? 'bg-white text-purple-600 shadow-lg'
+                : 'bg-white/10 text-white hover:bg-white/20'
                 }`}
             >
               <div className="text-sm">Neighborhoods</div>
@@ -198,8 +237,8 @@ export default function SuperAdminDashboard() {
             <button
               onClick={() => setActiveTab('superadmins')}
               className={`flex-1 py-3 px-4 rounded-xl transition-all ${activeTab === 'superadmins'
-                  ? 'bg-white text-purple-600 shadow-lg'
-                  : 'bg-white/10 text-white hover:bg-white/20'
+                ? 'bg-white text-purple-600 shadow-lg'
+                : 'bg-white/10 text-white hover:bg-white/20'
                 }`}
             >
               <div className="text-sm">Add Superadmin</div>
@@ -330,8 +369,8 @@ export default function SuperAdminDashboard() {
                         <div
                           key={proposal.id}
                           className={`bg-white rounded-xl border p-4 ${proposal.status === 'approved'
-                              ? 'border-green-200 bg-green-50/30'
-                              : 'border-red-200 bg-red-50/30'
+                            ? 'border-green-200 bg-green-50/30'
+                            : 'border-red-200 bg-red-50/30'
                             }`}
                         >
                           <div className="flex items-start justify-between">
@@ -421,9 +460,17 @@ export default function SuperAdminDashboard() {
                               </div>
                             </div>
 
-                            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm">
-                              <div className="text-muted-foreground mb-1">Neighborhood Lead</div>
-                              <div>{neighborhood.leadName}</div>
+                            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm relative">
+                              <div className="text-muted-foreground mb-1 font-medium">Neighborhood Lead</div>
+                              <div className="flex items-center justify-between">
+                                <div className="font-bold">{neighborhood.leadName}</div>
+                                <button
+                                  onClick={() => handleOpenAdminChange(neighborhood)}
+                                  className="text-blue-600 hover:text-blue-800 font-bold text-xs bg-white px-3 py-1.5 rounded-lg shadow-sm border border-blue-200 transition-all hover:shadow-md"
+                                >
+                                  Change
+                                </button>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -511,8 +558,8 @@ export default function SuperAdminDashboard() {
                               key={admin.userId}
                               onClick={() => setSelectedAdmin(admin)}
                               className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all ${selectedAdmin?.userId === admin.userId
-                                  ? 'border-purple-600 bg-purple-50 shadow-sm'
-                                  : 'border-border hover:border-purple-200'
+                                ? 'border-purple-600 bg-purple-50 shadow-sm'
+                                : 'border-border hover:border-purple-200'
                                 }`}
                             >
                               <div className="flex items-center gap-4 text-left">
@@ -581,6 +628,120 @@ export default function SuperAdminDashboard() {
               </div>
             )}
           </>
+        )}
+
+        {/* Change Admin Screen Overlay */}
+        {selectedNeighborhoodForAdminChange && (
+          <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl animate-in zoom-in-95 duration-200">
+              <div className="p-6 border-b flex items-center justify-between bg-purple-600 text-white">
+                <div>
+                  <h2 className="text-2xl font-bold">Change Neighborhood Lead</h2>
+                  <p className="text-purple-100 text-sm">{selectedNeighborhoodForAdminChange.name}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setSelectedNeighborhoodForAdminChange(null);
+                    setNewAdmin(null);
+                    setAdminChangeDescription("");
+                  }}
+                  className="bg-white/20 hover:bg-white/30 p-2 rounded-full transition-colors"
+                >
+                  <XCircle className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                <div>
+                  <label className="block text-sm font-medium mb-3 text-gray-700">Select New Admin from Members</label>
+                  <div className="space-y-3">
+                    {neighborhoodMembers.length === 0 ? (
+                      <div className="text-center py-8 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 text-muted-foreground">
+                        No members found in this neighborhood
+                      </div>
+                    ) : (
+                      neighborhoodMembers.map((member) => (
+                        <button
+                          key={member.id}
+                          onClick={() => setNewAdmin(member)}
+                          className={`w-full flex items-center justify-between p-4 rounded-2xl border-2 transition-all ${newAdmin?.id === member.id
+                              ? 'border-purple-600 bg-purple-50 shadow-sm'
+                              : 'border-border hover:border-purple-200'
+                            }`}
+                        >
+                          <div className="flex items-center gap-4 text-left">
+                            <div className="bg-gradient-to-br from-purple-100 to-indigo-100 text-purple-700 w-12 h-12 rounded-full flex items-center justify-center font-bold shadow-inner">
+                              {member.name.charAt(0)}
+                            </div>
+                            <div>
+                              <div className="font-bold text-gray-900">{member.name}</div>
+                              <div className="text-sm text-gray-500">{member.email}</div>
+                              {member.verified && (
+                                <div className="inline-flex items-center mt-1 text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                                  <Shield className="w-2.5 h-2.5 mr-1" />
+                                  Verified
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          {newAdmin?.id === member.id && (
+                            <div className="bg-purple-600 rounded-full p-1">
+                              <CheckCircle className="w-5 h-5 text-white" />
+                            </div>
+                          )}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {newAdmin && (
+                  <div className="space-y-4 animate-in slide-in-from-bottom-4 duration-300">
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-gray-700">Promotion Reason / Comment</label>
+                      <Textarea
+                        value={adminChangeDescription}
+                        onChange={(e) => setAdminChangeDescription(e.target.value)}
+                        placeholder="Explain the reason for this admin change. This will be sent as a notification and logged."
+                        className="min-h-[120px] rounded-2xl border-2 focus:ring-purple-500 focus:border-purple-500"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="p-6 border-t bg-gray-50 flex gap-4">
+                <Button
+                  onClick={() => {
+                    setSelectedNeighborhoodForAdminChange(null);
+                    setNewAdmin(null);
+                    setAdminChangeDescription("");
+                  }}
+                  variant="outline"
+                  className="flex-1 h-12 rounded-xl font-bold"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleChangeAdmin}
+                  disabled={!newAdmin || !adminChangeDescription.trim() || isChangingAdmin}
+                  className="flex-[2] h-12 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold shadow-lg shadow-purple-500/20"
+                >
+                  {isChangingAdmin ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Updating...
+                    </div>
+                  ) : (
+                    <>
+                      <Users className="w-5 h-5 mr-2" />
+                      Confirm New Lead
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

@@ -28,7 +28,7 @@ const getAuthToken = () => localStorage.getItem('auth_token');
 const apiFetch = async (path: string, init?: RequestInit) => {
   const authToken = getAuthToken();
   const url = `${API_BASE}${path}`;
-  
+
   if (init?.method === 'POST' || init?.method === 'PUT') {
     console.log(`API ${init.method} Request:`, url, init.body);
   }
@@ -250,7 +250,7 @@ export const postsService = {
       return postsStore;
     }
   },
-  
+
   getPostsCount: async (userId: string | number, neighborhoodId: string | number) => {
     try {
       const data = await apiGet<{ count: number }>(`/posts/count?userId=${userId}&neighborhoodId=${neighborhoodId}`);
@@ -278,7 +278,7 @@ export const postsService = {
       formData.append('neighborhoodId', String(authUser.neighborhoodId));
       formData.append('content', content);
       formData.append('category', category);
-      
+
       if (imageFile) {
         formData.append('image', imageFile);
       }
@@ -297,7 +297,7 @@ export const postsService = {
       if (!response.ok) {
         throw new Error(`API request failed: ${response.status} ${response.statusText}`);
       }
-      
+
       return response.json();
     } catch (error) {
       console.error('Error creating post:', error);
@@ -1135,6 +1135,28 @@ export const neighborhoodsService = {
       return null;
     }
   },
+
+  getMembers: async (neighborhoodId: string | number) => {
+    try {
+      return await apiGet<User[]>(`/neighborhoods/${neighborhoodId}/members`);
+    } catch (error) {
+      console.error('Error fetching neighborhood members:', error);
+      return [];
+    }
+  },
+
+  changeAdmin: async (neighborhoodId: string | number, data: { newAdminId: string | number, description: string }) => {
+    try {
+      const response = await apiFetch(`/neighborhoods/${neighborhoodId}/change-admin`, {
+        method: 'POST',
+        body: JSON.stringify(data)
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error changing admin:', error);
+      throw error;
+    }
+  }
 };
 
 // Proposals Service

@@ -905,4 +905,125 @@ router.get('/users/:userId/enrolled-neighborhoods', async (req, res) => {
   }
 });
 
+// Change neighborhood admin
+router.post('/neighborhoods/:id/change-admin', async (req, res) => {
+  try {
+    const { newAdminId, description } = req.body;
+    const neighborhoodId = parseInt(req.params.id);
+
+    if (!newAdminId) {
+      return res.status(400).json({ error: 'newAdminId is required' });
+    }
+
+    // 1. Get current admin to notify them later
+    const { data: currentNbh, error: fetchError } = await supabase
+      .from('neighborhoods')
+      .select('admin_id, name')
+      .eq('id', neighborhoodId)
+      .single();
+
+    if (fetchError) throw fetchError;
+    const oldAdminId = currentNbh.admin_id;
+
+    // 2. Update neighborhood admin_id
+    const { error: updateError } = await supabase
+      .from('neighborhoods')
+      .update({ admin_id: newAdminId })
+      .eq('id', neighborhoodId);
+
+    if (updateError) throw updateError;
+
+    // 3. Update new admin's is_admin status
+    await supabase
+      .from('users')
+      .update({ is_admin: true })
+      .eq('id', newAdminId);
+
+    // 4. Create notification for the NEW admin
+    await supabase
+      .from('notifications')
+      .insert({
+        user_id: newAdminId,
+        neighborhood_id: neighborhoodId,
+        type: 'admin_promotion',
+        title: 'Neighborhood Admin Promotion',
+        message: description || `You have been promoted to Neighborhood Admin of ${currentNbh.name}.`,
+        timestamp: new Date().toISOString(),
+        read: false
+      });
+
+    // 5. Create notification for the OLD admin (if exists)
+    if (oldAdminId && String(oldAdminId) !== String(newAdminId)) {
+      const removalMessage = description 
+        ? `You are no longer the admin for ${currentNbh.name}. Note from Super Admin: ${description}`
+        : `You are no longer the admin for ${currentNbh.name}. A new admin has been appointed.`;
+
+      await supabase
+        .from('notifications')
+        .insert({
+          user_id: oldAdminId,
+          neighborhood_id: neighborhoodId,
+          type: 'admin_removal',
+          title: 'Neighborhood Admin Update',
+          message: removalMessage,
+          timestamp: new Date().toISOString(),
+          read: false
+        });
+        
+      // Optional: Should we set old admin's is_admin to false? 
+      // Only if they don't admin ANY other neighborhoods.
+      const { count } = await supabase
+        .from('neighborhoods')
+        .select('*', { count: 'exact', head: true })
+        .eq('admin_id', oldAdminId);
+      
+      if (count === 0) {
+        await supabase
+          .from('users')
+          .update({ is_admin: false })
+          .eq('id', oldAdminId);
+      }
+    }
+
+    res.json({ success: true, message: 'Admin updated successfully' });
+  } catch (error) {
+    console.error('Error changing admin:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get members of a neighborhood
+router.get('/neighborhoods/:id/members', async (req, res) => {
+  try {
+    const neighborhoodId = parseInt(req.params.id);
+
+    // 1. Get all user IDs from neighborhood_members
+    const { data: memberData, error: memberError } = await supabase
+      .from('neighborhood_members')
+      .select('user_id')
+      .eq('neighborhood_id', neighborhoodId);
+
+    if (memberError) throw memberError;
+
+    const userIds = memberData.map(m => m.user_id);
+
+    if (userIds.length === 0) {
+      return res.json([]);
+    }
+
+    // 2. Fetch user details from public.users
+    const { data: users, error: userError } = await supabase
+      .from('users')
+      .select('id, name, email, avatar, verified')
+      .in('id', userIds);
+
+    if (userError) throw userError;
+
+    res.json(users || []);
+  } catch (error) {
+    console.error('Error fetching neighborhood members:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;
