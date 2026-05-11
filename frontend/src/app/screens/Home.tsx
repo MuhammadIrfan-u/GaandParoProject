@@ -5,6 +5,7 @@ import { BottomNav } from "../components/BottomNav";
 import { postsService, neighborhoodsService, alertsService, eventsService, authService, statsService } from "../services/storage";
 import { Post, Neighborhood, Alert, Event } from "../services/types";
 import { toast } from "sonner";
+import { supabase } from "../services/supabaseClient";
 
 export default function Home() {
   const [posts, setPosts] = useState<Post[]>([]);
@@ -23,11 +24,30 @@ export default function Home() {
     services: 0,
     reviews: 0
   });
+  const [isSuperadmin, setIsSuperadmin] = useState(false);
 
   useEffect(() => {
     loadPosts();
     loadStats();
+    checkSuperadminStatus();
   }, []);
+
+  const checkSuperadminStatus = async () => {
+    if (!currentUser?.id) return;
+    try {
+      const { data, error } = await supabase
+        .from('Superadmin')
+        .select('id')
+        .eq('user_id', currentUser.id)
+        .maybeSingle();
+
+      if (data) {
+        setIsSuperadmin(true);
+      }
+    } catch (err) {
+      console.error('Error checking superadmin status:', err);
+    }
+  };
 
   useEffect(() => {
     if (activeTab === 'alerts' && alerts.length === 0) loadAlerts();
@@ -155,6 +175,28 @@ export default function Home() {
             ))}
           </div>
         </div>
+
+        {isSuperadmin && (
+          <Link
+            to="/super-admin-dashboard"
+            className="bg-gradient-to-r from-rose-600 to-red-600 rounded-2xl p-4 mb-4 text-white flex items-center justify-between group hover:shadow-lg shadow-md shadow-rose-500/20 transition-all active:scale-[0.98]"
+          >
+            <div className="flex items-center gap-4">
+              <div className="bg-white/20 rounded-xl p-2.5">
+                <Shield className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="text-base font-bold">Super Admin Dashboard</div>
+                <div className="text-[10px] opacity-80 uppercase tracking-wider font-bold">
+                  System Administration & Control
+                </div>
+              </div>
+            </div>
+            <div className="bg-white/10 rounded-full p-1 group-hover:translate-x-1 transition-transform">
+              <ChevronRight className="w-5 h-5" />
+            </div>
+          </Link>
+        )}
 
         {(currentUser?.isAdmin || (userNeighborhood?.adminId && String(userNeighborhood.adminId) === String(currentUser?.id))) && (
           <Link

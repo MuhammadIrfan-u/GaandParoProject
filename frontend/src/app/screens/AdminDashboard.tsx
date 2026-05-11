@@ -8,6 +8,7 @@ import { Button } from "../components/ui/button";
 import { toast } from "sonner";
 import { authService, neighborhoodsService } from "../services/storage";
 import { adminService } from "../services/adminservice";
+import { supabase } from "../services/supabaseClient";
 import type {
   Post, Event, MarketplaceItem, Alert, ProviderApplication, User, Neighborhood
 } from "../services/types";
@@ -42,12 +43,24 @@ export default function AdminDashboard() {
     const checkAccessAndLoadData = async () => {
       setLoading(true);
       try {
+        let isSuperadmin = false;
+        try {
+          const { data } = await supabase
+            .from('Superadmin')
+            .select('id')
+            .eq('user_id', currentUser?.id)
+            .maybeSingle();
+          if (data) isSuperadmin = true;
+        } catch (err) {
+          console.error('Error checking superadmin status:', err);
+        }
+
         let nId = neighborhoodId;
         let nData = null;
 
         if (nId) {
           // If viewing a specific neighborhood from SuperAdmin
-          if (!currentUser?.isAdmin) {
+          if (!currentUser?.isAdmin && !isSuperadmin) {
             toast.error("Only Super Admins can manage arbitrary neighborhoods.");
             navigate("/home");
             return;
@@ -65,7 +78,7 @@ export default function AdminDashboard() {
           nData = allNeighborhoods.find(n => String(n.id) === String(currentUser.neighborhoodId));
           const isNeighborhoodAdmin = nData?.adminId && String(nData.adminId) === String(currentUser?.id);
 
-          if (!currentUser?.isAdmin && !isNeighborhoodAdmin) {
+          if (!currentUser?.isAdmin && !isNeighborhoodAdmin && !isSuperadmin) {
             toast.error("Access denied. Neighborhood Admins only.");
             navigate("/home");
             return;

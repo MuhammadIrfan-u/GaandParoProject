@@ -3,11 +3,12 @@ import { useNavigate } from "react-router";
 import { ArrowLeft, CheckCircle, XCircle, Trash2, MapPin, Users, Shield, Calendar, AlertTriangle } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Textarea } from "../components/ui/textarea";
-import { proposalsService, neighborhoodsService, authService } from "../services/storage";
+import { proposalsService, neighborhoodsService, authService, superadminService } from "../services/storage";
+import { supabase } from "../services/supabaseClient";
 import { NeighborhoodProposal, Neighborhood } from "../services/types";
 import { toast } from "sonner";
 
-type Tab = 'proposals' | 'neighborhoods';
+type Tab = 'proposals' | 'neighborhoods' | 'superadmins';
 
 export default function SuperAdminDashboard() {
   const navigate = useNavigate();
@@ -20,12 +21,30 @@ export default function SuperAdminDashboard() {
   const [reviewNotes, setReviewNotes] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
 
+  // Superadmin Management States
+  const [nbAdmins, setNbAdmins] = useState<any[]>([]);
+  const [selectedAdmin, setSelectedAdmin] = useState<any | null>(null);
+  const [promotionDescription, setPromotionDescription] = useState("");
+  const [isPromoting, setIsPromoting] = useState(false);
+
   useEffect(() => {
     const checkAccess = async () => {
       const userNeighborhood = await neighborhoodsService.getUserNeighborhood();
       const isNeighborhoodAdmin = userNeighborhood?.adminId && String(userNeighborhood.adminId) === String(currentUser?.id);
 
-      if (!currentUser?.isAdmin && !isNeighborhoodAdmin) {
+      let isSuperadmin = false;
+      try {
+        const { data } = await supabase
+          .from('Superadmin')
+          .select('id')
+          .eq('user_id', currentUser?.id)
+          .maybeSingle();
+        if (data) isSuperadmin = true;
+      } catch (err) {
+        console.error('Error checking superadmin status:', err);
+      }
+
+      if (!currentUser?.isAdmin && !isNeighborhoodAdmin && !isSuperadmin) {
         toast.error("Access denied. Authorized admins only.");
         navigate("/home");
         return;
@@ -38,11 +57,13 @@ export default function SuperAdminDashboard() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [proposalsData, neighborhoodsData] = await Promise.all([
+      const [proposalsData, neighborhoodsData, adminsData] = await Promise.all([
         proposalsService.getProposals(),
         neighborhoodsService.getNeighborhoods(),
+        superadminService.getAdmins()
       ]);
       
+      setNbAdmins(adminsData);
       if (!currentUser?.isAdmin) {
         // If neighborhood admin, only show their own neighborhood
         const userNeighborhood = await neighborhoodsService.getUserNeighborhood();
@@ -103,6 +124,34 @@ export default function SuperAdminDashboard() {
     }
   };
 
+  const handleAddSuperadmin = async () => {
+    if (!selectedAdmin) {
+      toast.error("Please select an admin");
+      return;
+    }
+    if (!promotionDescription.trim()) {
+      toast.error("Please provide a description");
+      return;
+    }
+
+    setIsPromoting(true);
+    try {
+      await superadminService.addSuperadmin({
+        userId: selectedAdmin.userId,
+        description: promotionDescription,
+        neighborhoodId: selectedAdmin.neighborhoods[0]?.id // Using first neighborhood for context
+      });
+      toast.success(`${selectedAdmin.userName} is now a Super Admin!`);
+      setPromotionDescription("");
+      setSelectedAdmin(null);
+      await loadData();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to add superadmin");
+    } finally {
+      setIsPromoting(false);
+    }
+  };
+
   const pendingProposals = proposals.filter(p => p.status === 'pending');
   const reviewedProposals = proposals.filter(p => p.status !== 'pending');
 
@@ -145,6 +194,16 @@ export default function SuperAdminDashboard() {
             >
               <div className="text-sm">Neighborhoods</div>
               <div className="text-xl mt-1">{neighborhoods.length}</div>
+            </button>
+            <button
+              onClick={() => setActiveTab('superadmins')}
+              className={`flex-1 py-3 px-4 rounded-xl transition-all ${activeTab === 'superadmins'
+                  ? 'bg-white text-purple-600 shadow-lg'
+                  : 'bg-white/10 text-white hover:bg-white/20'
+                }`}
+            >
+              <div className="text-sm">Add Superadmin</div>
+              <div className="text-xl mt-1">{nbAdmins.length}</div>
             </button>
           </div>
         </div>
@@ -422,6 +481,103 @@ export default function SuperAdminDashboard() {
                     </div>
                   ))
                 )}
+              </div>
+            )}
+
+            {/* Superadmins Tab */}
+            {activeTab === 'superadmins' && (
+              <div className="space-y-6">
+                <div className="bg-white rounded-2xl border border-border p-6">
+                  <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                    <Shield className="w-6 h-6 text-purple-600" />
+                    Promote Neighborhood Admin to Super Admin
+                  </h2>
+                  <p className="text-sm text-muted-foreground mb-6">
+                    Select an active neighborhood admin to grant them platform-wide administrative privileges.
+                    They will receive a notification with your description.
+                  </p>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Select Admin</label>
+                      <div className="grid grid-cols-1 gap-3">
+                        {nbAdmins.length === 0 ? (
+                          <div className="text-center py-4 text-muted-foreground bg-muted/20 rounded-xl border-2 border-dashed">
+                            No neighborhood admins found
+                          </div>
+                        ) : (
+                          nbAdmins.map((admin) => (
+                            <button
+                              key={admin.userId}
+                              onClick={() => setSelectedAdmin(admin)}
+                              className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all ${selectedAdmin?.userId === admin.userId
+                                  ? 'border-purple-600 bg-purple-50 shadow-sm'
+                                  : 'border-border hover:border-purple-200'
+                                }`}
+                            >
+                              <div className="flex items-center gap-4 text-left">
+                                <div className="bg-purple-100 text-purple-700 w-10 h-10 rounded-full flex items-center justify-center font-bold">
+                                  {admin.userName.charAt(0)}
+                                </div>
+                                <div>
+                                  <div className="font-bold">{admin.userName}</div>
+                                  <div className="text-xs text-muted-foreground">
+                                    Admin of: {admin.neighborhoods.map((n: any) => n.name).join(", ")}
+                                  </div>
+                                </div>
+                              </div>
+                              {selectedAdmin?.userId === admin.userId && (
+                                <CheckCircle className="w-6 h-6 text-purple-600" />
+                              )}
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    </div>
+
+                    {selectedAdmin && (
+                      <div className="pt-4 space-y-4 border-t animate-in fade-in slide-in-from-top-2">
+                        <div>
+                          <label className="block text-sm font-medium mb-2">Promotion Description</label>
+                          <Textarea
+                            value={promotionDescription}
+                            onChange={(e) => setPromotionDescription(e.target.value)}
+                            placeholder="Explain why this user is being promoted. This will be sent as a notification."
+                            className="min-h-[120px] rounded-xl"
+                          />
+                        </div>
+                        <Button
+                          onClick={handleAddSuperadmin}
+                          disabled={isPromoting || !promotionDescription.trim()}
+                          className="w-full bg-purple-600 hover:bg-purple-700 h-12 rounded-xl text-lg font-bold shadow-lg shadow-purple-500/20"
+                        >
+                          {isPromoting ? (
+                            <div className="flex items-center gap-2">
+                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                              Promoting...
+                            </div>
+                          ) : (
+                            <>
+                              <Shield className="w-5 h-5 mr-2" />
+                              Confirm Promotion
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="bg-purple-50 border-2 border-purple-100 rounded-2xl p-6">
+                  <h3 className="font-bold text-purple-800 mb-2 flex items-center gap-2">
+                    <AlertTriangle className="w-5 h-5" />
+                    Important Note
+                  </h3>
+                  <p className="text-sm text-purple-700">
+                    Super Admins have full control over all neighborhoods, proposals, and system settings.
+                    Grant this permission only to highly trusted community members.
+                  </p>
+                </div>
               </div>
             )}
           </>

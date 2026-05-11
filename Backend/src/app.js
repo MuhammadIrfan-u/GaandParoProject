@@ -18,6 +18,7 @@ import membershipRoutes from "./routes/membershipRoutes.js";
 import verificationRoutes from "./routes/verificationRoutes.js";
 import fraudRoutes from "./routes/fraud.routes.js";
 import supabaseUsersRoutes from "./routes/supabaseUsersRoutes.js";
+import supabaseSuperadminRoutes from "./routes/supabaseSuperadminRoutes.js";
 import express from 'express'
 import cors from 'cors'
 import path from 'path'
@@ -59,6 +60,7 @@ app.use("/", supabaseServiceRequestsRoutes);
 app.use("/", supabaseServicesRoutes);
 app.use("/", supabaseReviewsRoutes);
 app.use("/", supabaseUsersRoutes);
+app.use("/", supabaseSuperadminRoutes);
 
 app.use("/", supabaseEventsRoutes);
 app.use("/", marketplaceRoutes);

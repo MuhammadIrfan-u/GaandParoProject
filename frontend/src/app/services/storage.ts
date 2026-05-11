@@ -1343,6 +1343,29 @@ export const providerApplicationsService = {
   }
 };
 
+export const superadminService = {
+  getAdmins: async () => {
+    try {
+      return await apiGet<any[]>('/superadmin/admins');
+    } catch (error) {
+      console.error('Error fetching admins:', error);
+      return [];
+    }
+  },
+  addSuperadmin: async (data: { userId: string | number, description: string, neighborhoodId?: string | number }) => {
+    try {
+      const response = await apiFetch('/superadmin/add', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      });
+      return response.json();
+    } catch (error) {
+      console.error('Error adding superadmin:', error);
+      throw error;
+    }
+  }
+};
+
 // Helper function
 function getCategoryColor(category: string): string {
   const colors: { [key: string]: string } = {
