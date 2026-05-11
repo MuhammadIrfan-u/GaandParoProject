@@ -99,7 +99,6 @@ export default function AdminDashboard() {
           setApplications(data.applications);
           setSettings(data.settings || {
             enable_marketplace: true,
-            enable_resource_exchange: true,
             enable_public_alerts: true,
             enable_events: true,
             enable_services: true,

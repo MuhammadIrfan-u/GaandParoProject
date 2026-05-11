@@ -1009,14 +1009,12 @@ export const neighborhoodsService = {
 
   updateSettings: async (neighborhoodId: string | number, settings: Partial<NeighborhoodSettings>) => {
     try {
-      // Map camelCase to snake_case for API - save all settings to neighborhood_settings table
       const apiPayload = {
-        enable_marketplace: settings.enableMarketplace,
-        enable_resource_exchange: settings.enableResourceExchange,
-        enable_public_alerts: settings.enablePublicAlerts,
-        enable_events: settings.enableEvents,
-        enable_services: settings.enableServices,
-        require_verification: settings.requireVerification,
+        enable_marketplace: settings.enable_marketplace,
+        enable_public_alerts: settings.enable_public_alerts,
+        enable_events: settings.enable_events,
+        enable_services: settings.enable_services,
+        require_verification: settings.require_verification,
       };
 
       const response = await apiFetch(`/neighborhoods/${neighborhoodId}/hub-settings`, {
@@ -1026,13 +1024,7 @@ export const neighborhoodsService = {
       return response.json();
     } catch (error) {
       console.error('Error updating settings in Supabase:', error);
-      // Fallback to local store
-      const neighborhood = neighborhoodsStore.find(n => String(n.id) === String(neighborhoodId));
-      if (neighborhood) {
-        neighborhood.settings = { ...neighborhood.settings, ...settings };
-        setStoredData('neighborhub_neighborhoods', neighborhoodsStore);
-      }
-      return neighborhood;
+      throw error;
     }
   },
 

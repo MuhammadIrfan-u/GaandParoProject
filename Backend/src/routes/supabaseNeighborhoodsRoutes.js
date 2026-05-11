@@ -185,18 +185,16 @@ router.get('/neighborhoods', async (req, res) => {
           ...n,
           lead_name: leadName,
           settings: settings ? {
-            enableMarketplace: settings.enable_marketplace ?? true,
-            enableResourceExchange: settings.enable_resource_exchange ?? true,
-            enablePublicAlerts: settings.enable_public_alerts ?? true,
-            enableEvents: settings.enable_events ?? true,
-            enableServices: settings.enable_services ?? true,
+            enable_marketplace: settings.enable_marketplace ?? true,
+            enable_public_alerts: settings.enable_public_alerts ?? true,
+            enable_events: settings.enable_events ?? true,
+            enable_services: settings.enable_services ?? true,
             require_verification: settings.require_verification ?? false,
           } : { 
-            enableMarketplace: true, 
-            enableResourceExchange: true,
-            enablePublicAlerts: true,
-            enableEvents: true,
-            enableServices: true,
+            enable_marketplace: true, 
+            enable_public_alerts: true,
+            enable_events: true,
+            enable_services: true,
             require_verification: false,
           },
         };
@@ -249,18 +247,16 @@ router.get('/neighborhoods/:id', async (req, res) => {
       ...data,
       lead_name: leadName,
       settings: settings ? {
-        enableMarketplace: settings.enable_marketplace ?? true,
-        enableResourceExchange: settings.enable_resource_exchange ?? true,
-        enablePublicAlerts: settings.enable_public_alerts ?? true,
-        enableEvents: settings.enable_events ?? true,
-        enableServices: settings.enable_services ?? true,
+        enable_marketplace: settings.enable_marketplace ?? true,
+        enable_public_alerts: settings.enable_public_alerts ?? true,
+        enable_events: settings.enable_events ?? true,
+        enable_services: settings.enable_services ?? true,
         require_verification: settings.require_verification ?? false,
       } : { 
-        enableMarketplace: true, 
-        enableResourceExchange: true,
-        enablePublicAlerts: true,
-        enableEvents: true,
-        enableServices: true,
+        enable_marketplace: true, 
+        enable_public_alerts: true,
+        enable_events: true,
+        enable_services: true,
         require_verification: false,
       },
     };
@@ -351,8 +347,11 @@ router.post('/neighborhoods', async (req, res) => {
     const enrichedData = {
       ...neighborhoodWithSettings,
       settings: {
-        enableMarketplace: true,
-        enableResourceExchange: true,
+        enable_marketplace: true,
+        enable_public_alerts: true,
+        enable_events: true,
+        enable_services: true,
+        require_verification: false,
       },
     };
     
@@ -452,19 +451,17 @@ router.put('/neighborhoods/:id/branding', async (req, res) => {
     const enrichedData = {
       ...data,
       settings: settings ? {
-        enableMarketplace: settings.enable_marketplace ?? true,
-        enableResourceExchange: settings.enable_resource_exchange ?? true,
-        enablePublicAlerts: settings.enable_public_alerts ?? true,
-        enableEvents: settings.enable_events ?? true,
-        enableServices: settings.enable_services ?? true,
-        requireVerification: settings.require_verification ?? false,
+        enable_marketplace: settings.enable_marketplace ?? true,
+        enable_public_alerts: settings.enable_public_alerts ?? true,
+        enable_events: settings.enable_events ?? true,
+        enable_services: settings.enable_services ?? true,
+        require_verification: settings.require_verification ?? false,
       } : { 
-        enableMarketplace: true, 
-        enableResourceExchange: true,
-        enablePublicAlerts: true,
-        enableEvents: true,
-        enableServices: true,
-        requireVerification: false,
+        enable_marketplace: true, 
+        enable_public_alerts: true,
+        enable_events: true,
+        enable_services: true,
+        require_verification: false,
       },
     };
 
@@ -532,7 +529,6 @@ router.put('/neighborhoods/:id/hub-settings', async (req, res) => {
   try {
     const { 
       enable_marketplace, 
-      enable_resource_exchange,
       enable_public_alerts,
       enable_events,
       enable_services,
@@ -546,7 +542,6 @@ router.put('/neighborhoods/:id/hub-settings', async (req, res) => {
         {
           neighborhood_id: parseInt(req.params.id),
           enable_marketplace: enable_marketplace ?? true,
-          enable_resource_exchange: enable_resource_exchange ?? true,
           enable_public_alerts: enable_public_alerts ?? true,
           enable_events: enable_events ?? true,
           enable_services: enable_services ?? true,

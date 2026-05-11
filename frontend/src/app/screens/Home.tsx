@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router";
-import { Bell, Plus, Heart, MessageCircle, Share2, MoreVertical, AlertCircle, Calendar, ShoppingBag, MapPin, TrendingUp, Star, Users, FileText, Shield, ChevronRight } from "lucide-react";
+import { Bell, Plus, Heart, MessageCircle, Share2, MoreVertical, AlertCircle, Calendar, ShoppingBag, MapPin, TrendingUp, Star, Users, FileText, Shield, ChevronRight, AlertTriangle, XCircle } from "lucide-react";
 import { BottomNav } from "../components/BottomNav";
 import { postsService, neighborhoodsService, alertsService, eventsService, authService, statsService } from "../services/storage";
-import { Post, Neighborhood, Alert, Event } from "../services/types";
+import { Post, Neighborhood, Alert, Event, User } from "../services/types";
 import { toast } from "sonner";
 import { supabase } from "../services/supabaseClient";
 
@@ -21,7 +21,6 @@ export default function Home() {
     alerts: 0,
     events: 0,
     marketplaceItems: 0,
-    services: 0,
     reviews: 0
   });
   const [isSuperadmin, setIsSuperadmin] = useState(false);
@@ -114,14 +113,19 @@ export default function Home() {
   };
 
   const quickActions = [
-    { icon: AlertCircle, label: "Alert", color: "text-red-600", bg: "bg-red-100", link: "/alerts" },
-    { icon: Calendar, label: "Event", color: "text-blue-600", bg: "bg-blue-100", link: "/events" },
-    { icon: ShoppingBag, label: "Sell", color: "text-green-600", bg: "bg-green-100", link: "/marketplace" },
-    { icon: MapPin, label: "Service", color: "text-purple-600", bg: "bg-purple-100", link: "/services" },
+    { icon: AlertCircle, label: "Alert", color: "text-red-600", bg: "bg-red-100", link: "/alerts", featureKey: 'enable_public_alerts' as const },
+    { icon: Calendar, label: "Event", color: "text-blue-600", bg: "bg-blue-100", link: "/events", featureKey: 'enable_events' as const },
+    { icon: ShoppingBag, label: "Sell", color: "text-green-600", bg: "bg-green-100", link: "/marketplace", featureKey: 'enable_marketplace' as const },
+    { icon: MapPin, label: "Service", color: "text-purple-600", bg: "bg-purple-100", link: "/services", featureKey: 'enable_services' as const },
     { icon: Star, label: "Reviews", color: "text-orange-600", bg: "bg-orange-100", link: "/reputation" },
     { icon: Users, label: "Community", color: "text-yellow-800", bg: "bg-yellow-100", link: "/neighborhoods" },
     { icon: FileText, label: "Proposal", color: "text-cyan-600", bg: "bg-cyan-100", link: "/propose-neighborhood" },
   ];
+
+  const isFeatureEnabled = (action: typeof quickActions[0]) => {
+    if (!action.featureKey || !userNeighborhood?.settings) return true;
+    return !!userNeighborhood.settings[action.featureKey];
+  };
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -161,18 +165,27 @@ export default function Home() {
             <h3 className="text-sm">Quick Actions</h3>
           </div>
           <div className="grid grid-cols-4 gap-3">
-            {quickActions.map((action) => (
-              <Link
-                key={action.label}
-                to={action.link}
-                className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-muted/50 transition-colors"
-              >
-                <div className={`${action.bg} ${action.color} rounded-full p-3`}>
-                  <action.icon className="w-5 h-5" />
-                </div>
-                <span className="text-xs text-muted-foreground">{action.label}</span>
-              </Link>
-            ))}
+            {quickActions.map((action) => {
+              const enabled = isFeatureEnabled(action);
+
+              const handleActionClick = (e: React.MouseEvent) => {
+                // If not enabled, we let the Link navigate to the disabled-service route
+                // No special handling needed here anymore unless we want to log it
+              };
+
+              return (
+                <Link
+                  key={action.label}
+                  to={enabled ? action.link : `/disabled-service/${action.label}`}
+                  className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-muted/50 transition-colors"
+                >
+                  <div className={`${action.bg} ${action.color} rounded-full p-3 transition-opacity duration-300 ${!enabled ? 'opacity-50' : ''}`}>
+                    <action.icon className="w-5 h-5" />
+                  </div>
+                  <span className={`text-xs text-muted-foreground transition-opacity duration-300 ${!enabled ? 'opacity-50' : ''}`}>{action.label}</span>
+                </Link>
+              );
+            })}
           </div>
         </div>
 
@@ -247,11 +260,6 @@ export default function Home() {
               <ShoppingBag className="w-5 h-5 mb-1 opacity-80" />
               <div className="text-2xl mb-1">{stats.marketplaceItems}</div>
               <div className="text-sm opacity-90">Market Items</div>
-            </div>
-            <div className="bg-gradient-to-br from-purple-500 to-violet-600 rounded-2xl p-4 text-white shadow-lg shadow-purple-500/20">
-              <MapPin className="w-5 h-5 mb-2 opacity-80" />
-              <div className="text-2xl mb-1">{stats.services}</div>
-              <div className="text-sm opacity-90">Services</div>
             </div>
             <div className="bg-gradient-to-br from-pink-500 to-rose-500 rounded-2xl px-3 py-3 text-white shadow-lg shadow-pink-500/20">
               <Star className="w-5 h-5 mb-2 opacity-80" />
@@ -442,6 +450,7 @@ export default function Home() {
           </div>
         )}
       </div>
+
 
       <BottomNav />
     </div>

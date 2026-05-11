@@ -45,6 +45,7 @@ import ForgotPassword from "./screens/ForgotPassword";
 import ResetPassword from "./screens/ResetPassword";
 import EditProfile from "./screens/EditProfile";
 import PublicProfile from "./screens/PublicProfile";
+import DisabledServiceScreen from "./screens/DisabledServiceScreen";
 
 export const router = createBrowserRouter([
   {
@@ -230,5 +231,9 @@ export const router = createBrowserRouter([
   {
     path: "/user-profile/:userId",
     Component: PublicProfile,
+  },
+  {
+    path: "/disabled-service/:serviceName",
+    Component: DisabledServiceScreen,
   }
 ]);

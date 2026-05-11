@@ -172,12 +172,11 @@ export interface Notification {
 }
 
 export interface NeighborhoodSettings {
-  enableMarketplace: boolean;
-  enableResourceExchange: boolean;
-  enablePublicAlerts: boolean;
-  enableEvents: boolean;
-  enableServices: boolean;
-  requireVerification: boolean;
+  enable_marketplace: boolean;
+  enable_public_alerts: boolean;
+  enable_events: boolean;
+  enable_services: boolean;
+  require_verification: boolean;
 }
 
 export interface Neighborhood {
