@@ -27,6 +27,8 @@ export default function Services() {
     setUser(authService.getCurrentUser());
   }, [isProviderMode]);
 
+  const isProviderUser = Boolean(user?.isProvider || user?.isServiceProvider);
+
   const loadServices = async () => {
     try {
       const data = await servicesService.getServices();
@@ -53,8 +55,14 @@ export default function Services() {
     const priceNum = parseInt(String(service.price).replace(/[^\d]/g, '')) || 0;
     const matchesPrice = priceNum <= maxPrice;
 
-    return (service.status === undefined || service.status === 'active') &&
-      matchesSearch && matchesCategory && matchesRating && matchesPrice;
+    const st = (service.status ?? '').toLowerCase();
+    const listingOk =
+      st !== 'inactive' &&
+      (service.status === undefined ||
+        service.status === null ||
+        st === 'active' ||
+        st === 'approved');
+    return listingOk && matchesSearch && matchesCategory && matchesRating && matchesPrice;
   });
 
   const getCategoryIcon = (category: string) => {
@@ -102,7 +110,7 @@ export default function Services() {
                 </Button>
               </Link>
 
-              {user?.isProvider ? (
+              {isProviderUser ? (
                 <div className="flex items-center gap-3 bg-white/40 backdrop-blur-sm px-3 py-1.5 rounded-2xl border border-white/20 shadow-sm">
                   <span className="text-[10px] font-bold uppercase text-muted-foreground tracking-tighter">
                     {isProviderMode ? "Provider" : "Customer"}

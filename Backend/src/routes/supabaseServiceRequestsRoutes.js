@@ -52,7 +52,12 @@ router.post('/service-requests', async (req, res) => {
 router.get('/service-requests', async (req, res) => {
   try {
     const { userId, providerId } = req.query;
-    
+
+    // Avoid returning every row when no scope is provided (consumer UIs always pass userId or providerId).
+    if (!userId && !providerId) {
+      return res.json([]);
+    }
+
     // Join with services to get more info
     let query = supabase
       .from('service_requests')

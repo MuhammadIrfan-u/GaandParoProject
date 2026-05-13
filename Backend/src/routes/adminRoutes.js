@@ -21,7 +21,7 @@ router.get('/admin/dashboard/:neighborhoodId', async (req, res) => {
           supabase.from('events').select('*').eq('neighborhood_id', neighborhoodId),
           supabase.from('alerts').select('*').eq('neighborhood_id', neighborhoodId),
           supabase.from('marketplace_items').select('*'),
-          supabase.from('provider_applications').select('*'),
+          supabase.from('provider_applications').select('*, users(id, name, email, verified, avatar)').eq('neighborhood_id', neighborhoodId).order('created_at', { ascending: false }),
           supabase.from('neighborhood_settings').select('*').eq('neighborhood_id', neighborhoodId).single()
       ]);
 

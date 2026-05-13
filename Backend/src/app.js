@@ -19,6 +19,8 @@ import verificationRoutes from "./routes/verificationRoutes.js";
 import fraudRoutes from "./routes/fraud.routes.js";
 import supabaseUsersRoutes from "./routes/supabaseUsersRoutes.js";
 import supabaseSuperadminRoutes from "./routes/supabaseSuperadminRoutes.js";
+import adminProviderApplicationsRoutes from "./routes/adminProviderApplicationsRoutes.js";
+import adminServiceManagementRoutes from "./routes/adminServiceManagementRoutes.js";
 import express from 'express'
 import cors from 'cors'
 import path from 'path'
@@ -46,6 +48,8 @@ app.use('/api', verificationRoutes);
 app.use('/api', userSettingsRoutes);
 app.use('/api', statsRoutes);
 app.use('/api', adminRoutes);
+app.use('/api/admin/provider-applications', adminProviderApplicationsRoutes);
+app.use('/api/admin/services', adminServiceManagementRoutes);
 
 // Home route
 app.get("/", (req, res) => {

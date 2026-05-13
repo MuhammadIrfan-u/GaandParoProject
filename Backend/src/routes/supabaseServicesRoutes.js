@@ -24,24 +24,44 @@ const transformService = (data) => {
   };
 };
 
-// Get all services
+// Get all services (neighborhood browse vs provider-owned listings)
 router.get('/services', async (req, res) => {
   try {
-    const { neighborhoodId } = req.query;
+    const { neighborhoodId, providerId, listScope } = req.query;
+    const numericNid = neighborhoodId != null && String(neighborhoodId).trim() !== ''
+      ? parseInt(String(neighborhoodId).replace(/\D/g, ''), 10)
+      : NaN;
+    const numericPid = providerId != null && String(providerId).trim() !== ''
+      ? parseInt(String(providerId).replace(/\D/g, ''), 10)
+      : NaN;
+
+    const providerOwned = listScope === 'provider_owned' && !Number.isNaN(numericPid);
+    if (providerOwned && Number.isNaN(numericNid)) {
+      return res.status(400).json({ error: 'neighborhoodId is required for provider_owned listings' });
+    }
+
     let query = supabase
       .from('services')
       .select('*, users(name, avatar, verified)')
-      .eq('moderation_status', 'approved')
       .order('id', { ascending: false });
-    
-    if (neighborhoodId) {
-      query = query.eq('neighborhood_id', neighborhoodId);
+
+    if (!Number.isNaN(numericNid)) {
+      query = query.or(`neighborhood_id.eq.${numericNid},neighborhood_Id.eq.${numericNid}`);
     }
-    
+
+    if (providerOwned) {
+      query = query.eq('provider_id', numericPid);
+      // Provider Hub: own listings in this neighborhood, active or inactive (plus legacy approved)
+      query = query.in('moderation_status', ['active', 'inactive', 'approved']);
+    } else {
+      // Local Services browse: only publicly visible listings (exclude inactive)
+      query = query.in('moderation_status', ['active', 'approved']);
+    }
+
     const { data, error } = await query;
-    
+
     if (error) throw error;
-    
+
     res.json((data || []).map(transformService));
   } catch (error) {
     console.error('Error fetching services:', error);
@@ -59,7 +79,7 @@ router.get('/services/:id', async (req, res) => {
       .from('services')
       .select('*, users(name, avatar, verified)')
       .eq('id', id)
-      .eq('moderation_status', 'approved')
+      .in('moderation_status', ['approved', 'active'])
       .single();
     
     if (error) throw error;

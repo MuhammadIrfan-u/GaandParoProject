@@ -31,8 +31,10 @@ export default function ProviderDashboard() {
       const user = authService.getCurrentUser();
       
       // Load Services
-      const allServices = await servicesService.getServices();
-      const filteredServices = allServices.filter(s => s.provider === user.name || s.providerId === user.id);
+      const allServices = await servicesService.getServices({ providerListings: true });
+      const filteredServices = allServices.filter(
+        (s) => String(s.providerId) === String(user.id) || s.provider === user.name
+      );
       setMyServices(filteredServices);
 
       // Load Requests

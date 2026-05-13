@@ -2,15 +2,16 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router";
 import {
   ArrowLeft, Shield, Users, AlertTriangle, Calendar,
-  Trash2, Edit, CheckCircle, XCircle, BarChart3, Activity, Store, Settings
+  Trash2, Edit, BarChart3, Activity, Store, Settings
 } from "lucide-react";
 import { Button } from "../components/ui/button";
+import { ProviderApplicationReviewCard, type ProviderApplicationRow } from "../components/ProviderApplicationReviewCard";
 import { toast } from "sonner";
 import { authService, neighborhoodsService } from "../services/storage";
 import { adminService } from "../services/adminservice";
 import { supabase } from "../services/supabaseClient";
 import type {
-  Post, Event, MarketplaceItem, Alert, ProviderApplication, User, Neighborhood
+  Post, Event, MarketplaceItem, Alert, User, Neighborhood
 } from "../services/types";
 
 type Tab = 'analytics' | 'settings' | 'users' | 'posts' | 'events' | 'marketplace' | 'alerts' | 'applications';
@@ -30,7 +31,7 @@ export default function AdminDashboard() {
   const [events, setEvents] = useState<Event[]>([]);
   const [marketItems, setMarketItems] = useState<MarketplaceItem[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [applications, setApplications] = useState<ProviderApplication[]>([]);
+  const [applications, setApplications] = useState<ProviderApplicationRow[]>([]);
   const [settings, setSettings] = useState<any>({});
 
   // Editing States
@@ -130,7 +131,7 @@ export default function AdminDashboard() {
   const handleAppStatus = async (id: string, status: 'approved' | 'rejected') => {
     try {
       await adminService.updateApplicationStatus(id, status);
-      setApplications(applications.map(a => a.id === id ? { ...a, status } : a));
+      setApplications(applications.map(a => String(a.id) === id ? { ...a, status } : a));
       toast.success(`Application ${status}`);
     } catch {
       toast.error("Failed to update status");
@@ -382,21 +383,14 @@ export default function AdminDashboard() {
 
             {/* Applications */}
             {activeTab === 'applications' && (
-              <div className="space-y-4">
-                {applications.map(app => (
-                  <div key={app.id} className="bg-white p-5 rounded-2xl border shadow-sm">
-                    <div className="flex justify-between mb-4">
-                      <div><h3 className="font-bold">{app.fullName}</h3><p className="text-sm text-blue-600">{app.category}</p></div>
-                      <span className="uppercase text-xs font-bold py-1 px-2 rounded-full bg-gray-100">{app.status}</span>
-                    </div>
-                    <p className="text-sm bg-gray-50 p-2 rounded">{app.description}</p>
-                    {app.status === 'pending' && (
-                      <div className="flex gap-2 mt-4">
-                        <Button className="bg-green-600" onClick={() => handleAppStatus(app.id, 'approved')}><CheckCircle className="w-4 h-4 mr-2" /> Approve</Button>
-                        <Button variant="outline" className="text-red-600" onClick={() => handleAppStatus(app.id, 'rejected')}><XCircle className="w-4 h-4 mr-2" /> Reject</Button>
-                      </div>
-                    )}
-                  </div>
+              <div className="space-y-6">
+                {applications.map((app) => (
+                  <ProviderApplicationReviewCard
+                    key={String(app.id)}
+                    app={app}
+                    onApprove={(applicationId) => handleAppStatus(applicationId, 'approved')}
+                    onReject={(applicationId) => handleAppStatus(applicationId, 'rejected')}
+                  />
                 ))}
               </div>
             )}

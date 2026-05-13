@@ -34,10 +34,12 @@ export default function Home() {
   const checkSuperadminStatus = async () => {
     if (!currentUser?.id) return;
     try {
-      const { data, error } = await supabase
+      const numericId = parseInt(String(currentUser.id).replace(/\D/g, ''), 10);
+      if (Number.isNaN(numericId)) return;
+      const { data } = await supabase
         .from('Superadmin')
         .select('id')
-        .eq('user_id', currentUser.id)
+        .eq('user_id', numericId)
         .maybeSingle();
 
       if (data) {
@@ -79,15 +81,20 @@ export default function Home() {
 
   const loadPosts = async () => {
     try {
-      const data = await postsService.getPosts();
-      setPosts(data);
+      // Load neighborhood first to ensure we have a valid neighborhoodId
+      let nbh: Neighborhood | null = null;
       try {
-        const nbh = await neighborhoodsService.getUserNeighborhood();
+        nbh = await neighborhoodsService.getUserNeighborhood();
         setUserNeighborhood(nbh || null);
       } catch (e) {
-        // ignore
+        console.error('Error loading neighborhood:', e);
       }
+
+      // Now fetch posts with valid neighborhood context
+      const data = await postsService.getPosts();
+      setPosts(data);
     } catch (error) {
+      console.error('Error fetching posts:', error);
       toast.error("Failed to load posts");
     } finally {
       setLoading(false);
@@ -123,8 +130,10 @@ export default function Home() {
   ];
 
   const isFeatureEnabled = (action: typeof quickActions[0]) => {
+    if (isSuperadmin) return true;
+    if (action.featureKey === "enable_services" && currentUser?.isAdmin) return true;
     if (!action.featureKey || !userNeighborhood?.settings) return true;
-    return !!userNeighborhood.settings[action.featureKey];
+    return userNeighborhood.settings[action.featureKey] !== false;
   };
 
   return (

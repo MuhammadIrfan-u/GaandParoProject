@@ -10,23 +10,17 @@ import { motion } from "motion/react";
 export default function ServiceRequests() {
   const navigate = useNavigate();
   const currentUser = authService.getCurrentUser();
-  const isProvider = currentUser.isProvider;
-  
+
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadRequests();
-  }, [isProvider]);
+  }, [currentUser.id]);
 
   const loadRequests = async () => {
     try {
-      let data: ServiceRequest[] = [];
-      if (isProvider) {
-        data = await servicesService.getProviderRequests(currentUser.id);
-      } else {
-        data = await servicesService.getMyRequests();
-      }
+      const data = await servicesService.getMyRequests();
       setRequests(data);
     } catch (error) {
       toast.error("Failed to load requests");
@@ -52,9 +46,7 @@ export default function ServiceRequests() {
           <button onClick={() => navigate(-1)} className="p-2 hover:bg-black/5 rounded-full transition-colors">
             <ArrowLeft className="w-6 h-6" />
           </button>
-          <h1 className="text-xl font-bold">
-            {isProvider ? "Received Requests" : "Sent Requests"}
-          </h1>
+          <h1 className="text-xl font-bold">Sent Requests</h1>
         </div>
       </header>
 
@@ -79,9 +71,7 @@ export default function ServiceRequests() {
                 <div className="flex justify-between items-start mb-3">
                   <div>
                     <h3 className="font-bold text-lg">{request.serviceName}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {isProvider ? `Requested by User ID: ${request.userId}` : `Provider: ${request.provider}`}
-                    </p>
+                    <p className="text-sm text-muted-foreground">Provider: {request.provider}</p>
                   </div>
                   <span className={`px-2.5 py-1 rounded-full text-xs font-semibold capitalize ${getStatusColor(request.status)}`}>
                     {request.status}
