@@ -1,7 +1,8 @@
 import { Home, ShoppingBag, Briefcase, MessageCircle, User, ShieldCheck } from "lucide-react";
 import { Link, useLocation } from "react-router";
 import { motion } from "motion/react";
-import { neighborhoodsService } from "../services/storage";
+import { neighborhoodsService, authService } from "../services/storage";
+import { supabase } from "../services/supabaseClient";
 import { useEffect, useState } from "react";
 import { Neighborhood } from "../services/types";
 import { toast } from "sonner";
@@ -9,6 +10,7 @@ import { toast } from "sonner";
 export function BottomNav() {
   const location = useLocation();
   const [neighborhood, setNeighborhood] = useState<Neighborhood | null>(null);
+  const [isSuperadmin, setIsSuperadmin] = useState(false);
 
   useEffect(() => {
     const loadNeighborhood = async () => {
@@ -18,11 +20,42 @@ export function BottomNav() {
     loadNeighborhood();
   }, []);
 
+  // Re-run when route or neighborhood changes so auth is hydrated after login and Superadmin check uses a numeric user_id.
+  useEffect(() => {
+    let cancelled = false;
+    const uid = authService.getCurrentUser()?.id ?? localStorage.getItem("user_id");
+    if (!uid) {
+      setIsSuperadmin(false);
+      return;
+    }
+    const numericId = parseInt(String(uid).replace(/\D/g, ""), 10);
+    if (Number.isNaN(numericId)) {
+      setIsSuperadmin(false);
+      return;
+    }
+    (async () => {
+      try {
+        const { data } = await supabase.from("Superadmin").select("id").eq("user_id", numericId).maybeSingle();
+        if (!cancelled) setIsSuperadmin(!!data);
+      } catch {
+        if (!cancelled) setIsSuperadmin(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [location.pathname, neighborhood?.id]);
+
   const isEnabled = (label: string) => {
-    if (!neighborhood?.settings) return true; // Default to true if not loaded
+    const user = authService.getCurrentUser();
+    const servicesBypass = isSuperadmin || user?.isAdmin === true;
+    if (label === "Services" && servicesBypass) return true;
+
+    if (!neighborhood?.settings) return true;
     const settings = neighborhood.settings;
-    if (label === "Market") return settings.enable_marketplace;
-    if (label === "Services") return settings.enable_services;
+    // Treat missing flags as enabled; only explicit false disables (matches DB defaults).
+    if (label === "Market") return settings.enable_marketplace !== false;
+    if (label === "Services") return settings.enable_services !== false;
     return true;
   };
 

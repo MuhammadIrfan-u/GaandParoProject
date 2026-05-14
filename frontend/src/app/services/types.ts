@@ -12,6 +12,8 @@ export interface User {
   isAdmin?: boolean;
   neighborhoodId?: number;
   isProvider?: boolean;
+  /** DB column; public API maps provider capability to isProvider as well */
+  isServiceProvider?: boolean;
 }
 
 export interface Post {

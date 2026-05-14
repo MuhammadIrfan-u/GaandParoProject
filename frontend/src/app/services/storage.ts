@@ -242,7 +242,14 @@ export const postsService = {
   getPosts: async (neighborhoodId?: string | number) => {
     try {
       const user = authService.getCurrentUser();
-      const nId = neighborhoodId || user.neighborhoodId;
+      const nId = neighborhoodId || user?.neighborhoodId;
+      
+      // Validate that we have a valid numeric neighborhoodId
+      if (!nId || isNaN(Number(nId))) {
+        console.warn('Invalid neighborhoodId:', nId, 'falling back to cached posts');
+        return postsStore;
+      }
+      
       const posts = await apiGet<Post[]>(`/posts?neighborhoodId=${nId}`);
       return posts;
     } catch (error) {
@@ -659,11 +666,15 @@ export const analyticsService = {
 
 // Services Service
 export const servicesService = {
-  getServices: async () => {
+  getServices: async (opts?: { providerListings?: boolean }) => {
     try {
       const user = authService.getCurrentUser();
       const nId = user.neighborhoodId || 1;
-      const backendServices = await apiGet<Service[]>(`/services?neighborhoodId=${nId}`);
+      let path = `/services?neighborhoodId=${nId}`;
+      if (opts?.providerListings) {
+        path += `&providerId=${encodeURIComponent(String(user.id))}&listScope=provider_owned`;
+      }
+      const backendServices = await apiGet<Service[]>(path);
       // Merge backend services with overrides
       const mergedBackend = backendServices.map(s => ({
         ...s,
@@ -1310,7 +1321,9 @@ export const locationService = {
 export const providerApplicationsService = {
   getApplications: async () => {
     try {
-      const data = await apiGet<ProviderApplication[]>('/provider-applications');
+      const user = authService.getCurrentUser();
+      const neighborhoodId = user.neighborhoodId || 1;
+      const data = await apiGet<ProviderApplication[]>(`/provider-applications?neighborhoodId=${neighborhoodId}`);
       return data;
     } catch (error) {
       console.error('Error fetching provider applications from Supabase:', error);
@@ -1320,10 +1333,13 @@ export const providerApplicationsService = {
 
   submitApplication: async (application: Omit<ProviderApplication, 'id' | 'status' | 'submittedDate' | 'userId'>) => {
     try {
+      const user = authService.getCurrentUser();
+      const neighborhoodId = user.neighborhoodId || 1;
       const response = await apiFetch('/provider-applications', {
         method: 'POST',
         body: JSON.stringify({
           userId: authUser.id,
+          neighborhoodId: neighborhoodId,
           fullName: application.fullName,
           category: application.category,
           experience: application.experience,

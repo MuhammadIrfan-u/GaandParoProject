@@ -32,6 +32,12 @@ export const getPosts = async (req, res) => {
             return res.status(400).json({ error: 'neighborhoodId is required' });
         }
 
+        // Validate that neighborhoodId is a valid number
+        const numericNeighborhoodId = parseInt(neighborhoodId, 10);
+        if (isNaN(numericNeighborhoodId) || numericNeighborhoodId <= 0) {
+            return res.status(400).json({ error: 'Invalid neighborhoodId: must be a positive number' });
+        }
+
         const { data, error } = await supabase
             .from('posts')
             .select(`
@@ -56,7 +62,7 @@ export const getPosts = async (req, res) => {
                     )
                 )
             `)
-            .eq('neighborhod_id', parseInt(neighborhoodId))
+            .eq('neighborhod_id', numericNeighborhoodId)
             .eq('moderation_status', 'approved')
             .order('id', { ascending: false });
 

@@ -5,6 +5,12 @@ const router = express.Router();
 
 const transformUser = (data) => {
   if (!data) return null;
+  const isProvider = !!(
+    data.isProvider ||
+    data.is_provider ||
+    data.isServiceProvider ||
+    data.is_service_provider
+  );
   return {
     id: String(data.id),
     name: data.name,
@@ -17,7 +23,8 @@ const transformUser = (data) => {
     joinedDate: data.joined_date,
     bio: data.bio,
     isAdmin: data.is_admin || false,
-    isProvider: data.isProvider || false,
+    isProvider,
+    isServiceProvider: !!(data.isServiceProvider || data.is_service_provider),
   };
 };
 

@@ -241,27 +241,45 @@ export const resetPassword = async (req, res) => {
 // REQ-13: session validation
 export const getMe = async (req, res) => {
   try {
-    return res.status(200).json({ user: toPublicProfile(req.user) });
+    const id = req.user?.id ?? req.user?.userId;
+    if (!id) return res.status(401).json({ message: 'Not authenticated.' });
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (error || !user) return res.status(404).json({ message: 'User not found.' });
+    return res.status(200).json({ user: toPublicProfile(user) });
   } catch (error) {
     return res.status(500).json({ message: 'Server error.' });
   }
 };
 
 // ── Helper: strip sensitive fields ───────────────────────────────────────────
-export const toPublicProfile = (user) => ({
-  id: user.id,
-  name: user.name,
-  email: user.email,
-  phone: user.phone || '',
-  address: user.address || '',
-  avatar: user.avatar || '',
-  bio: user.bio || '',
-  verified: user.verified || false,
-  reputation: user.reputation || 0,
-  isAdmin: user.is_admin || false,
-  isFlagged: user.is_flagged || false,
-  flagReason: user.flag_reason || '',
-  moderationStatus: user.moderation_status || 'active',
-  isServiceProvider: user.isServiceProvider || false,
-  joinedDate: user.joined_date,
-});
+export const toPublicProfile = (user) => {
+  const serviceProvider =
+    !!(user.isServiceProvider || user.is_service_provider);
+  const providerFlag =
+    !!(user.isProvider ||
+      user.is_provider ||
+      user.isServiceProvider ||
+      user.is_service_provider);
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    phone: user.phone || '',
+    address: user.address || '',
+    avatar: user.avatar || '',
+    bio: user.bio || '',
+    verified: user.verified || false,
+    reputation: user.reputation || 0,
+    isAdmin: user.is_admin || false,
+    isFlagged: user.is_flagged || false,
+    flagReason: user.flag_reason || '',
+    moderationStatus: user.moderation_status || 'active',
+    isServiceProvider: serviceProvider,
+    isProvider: providerFlag,
+    joinedDate: user.joined_date,
+  };
+};
