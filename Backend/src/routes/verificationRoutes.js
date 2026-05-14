@@ -254,7 +254,11 @@ async function addToNeighborhood(userId, neighborhoodId) {
             [{ user_id: String(userId), neighborhood_id: neighborhoodId, status: 'verified', verified_at: new Date().toISOString() }],
             { onConflict: 'user_id,neighborhood_id', ignoreDuplicates: true }
         );
-    if (error) console.error('neighborhood_members upsert error (non-fatal):', error.message);
+    if (error) {
+        console.error('neighborhood_members upsert error (non-fatal):', error.message);
+    } else {
+        console.log(`[MEMBERSHIP] User ${userId} successfully added/updated in neighborhood ${neighborhoodId}`);
+    }
 }
 
 // ─── Shared helper: flip users.verified = true when BOTH conditions met ────────
@@ -332,7 +336,7 @@ router.post('/verifications/upload', requireAuth, upload.single('document'), asy
         }
 
         const { neighborhoodId } = req.body;
-        const userId = req.user.userId;
+        const userId = req.user.id || req.user.userId;
         const parsedNeighborhoodId = neighborhoodId ? parseInt(neighborhoodId) : null;
 
         // ── 1. OCR ────────────────────────────────────────────────────────────────
@@ -418,6 +422,7 @@ router.post('/verifications/upload', requireAuth, upload.single('document'), asy
 
         console.log('\n========== DECISION DEBUG ==========');
         console.log(`User ID        : ${userId}`);
+        console.log(`Neighborhood ID: ${parsedNeighborhoodId}`);
         console.log(`Registered name: ${registeredName}`);
         console.log(`OCR name       : ${ocrName}`);
         console.log(`OCR address    : ${ocrAddress}`);
@@ -516,7 +521,7 @@ router.get('/verifications/my-status', requireAuth, async (req, res) => {
         const { data, error } = await supabase
             .from('verification_requests')
             .select('id, status, submitted_at, reviewed_at, review_notes, ocr_name, ocr_address, neighborhood_id')
-            .eq('user_id', req.user.userId)
+            .eq('user_id', req.user.id || req.user.userId)
             .order('submitted_at', { ascending: false })
             .limit(1)
             .maybeSingle();
@@ -633,7 +638,7 @@ router.put('/verifications/:id/review', requireAuth, requireAdmin, async (req, r
                 status,
                 review_notes: reviewNotes || null,
                 reviewed_at: new Date().toISOString(),
-                reviewed_by: req.user.userId,
+                reviewed_by: req.user.id || req.user.userId,
             })
             .eq('id', id)
             .select()
