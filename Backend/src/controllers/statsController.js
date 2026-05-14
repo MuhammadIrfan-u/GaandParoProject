@@ -4,26 +4,31 @@ export const getNeighborhoodStats = async (req, res) => {
     try {
         const { neighborhoodId } = req.query;
         
-        const queries = [
-            supabase.from('users').select('*', { count: 'exact', head: true }),
-            supabase.from('alerts').select('*', { count: 'exact', head: true }),
-            supabase.from('events').select('*', { count: 'exact', head: true }),
-            supabase.from('marketplace_items').select('*', { count: 'exact', head: true }),
-            supabase.from('services').select('*', { count: 'exact', head: true }),
-            supabase.from('reviews').select('*', { count: 'exact', head: true })
-        ];
+        let userQuery = supabase.from('neighborhood_members').select('*', { count: 'exact', head: true });
+        let alertQuery = supabase.from('alerts').select('*', { count: 'exact', head: true });
+        let eventQuery = supabase.from('events').select('*', { count: 'exact', head: true });
+        let marketplaceQuery = supabase.from('marketplace_items').select('*', { count: 'exact', head: true });
+        let serviceQuery = supabase.from('services').select('*', { count: 'exact', head: true });
+        let reviewQuery = supabase.from('reviews').select('*', { count: 'exact', head: true });
 
-        // Apply neighborhood filter if present
-        // Note: some tables might use different column names like 'neighborhood_id' or 'neighborhod_id'
-        // Based on previous experience, it's often 'neighborhod_id' (missing 'o')
-        
         if (neighborhoodId) {
-            // We'll try to apply the filter where it exists. 
-            // Users table might not have neighborhoodId directly if it's in a junction table, 
-            // but usually it's there.
+            userQuery = userQuery.eq('neighborhood_id', neighborhoodId);
+            alertQuery = alertQuery.eq('neighborhood_id', neighborhoodId);
+            eventQuery = eventQuery.eq('neighborhood_id', neighborhoodId);
+            marketplaceQuery = marketplaceQuery.eq('neighborhood_id', neighborhoodId);
+            serviceQuery = serviceQuery.eq('neighborhood_id', neighborhoodId);
+            // reviews table has typo 'neighborhod_id'
+            reviewQuery = reviewQuery.eq('neighborhod_id', neighborhoodId);
         }
 
-        const results = await Promise.all(queries);
+        const results = await Promise.all([
+            userQuery,
+            alertQuery,
+            eventQuery,
+            marketplaceQuery,
+            serviceQuery,
+            reviewQuery
+        ]);
         
         const stats = {
             users: results[0].count || 0,

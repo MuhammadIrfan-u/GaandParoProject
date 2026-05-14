@@ -88,6 +88,7 @@ export default function Home() {
       try {
         nbh = await neighborhoodsService.getUserNeighborhood();
         setUserNeighborhood(nbh || null);
+        if (nbh?.id) loadStats(nbh.id);
       } catch (e) {
         console.error('Error loading neighborhood:', e);
       }
@@ -103,9 +104,10 @@ export default function Home() {
     }
   };
 
-  const loadStats = async () => {
+  const loadStats = async (nId?: string | number) => {
     try {
-      const data = await statsService.getStats();
+      const id = nId || userNeighborhood?.id || currentUser?.neighborhoodId;
+      const data = await statsService.getStats(id);
       setStats(data);
     } catch (error) {
       console.error('Failed to load stats:', error);
