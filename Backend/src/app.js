@@ -21,10 +21,16 @@ import supabaseUsersRoutes from "./routes/supabaseUsersRoutes.js";
 import supabaseSuperadminRoutes from "./routes/supabaseSuperadminRoutes.js";
 import adminProviderApplicationsRoutes from "./routes/adminProviderApplicationsRoutes.js";
 import adminServiceManagementRoutes from "./routes/adminServiceManagementRoutes.js";
+import reportRoutes from "./routes/reportRoutes.js";
+import moderationRoutes from "./routes/moderationRoutes.js";
+import appealRoutes from "./routes/appealRoutes.js";
+import conflictRoutes from "./routes/conflictRoutes.js";
+
 import express from 'express'
 import cors from 'cors'
 import path from 'path'
 import { fileURLToPath } from 'url'
+
 
 import userSettingsRoutes from "./routes/userSettingsRoutes.js";
 import statsRoutes from "./routes/statsRoutes.js";
@@ -73,6 +79,11 @@ app.use("/", postRoutes);
 app.use("/", notificationRoutes);
 app.use("/messages", messageRoutes);
 app.use("/api/fraud/check", fraudRoutes);
+app.use("/", reportRoutes);
+app.use("/", moderationRoutes);
+app.use("/", appealRoutes);
+app.use("/", conflictRoutes);
+
 
 // Mock data routes (for other features)
 app.use("/", mockDataRoutes);

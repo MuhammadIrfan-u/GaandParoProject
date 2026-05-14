@@ -139,13 +139,16 @@ export interface Conversation {
 
 export interface Report {
   id: string;
-  reporterId: string;
-  reportedItemId: string;
-  reportedItemType: 'post' | 'user' | 'message' | 'marketplace';
+  reporterId: number;
+  reportedItemId: number;
+  reportedItemType: 'post' | 'message' | 'marketplace' | 'event' | 'service';
   reason: string;
   description: string;
   status: 'pending' | 'reviewing' | 'resolved' | 'dismissed';
   timestamp: string;
+  neighborhoodId?: number;
+  reportedUserId?: number;
+  reporter?: User;
 }
 
 export interface Review {

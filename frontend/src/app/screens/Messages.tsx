@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router";
-import { Search } from "lucide-react";
 import { BottomNav } from "../components/BottomNav";
 import { Input } from "../components/ui/input";
 import { messagesService, authService } from "../services/storage";
 import { Conversation, User } from "../services/types";
 import { toast } from "sonner";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Flag, Search } from "lucide-react";
 import { Button } from "../components/ui/button";
+import { ReportModal } from "../components/ReportModal";
 
 export default function Messages() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -130,6 +130,17 @@ export default function Messages() {
                   <p className={`text-sm truncate ${conversation.unreadCount > 0 ? '' : 'text-muted-foreground'}`}>
                     {conversation.lastMessage}
                   </p>
+                </div>
+                <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); }} className="ml-2">
+                  <ReportModal 
+                    reportedItemId={conversation.id} 
+                    reportedItemType="message"
+                    trigger={
+                      <button className="text-muted-foreground hover:text-orange-500 transition-colors p-2 rounded-full hover:bg-muted">
+                        <Flag className="w-4 h-4" />
+                      </button>
+                    }
+                  />
                 </div>
               </Link>
             ))}

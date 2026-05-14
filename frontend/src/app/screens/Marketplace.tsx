@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router";
-import { Plus, Search, Filter, DollarSign, ShoppingBag } from "lucide-react";
+import { Plus, Search, Filter, DollarSign, ShoppingBag, Flag } from "lucide-react";
+import { ReportModal } from "../components/ReportModal";
 import { BottomNav } from "../components/BottomNav";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -101,6 +102,17 @@ export default function Marketplace() {
                     {item.status === 'sold' && (
                       <span className="text-xs px-2 py-1 rounded-full bg-red-100 text-red-700">Sold</span>
                     )}
+                    <div className="ml-auto" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+                      <ReportModal 
+                        reportedItemId={item.id} 
+                        reportedItemType="marketplace"
+                        trigger={
+                          <button className="text-muted-foreground hover:text-orange-500 transition-colors">
+                            <Flag className="w-3.5 h-3.5" />
+                          </button>
+                        }
+                      />
+                    </div>
                   </div>
                   <h3 className="text-sm mb-1 line-clamp-1">{item.title}</h3>
                   <div className="flex items-center gap-1 text-primary mb-2">

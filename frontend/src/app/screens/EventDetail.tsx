@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router";
-import { ArrowLeft, Calendar, MapPin, Users, Check, Trash2, Edit } from "lucide-react";
+import { ArrowLeft, Calendar, MapPin, Users, Check, Trash2, Edit, Flag } from "lucide-react";
+import { ReportModal } from "../components/ReportModal";
 import { Button } from "../components/ui/button";
 import { eventsService, authService } from "../services/storage";
 import { Event } from "../services/types";
@@ -96,6 +97,18 @@ export default function EventDetail() {
               </button>
             </div>
           )}
+          <ReportModal 
+            reportedItemId={event.id} 
+            reportedItemType="event"
+            trigger={
+              <button 
+                className="p-2 text-orange-500 hover:bg-orange-50 rounded-full transition-colors"
+                title="Report Event"
+              >
+                <Flag className="w-6 h-6" />
+              </button>
+            }
+          />
         </div>
       </div>
 

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router";
-import { Plus, Calendar, MapPin, Users, Trash2, Edit } from "lucide-react";
+import { Plus, Calendar, MapPin, Users, Trash2, Edit, Flag } from "lucide-react";
+import { ReportModal } from "../components/ReportModal";
 import { BottomNav } from "../components/BottomNav";
 import { Button } from "../components/ui/button";
 import { eventsService, authService } from "../services/storage";
@@ -133,6 +134,20 @@ export default function Events() {
                           </button>
                         </>
                       )}
+                      <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+                        <ReportModal 
+                          reportedItemId={event.id} 
+                          reportedItemType="event"
+                          trigger={
+                            <button 
+                              className="p-1.5 text-orange-500 hover:bg-orange-50 rounded-lg transition-colors"
+                              title="Report Event"
+                            >
+                              <Flag className="w-4 h-4" />
+                            </button>
+                          }
+                        />
+                      </div>
                     </div>
                   </div>
                   <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{event.description}</p>

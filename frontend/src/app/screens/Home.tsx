@@ -6,6 +6,8 @@ import { postsService, neighborhoodsService, alertsService, eventsService, authS
 import { Post, Neighborhood, Alert, Event, User } from "../services/types";
 import { toast } from "sonner";
 import { supabase } from "../services/supabaseClient";
+import { ReportModal } from "../components/ReportModal";
+import { Flag } from "lucide-react";
 
 export default function Home() {
   const [posts, setPosts] = useState<Post[]>([]);
@@ -399,6 +401,16 @@ export default function Home() {
                         <span className="text-sm">{post.comments.length}</span>
                       </Link>
 
+                      <ReportModal 
+                        reportedItemId={post.id} 
+                        reportedItemType="post"
+                        trigger={
+                          <button className="flex items-center gap-2 text-muted-foreground hover:text-orange-500 transition-colors py-2 px-4 rounded-xl hover:bg-orange-50">
+                            <Flag className="w-5 h-5" />
+                            <span className="text-sm">Report</span>
+                          </button>
+                        }
+                      />
                     </div>
                   </div>
                 ))

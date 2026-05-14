@@ -5,4 +5,4 @@ const router = express.Router();
 
 router.post("/appeal", createAppeal);
 
-export default router;
+export default router

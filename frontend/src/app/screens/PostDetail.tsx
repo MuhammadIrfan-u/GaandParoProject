@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router";
-import { ArrowLeft, Heart, MessageCircle, Share2, Send, Edit2, Trash2, X } from "lucide-react";
+import { ArrowLeft, Heart, MessageCircle, Share2, Send, Edit2, Trash2, X, Flag } from "lucide-react";
+import { ReportModal } from "../components/ReportModal";
 import { Button } from "../components/ui/button";
 import { Textarea } from "../components/ui/textarea";
 import { postsService, authService } from "../services/storage";
@@ -204,6 +205,18 @@ export default function PostDetail() {
                   <MessageCircle className="w-5 h-5" />
                   <span className="text-sm">{post.comments.length}</span>
                 </button>
+                <div className="ml-auto">
+                  <ReportModal 
+                    reportedItemId={post.id} 
+                    reportedItemType="post"
+                    trigger={
+                      <button className="flex items-center gap-2 text-muted-foreground hover:text-orange-500 transition-colors py-2 px-3 rounded-xl hover:bg-orange-50">
+                        <Flag className="w-5 h-5" />
+                        <span className="text-sm">Report</span>
+                      </button>
+                    }
+                  />
+                </div>
               </div>
             </div>
           </div>

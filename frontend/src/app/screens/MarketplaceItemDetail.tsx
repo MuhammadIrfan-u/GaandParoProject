@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router";
-import { ArrowLeft, DollarSign, MapPin, ShoppingBag, MessageCircle, Trash2, Edit, Send } from "lucide-react";
+import { ArrowLeft, DollarSign, MapPin, ShoppingBag, MessageCircle, Trash2, Edit, Send, Flag } from "lucide-react";
+import { ReportModal } from "../components/ReportModal";
 import { Button } from "../components/ui/button";
 import { Textarea } from "../components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../components/ui/dialog";
@@ -118,6 +119,18 @@ export default function MarketplaceItemDetail() {
               </button>
             </div>
           )}
+          <ReportModal 
+            reportedItemId={item.id} 
+            reportedItemType="marketplace"
+            trigger={
+              <button 
+                className="p-2 text-orange-500 hover:bg-orange-50 rounded-full transition-colors"
+                title="Report Item"
+              >
+                <Flag className="w-5 h-5" />
+              </button>
+            }
+          />
         </div>
       </div>
 

@@ -14,15 +14,17 @@ router.get('/admin/dashboard/:neighborhoodId', async (req, res) => {
           alertsRes,
           marketplaceRes,
           applicationsRes,
-          settingsRes
+          settingsRes,
+          reportsRes
       ] = await Promise.all([
           supabase.from('neighborhood_members').select('user_id, users(*)').eq('neighborhood_id', neighborhoodId),
-          supabase.from('posts').select('*').eq('neighborhod_id', neighborhoodId),
+          supabase.from('posts').select('*').eq('neighborhood_id', neighborhoodId),
           supabase.from('events').select('*').eq('neighborhood_id', neighborhoodId),
           supabase.from('alerts').select('*').eq('neighborhood_id', neighborhoodId),
           supabase.from('marketplace_items').select('*'),
           supabase.from('provider_applications').select('*, users(id, name, email, verified, avatar)').eq('neighborhood_id', neighborhoodId).order('created_at', { ascending: false }),
-          supabase.from('neighborhood_settings').select('*').eq('neighborhood_id', neighborhoodId).single()
+          supabase.from('neighborhood_settings').select('*').eq('neighborhood_id', neighborhoodId).single(),
+          supabase.from('reports').select('*, reporter:users!reports_reporter_id_fkey(*)').eq('neighborhood_id', neighborhoodId).order('timestamp', { ascending: false })
       ]);
 
       const members = usersRes.data || [];
@@ -33,13 +35,15 @@ router.get('/admin/dashboard/:neighborhoodId', async (req, res) => {
       const marketplaceItems = marketplaceRes.data || [];
       const applications = applicationsRes.data || [];
       const settings = settingsRes.data || {};
+      const reports = reportsRes.data || [];
       
       const stats = {
           users: users.length,
           posts: posts.length,
           events: events.length,
           marketplaceItems: marketplaceItems.length,
-          alerts: alerts.length
+          alerts: alerts.length,
+          reports: reports.length
       };
 
       res.json({
@@ -50,7 +54,8 @@ router.get('/admin/dashboard/:neighborhoodId', async (req, res) => {
           marketplaceItems,
           alerts,
           applications,
-          settings
+          settings,
+          reports
       });
   } catch (err) {
       console.error('Error fetching admin dashboard data:', err);

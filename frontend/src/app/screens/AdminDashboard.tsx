@@ -2,19 +2,27 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router";
 import {
   ArrowLeft, Shield, Users, AlertTriangle, Calendar,
-  Trash2, Edit, BarChart3, Activity, Store, Settings
+  Trash2, Edit, BarChart3, Activity, Store, Settings, Flag
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { ProviderApplicationReviewCard, type ProviderApplicationRow } from "../components/ProviderApplicationReviewCard";
 import { toast } from "sonner";
-import { authService, neighborhoodsService } from "../services/storage";
+import { 
+  authService, 
+  neighborhoodsService, 
+  postsService,
+  eventsService,
+  marketplaceService,
+  servicesService,
+  usersService
+} from "../services/storage";
 import { adminService } from "../services/adminservice";
 import { supabase } from "../services/supabaseClient";
 import type {
   Post, Event, MarketplaceItem, Alert, User, Neighborhood
 } from "../services/types";
 
-type Tab = 'analytics' | 'settings' | 'users' | 'posts' | 'events' | 'marketplace' | 'alerts' | 'applications';
+type Tab = 'analytics' | 'settings' | 'users' | 'posts' | 'events' | 'marketplace' | 'alerts' | 'applications' | 'reports';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -32,6 +40,7 @@ export default function AdminDashboard() {
   const [marketItems, setMarketItems] = useState<MarketplaceItem[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [applications, setApplications] = useState<ProviderApplicationRow[]>([]);
+  const [reports, setReports] = useState<any[]>([]);
   const [settings, setSettings] = useState<any>({});
 
   // Editing States
@@ -60,7 +69,6 @@ export default function AdminDashboard() {
         let nData = null;
 
         if (nId) {
-          // If viewing a specific neighborhood from SuperAdmin
           if (!currentUser?.isAdmin && !isSuperadmin) {
             toast.error("Only Super Admins can manage arbitrary neighborhoods.");
             navigate("/home");
@@ -69,7 +77,6 @@ export default function AdminDashboard() {
           const allNeighborhoods = await neighborhoodsService.getNeighborhoods();
           nData = allNeighborhoods.find(n => String(n.id) === String(nId));
         } else {
-          // Current user's neighborhood
           if (!currentUser?.neighborhoodId) {
             toast.error("You are not assigned to a neighborhood.");
             navigate("/home");
@@ -98,6 +105,7 @@ export default function AdminDashboard() {
           setMarketItems(data.marketplaceItems);
           setAlerts(data.alerts);
           setApplications(data.applications);
+          setReports(data.reports || []);
           setSettings(data.settings || {
             enable_marketplace: true,
             enable_public_alerts: true,
@@ -157,6 +165,7 @@ export default function AdminDashboard() {
     { id: 'marketplace', label: 'Market', icon: <Store className="w-4 h-4" /> },
     { id: 'alerts', label: 'Alerts', icon: <AlertTriangle className="w-4 h-4" /> },
     { id: 'applications', label: 'Providers', icon: <Shield className="w-4 h-4" /> },
+    { id: 'reports', label: 'Reports', icon: <Flag className="w-4 h-4" /> },
   ];
 
   const filterFlagged = (items: any[]) => showFlaggedOnly ? items.filter(i => i.is_flagged || i.isFlagged) : items;
@@ -211,7 +220,6 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-background pb-20 relative">
-      {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white sticky top-0 z-40">
         <div className="max-w-6xl mx-auto px-4 py-6">
           <div className="flex items-center justify-between mb-6">
@@ -238,7 +246,6 @@ export default function AdminDashboard() {
             </Button>
           </div>
 
-          {/* Tabs */}
           <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
             {tabs.map(tab => (
               <button
@@ -261,7 +268,6 @@ export default function AdminDashboard() {
         ) : (
           <div className="space-y-6">
 
-            {/* Analytics */}
             {activeTab === 'analytics' && stats && (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <div className="bg-white p-6 rounded-2xl border shadow-sm"><Users className="w-8 h-8 text-blue-500 mb-2" /><div className="text-3xl font-bold">{stats.users}</div><div className="text-sm text-muted-foreground">Total Users</div></div>
@@ -272,7 +278,6 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {/* Hub Settings */}
             {activeTab === 'settings' && (
               <div className="bg-white p-6 rounded-2xl border shadow-sm max-w-2xl mx-auto space-y-6">
                 <h2 className="text-xl font-bold border-b pb-2">Hub Settings</h2>
@@ -289,7 +294,6 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {/* Users Tab */}
             {activeTab === 'users' && (
               <div className="bg-white rounded-2xl border divide-y shadow-sm">
                 {users.map(user => (
@@ -306,7 +310,6 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {/* Posts */}
             {activeTab === 'posts' && (
               <div className="space-y-4">
                 {filterFlagged(posts).map(post => (
@@ -325,7 +328,6 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {/* Events */}
             {activeTab === 'events' && (
               <div className="space-y-4">
                 {filterFlagged(events).map(event => (
@@ -344,7 +346,6 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {/* Marketplace */}
             {activeTab === 'marketplace' && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {filterFlagged(marketItems).map(item => (
@@ -363,7 +364,6 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {/* Alerts */}
             {activeTab === 'alerts' && (
               <div className="space-y-4">
                 {filterFlagged(alerts).map(alert => (
@@ -381,17 +381,30 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {/* Applications */}
             {activeTab === 'applications' && (
-              <div className="space-y-6">
-                {applications.map((app) => (
-                  <ProviderApplicationReviewCard
-                    key={String(app.id)}
-                    app={app}
-                    onApprove={(applicationId) => handleAppStatus(applicationId, 'approved')}
-                    onReject={(applicationId) => handleAppStatus(applicationId, 'rejected')}
+              <div className="space-y-4">
+                {applications.map(app => (
+                  <ProviderApplicationReviewCard 
+                    key={app.id} 
+                    application={app} 
+                    onAction={(status) => handleAppStatus(String(app.id), status)} 
                   />
                 ))}
+              </div>
+            )}
+
+            {activeTab === 'reports' && (
+              <div className="space-y-6">
+                {reports.length === 0 ? (
+                  <div className="text-center py-20 bg-white rounded-2xl border shadow-sm">
+                    <Flag className="w-12 h-12 text-muted-foreground/20 mx-auto mb-4" />
+                    <p className="text-muted-foreground">No reports found for this neighborhood.</p>
+                  </div>
+                ) : (
+                  reports.map(report => (
+                    <ReportItemCard key={report.id} report={report} onUpdate={() => {/* refresh data */ }} />
+                  ))
+                )}
               </div>
             )}
 
@@ -460,7 +473,73 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
 
+function ReportItemCard({ report, onUpdate }: { report: any, onUpdate: () => void }) {
+  const navigate = useNavigate();
+  
+  const handleViewContent = () => {
+    const itemId = report.reported_item_id || report.reportedItemId;
+    const type = (report.reported_item_type || report.reportedItemType || '').toLowerCase();
+    
+    if (!itemId) {
+      toast.error("Item ID not found for this report");
+      return;
+    }
+
+    switch(type) {
+      case 'post': navigate(`/post/${itemId}`); break;
+      case 'event': navigate(`/event/${itemId}`); break;
+      case 'marketplace': navigate(`/marketplace-item/${itemId}`); break;
+      case 'service': navigate(`/service/${itemId}`); break;
+      case 'user': navigate(`/user-profile/${itemId}`); break;
+      case 'message': navigate(`/messages`); break;
+      default: toast.error(`Unknown report type: ${type}`);
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
+      <div className="p-5">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="bg-red-100 p-2 rounded-xl">
+              <Flag className="w-5 h-5 text-red-600" />
+            </div>
+            <div>
+              <h3 className="font-bold text-lg capitalize">{report.reported_item_type} Reported</h3>
+              <p className="text-xs text-muted-foreground">
+                Reported by <span className="font-medium text-foreground">{report.reporter?.name || 'Unknown'}</span> • {new Date(report.timestamp).toLocaleString()}
+              </p>
+            </div>
+          </div>
+          <div className={`px-3 py-1 rounded-full text-xs font-bold ${report.status === 'pending' ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'
+            }`}>
+            {report.status.toUpperCase()}
+          </div>
+        </div>
+
+        <div className="bg-muted/30 rounded-2xl p-4 mb-4">
+          <div className="text-sm font-bold mb-1 text-red-900">Reason: {report.reason}</div>
+          <p className="text-sm text-gray-700 leading-relaxed">{report.description}</p>
+        </div>
+
+        <div className="flex gap-2 mb-4">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="h-9 px-4 rounded-xl"
+            onClick={handleViewContent}
+          >
+            View Content
+          </Button>
+          <Button variant="ghost" size="sm" className="h-9 px-4 rounded-xl ml-auto text-muted-foreground hover:text-green-600">
+            Mark Resolved
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

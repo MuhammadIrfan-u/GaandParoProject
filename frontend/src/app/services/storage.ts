@@ -18,6 +18,7 @@ import type {
   NeighborhoodSettings,
   AnalyticsData,
   ProviderApplication,
+  Report
 } from './types';
 
 const API_BASE = 'http://localhost:3000';
@@ -89,6 +90,8 @@ let locationStore = getStoredData('neighborhub_location', { lat: 0, lng: 0 });
 let servicesStore: Service[] = getStoredData('neighborhub_services', []);
 let serviceOverridesStore: { [id: string]: Partial<Service> } = getStoredData('neighborhub_service_overrides', {});
 let providerApplicationsStore: ProviderApplication[] = getStoredData('neighborhub_provider_applications', []);
+let reportsStore: Report[] = getStoredData('neighborhub_reports', []);
+
 
 // Auth State
 const localCurrentUser: User = {
@@ -243,13 +246,13 @@ export const postsService = {
     try {
       const user = authService.getCurrentUser();
       const nId = neighborhoodId || user?.neighborhoodId;
-      
+
       // Validate that we have a valid numeric neighborhoodId
       if (!nId || isNaN(Number(nId))) {
         console.warn('Invalid neighborhoodId:', nId, 'falling back to cached posts');
         return postsStore;
       }
-      
+
       const posts = await apiGet<Post[]>(`/posts?neighborhoodId=${nId}`);
       return posts;
     } catch (error) {
@@ -607,14 +610,6 @@ export const alertsService = {
       throw error;
     }
   },
-
-  getOrCreateConversation: async (providerId: string, providerName: string, providerAvatar: string) => {
-    const response = await apiFetch('/conversations/get-or-create', {
-      method: 'POST',
-      body: JSON.stringify({ participantId: providerId })
-    });
-    return response.json();
-  },
 };
 
 
@@ -655,6 +650,38 @@ export const notificationsService = {
     }
   },
 };
+
+
+export const reportsService = {
+  submitReport: async (
+    report: Omit<Report, 'id' | 'status' | 'timestamp' | 'reporterId'>
+  ) => {
+    const res = await apiFetch('/report', {
+      method: 'POST',
+      body: JSON.stringify({
+        ...report,
+        reporter_id: authUser.id,
+        reported_item_id: report.reportedItemId,
+        reported_item_type: report.reportedItemType,
+        neighborhood_id: authUser.neighborhoodId,
+      }),
+    });
+
+    return res.json();
+  },
+
+  getReports: async () => {
+    const res = await apiFetch('/reports');
+    return res.json();
+  },
+
+  getMyReports: async () => {
+    const res = await apiFetch(`/reports/user/${authUser.id}`);
+    return res.json();
+  },
+};
+
+
 
 // Analytics Service
 export const analyticsService = {
@@ -1306,6 +1333,15 @@ export const messagesService = {
       console.error('Error fetching neighborhood members:', error);
       return [];
     }
+  },
+  getOrCreateConversation: async (recipientId: string | number) => {
+    const user = authService.getCurrentUser();
+    const response = await apiFetch('/messages/get-or-create', {
+      method: 'POST',
+      body: JSON.stringify({ user1: user.id, user2: recipientId })
+    });
+    const data = await response.json();
+    return data.conversationId;
   }
 };
 

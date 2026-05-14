@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router";
-import { Search, Star, Wrench, Home, Dog, Zap, Scissors, Car, CheckCircle2, ClipboardList } from "lucide-react";
+import { Search, Star, Wrench, Home, Dog, Zap, Scissors, Car, CheckCircle2, ClipboardList, Flag } from "lucide-react";
+import { ReportModal } from "../components/ReportModal";
 import { motion, AnimatePresence } from "motion/react";
 import { BottomNav } from "../components/BottomNav";
 import { Button } from "../components/ui/button";
@@ -241,6 +242,17 @@ export default function Services() {
                             <div className="flex items-center gap-1 bg-yellow-50 px-2 py-0.5 rounded-full">
                               <Star className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" />
                               <span className="text-xs font-bold text-yellow-700">{service.rating}</span>
+                            </div>
+                            <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); }} className="ml-2">
+                              <ReportModal 
+                                reportedItemId={service.id} 
+                                reportedItemType="service"
+                                trigger={
+                                  <button className="text-muted-foreground hover:text-orange-500 transition-colors p-1">
+                                    <Flag className="w-3.5 h-3.5" />
+                                  </button>
+                                }
+                              />
                             </div>
                           </div>
                           <p className="text-sm text-muted-foreground mb-3 line-clamp-2 leading-relaxed">

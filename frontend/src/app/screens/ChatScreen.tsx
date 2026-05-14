@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router";
-import { ArrowLeft, Send } from "lucide-react";
+import { ArrowLeft, Send, Flag } from "lucide-react";
+import { ReportModal } from "../components/ReportModal";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { messagesService, authService } from "../services/storage";
@@ -141,9 +142,22 @@ export default function ChatScreen() {
                     >
                       <p className="text-sm">{message.content}</p>
                     </div>
-                    <span className="text-xs text-muted-foreground mt-1">
-                      {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                      {!isOwnMessage && (
+                        <ReportModal 
+                          reportedItemId={message.id} 
+                          reportedItemType="message"
+                          trigger={
+                            <button className="text-muted-foreground hover:text-orange-500 transition-colors">
+                              <Flag className="w-3 h-3" />
+                            </button>
+                          }
+                        />
+                      )}
+                    </div>
                   </div>
                 </div>
               );

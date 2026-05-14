@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router";
-import { ArrowLeft, Star, Clock, DollarSign, Calendar, ShieldCheck, MapPin, MessageCircle, Send } from "lucide-react";
+import { ArrowLeft, Star, Clock, DollarSign, Calendar, ShieldCheck, MapPin, MessageCircle, Send, Flag } from "lucide-react";
+import { ReportModal } from "../components/ReportModal";
 import { motion } from "motion/react";
 import { Button } from "../components/ui/button";
 import { Textarea } from "../components/ui/textarea";
@@ -123,6 +124,20 @@ export default function ServiceDetail() {
           >
             Service Details
           </motion.h1>
+          <div className="ml-auto">
+            <ReportModal 
+              reportedItemId={service.id} 
+              reportedItemType="service"
+              trigger={
+                <button 
+                  className="p-2 text-orange-500 hover:bg-black/5 rounded-full transition-colors"
+                  title="Report Service"
+                >
+                  <Flag className="w-6 h-6" />
+                </button>
+              }
+            />
+          </div>
         </div>
       </header>
 

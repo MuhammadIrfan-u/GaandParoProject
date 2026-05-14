@@ -247,18 +247,23 @@ CREATE TABLE public.provider_applications (
   CONSTRAINT provider_applications_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
   CONSTRAINT provider_applications_neighborhood_id_fkey FOREIGN KEY (neighborhood_id) REFERENCES public.neighborhoods(id)
 );
-CREATE TABLE public.reports (
-  id integer NOT NULL DEFAULT nextval('reports_id_seq'::regclass),
-  reporter_id integer,
-  reported_item_id integer,
-  reported_item_type character varying,
-  reason character varying,
-  description text,
-  status character varying DEFAULT 'pending'::character varying,
-  timestamp timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT reports_pkey PRIMARY KEY (id),
-  CONSTRAINT reports_reporter_id_fkey FOREIGN KEY (reporter_id) REFERENCES public.users(id)
-);
+create table public.reports (
+  id serial not null,
+  reporter_id integer null,
+  reported_item_id integer null,
+  reported_item_type character varying(30) null,
+  reason character varying(100) null,
+  description text null,
+  status character varying(20) null default 'pending'::character varying,
+  timestamp timestamp without time zone null default CURRENT_TIMESTAMP,
+  neighborhood_id integer null,
+  reported_user_id integer null,
+  constraint reports_pkey primary key (id),
+  constraint reports_neighborhood_id_fkey foreign KEY (neighborhood_id) references neighborhoods (id),
+  constraint reports_reporter_id_fkey foreign KEY (reporter_id) references users (id),
+  constraint reports_reported_user_id_fkey foreign KEY (reported_user_id) references users (id)
+) TABLESPACE pg_default;
+
 CREATE TABLE public.reviews (
   id integer NOT NULL DEFAULT nextval('reviews_id_seq'::regclass),
   reviewer_id integer,

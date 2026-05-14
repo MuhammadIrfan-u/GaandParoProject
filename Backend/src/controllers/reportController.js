@@ -33,8 +33,32 @@ export const createReport = async (req, res) => {
       reported_item_id,
       reported_item_type,
       reason,
-      description
+      description,
+      neighborhood_id
     } = req.body;
+
+    // 🔥 Find the reported user (owner of the item)
+    let reported_user_id = null;
+    if (reported_item_type === 'user') {
+      reported_user_id = reported_item_id;
+    } else {
+      let table = null;
+      let field = 'author_id'; // default for posts, comments, messages
+
+      switch (reported_item_type) {
+        case 'post': table = 'posts'; break;
+        case 'comment': table = 'comments'; break;
+        case 'message': table = 'messages'; field = 'sender_id'; break;
+        case 'event': table = 'events'; field = 'organizer_id'; break;
+        case 'marketplace': table = 'marketplace_items'; field = 'seller_id'; break;
+        case 'service': table = 'services'; field = 'provider_id'; break;
+      }
+
+      if (table) {
+        const { data } = await supabase.from(table).select(field).eq('id', reported_item_id).maybeSingle();
+        if (data) reported_user_id = data[field];
+      }
+    }
 
     const { data, error } = await supabase
       .from("reports")
@@ -44,6 +68,8 @@ export const createReport = async (req, res) => {
         reported_item_type,
         reason,
         description,
+        neighborhood_id,
+        reported_user_id,
         status: "pending",
         timestamp: new Date()
       }])
