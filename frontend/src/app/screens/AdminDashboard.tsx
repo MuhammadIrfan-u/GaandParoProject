@@ -7,9 +7,9 @@ import {
 import { Button } from "../components/ui/button";
 import { ProviderApplicationReviewCard, type ProviderApplicationRow } from "../components/ProviderApplicationReviewCard";
 import { toast } from "sonner";
-import { 
-  authService, 
-  neighborhoodsService, 
+import {
+  authService,
+  neighborhoodsService,
   postsService,
   eventsService,
   marketplaceService,
@@ -384,10 +384,11 @@ export default function AdminDashboard() {
             {activeTab === 'applications' && (
               <div className="space-y-4">
                 {applications.map(app => (
-                  <ProviderApplicationReviewCard 
-                    key={app.id} 
-                    application={app} 
-                    onAction={(status) => handleAppStatus(String(app.id), status)} 
+                  <ProviderApplicationReviewCard
+                    key={String(app.id)}
+                    app={app}
+                    onApprove={(applicationId) => handleAppStatus(applicationId, 'approved')}
+                    onReject={(applicationId) => handleAppStatus(applicationId, 'rejected')}
                   />
                 ))}
               </div>
@@ -479,17 +480,17 @@ export default function AdminDashboard() {
 
 function ReportItemCard({ report, onUpdate }: { report: any, onUpdate: () => void }) {
   const navigate = useNavigate();
-  
+
   const handleViewContent = () => {
     const itemId = report.reported_item_id || report.reportedItemId;
     const type = (report.reported_item_type || report.reportedItemType || '').toLowerCase();
-    
+
     if (!itemId) {
       toast.error("Item ID not found for this report");
       return;
     }
 
-    switch(type) {
+    switch (type) {
       case 'post': navigate(`/post/${itemId}`); break;
       case 'event': navigate(`/event/${itemId}`); break;
       case 'marketplace': navigate(`/marketplace-item/${itemId}`); break;
@@ -527,9 +528,9 @@ function ReportItemCard({ report, onUpdate }: { report: any, onUpdate: () => voi
         </div>
 
         <div className="flex gap-2 mb-4">
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             className="h-9 px-4 rounded-xl"
             onClick={handleViewContent}
           >
