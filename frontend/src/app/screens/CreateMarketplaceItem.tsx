@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router";
-import { ArrowLeft, DollarSign } from "lucide-react";
+import { ArrowLeft, DollarSign, ImagePlus, X, Image as ImageIcon } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Textarea } from "../components/ui/textarea";
@@ -8,8 +8,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { marketplaceService } from "../services/storage";
 import { toast } from "sonner";
 
+const MAX_IMAGES = 3;
+
 export default function CreateMarketplaceItem() {
   const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -17,14 +21,45 @@ export default function CreateMarketplaceItem() {
     condition: "used" as 'new' | 'used' | 'like-new',
     category: "Furniture",
   });
+
+  // Each entry: { file: File; preview: string }
+  const [imageFiles, setImageFiles] = useState<{ file: File; preview: string }[]>([]);
   const [loading, setLoading] = useState(false);
 
   const categories = ["Furniture", "Electronics", "Appliances", "Sports & Outdoors", "Garden", "Kids & Toys", "Books", "Other"];
   const conditions: Array<'new' | 'used' | 'like-new'> = ["new", "used", "like-new"];
 
+  const handleImagePick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+
+    const remaining = MAX_IMAGES - imageFiles.length;
+    if (remaining <= 0) {
+      toast.error(`You can upload a maximum of ${MAX_IMAGES} images`);
+      return;
+    }
+
+    const toAdd = files.slice(0, remaining);
+    const newEntries = toAdd.map((file) => ({
+      file,
+      preview: URL.createObjectURL(file),
+    }));
+
+    setImageFiles((prev) => [...prev, ...newEntries]);
+    // Reset so the same file can be re-picked if removed
+    e.target.value = "";
+  };
+
+  const removeImage = (index: number) => {
+    setImageFiles((prev) => {
+      URL.revokeObjectURL(prev[index].preview);
+      return prev.filter((_, i) => i !== index);
+    });
+  };
+
   const handleSubmit = async () => {
     if (!formData.title || !formData.description || !formData.price) {
-      toast.error("Please fill in all fields");
+      toast.error("Please fill in all required fields");
       return;
     }
 
@@ -36,6 +71,7 @@ export default function CreateMarketplaceItem() {
         price: parseFloat(formData.price),
         condition: formData.condition,
         category: formData.category,
+        imageFiles: imageFiles.map((e) => e.file),
       });
       toast.success("Item listed successfully!");
       navigate("/marketplace");
@@ -48,6 +84,7 @@ export default function CreateMarketplaceItem() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Header */}
       <div className="bg-white border-b border-border sticky top-0 z-40">
         <div className="max-w-lg mx-auto px-4 py-4 flex items-center justify-between">
           <button onClick={() => navigate(-1)} className="p-2 hover:bg-muted rounded-full">
@@ -60,7 +97,64 @@ export default function CreateMarketplaceItem() {
         </div>
       </div>
 
-      <div className="max-w-lg mx-auto px-4 py-6">
+      <div className="max-w-lg mx-auto px-4 py-6 space-y-4">
+        {/* ── Image Upload ─────────────────────────────────────────── */}
+        <div className="bg-white rounded-2xl p-4 border border-border">
+          <label className="block text-sm mb-3">
+            Photos
+            <span className="ml-1 text-muted-foreground">({imageFiles.length}/{MAX_IMAGES})</span>
+          </label>
+
+          <div className="flex gap-3 flex-wrap">
+            {/* Existing previews */}
+            {imageFiles.map((entry, idx) => (
+              <div key={idx} className="relative w-24 h-24 rounded-xl overflow-hidden border border-border flex-shrink-0">
+                <img src={entry.preview} alt={`preview ${idx + 1}`} className="w-full h-full object-cover" />
+                <button
+                  onClick={() => removeImage(idx)}
+                  className="absolute top-1 right-1 bg-black/60 hover:bg-black/80 text-white rounded-full p-0.5 transition-colors"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+                {idx === 0 && (
+                  <span className="absolute bottom-0 left-0 right-0 text-center text-[10px] bg-black/50 text-white py-0.5">
+                    Cover
+                  </span>
+                )}
+              </div>
+            ))}
+
+            {/* Add button — only show when under the limit */}
+            {imageFiles.length < MAX_IMAGES && (
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="w-24 h-24 rounded-xl border-2 border-dashed border-border hover:border-primary hover:bg-primary/5 flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-primary transition-colors flex-shrink-0"
+              >
+                <ImagePlus className="w-6 h-6" />
+                <span className="text-xs">Add Photo</span>
+              </button>
+            )}
+
+            {/* Empty state hint when no images yet */}
+            {imageFiles.length === 0 && (
+              <div className="flex-1 flex items-center gap-2 text-xs text-muted-foreground pl-1">
+                <ImageIcon className="w-4 h-4 flex-shrink-0" />
+                First photo will be the cover image
+              </div>
+            )}
+          </div>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={handleImagePick}
+          />
+        </div>
+
+        {/* ── Item Details ──────────────────────────────────────────── */}
         <div className="bg-white rounded-2xl p-4 border border-border space-y-4">
           <div>
             <label className="block text-sm mb-2">Title</label>
@@ -98,9 +192,7 @@ export default function CreateMarketplaceItem() {
           <div>
             <label className="block text-sm mb-2">Category</label>
             <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
+              <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 {categories.map((cat) => (
                   <SelectItem key={cat} value={cat}>{cat}</SelectItem>
@@ -112,9 +204,7 @@ export default function CreateMarketplaceItem() {
           <div>
             <label className="block text-sm mb-2">Condition</label>
             <Select value={formData.condition} onValueChange={(value: 'new' | 'used' | 'like-new') => setFormData({ ...formData, condition: value })}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
+              <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 {conditions.map((cond) => (
                   <SelectItem key={cond} value={cond}>

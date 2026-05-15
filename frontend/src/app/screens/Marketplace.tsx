@@ -91,8 +91,16 @@ export default function Marketplace() {
                 to={`/marketplace-item/${item.id}`}
                 className="bg-white rounded-2xl border border-border overflow-hidden hover:shadow-lg transition-shadow"
               >
-                <div className="aspect-square bg-gradient-to-br from-primary/10 to-indigo-100 flex items-center justify-center">
-                  <ShoppingBag className="w-12 h-12 text-primary/40" />
+                <div className="aspect-square bg-gradient-to-br from-primary/10 to-indigo-100 flex items-center justify-center overflow-hidden">
+                  {(item.images?.[0] || item.image) ? (
+                    <img
+                      src={item.images?.[0] || item.image}
+                      alt={item.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <ShoppingBag className="w-12 h-12 text-primary/40" />
+                  )}
                 </div>
                 <div className="p-3">
                   <div className="flex items-center gap-2 mb-2">

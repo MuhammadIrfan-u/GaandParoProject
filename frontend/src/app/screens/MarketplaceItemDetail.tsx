@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router";
-import { ArrowLeft, DollarSign, MapPin, ShoppingBag, MessageCircle, Trash2, Edit, Send, Flag } from "lucide-react";
+import { ArrowLeft, DollarSign, MapPin, ShoppingBag, MessageCircle, Trash2, Edit, Send, Flag, ChevronLeft, ChevronRight } from "lucide-react";
 import { ReportModal } from "../components/ReportModal";
 import { Button } from "../components/ui/button";
 import { Textarea } from "../components/ui/textarea";
@@ -17,6 +17,7 @@ export default function MarketplaceItemDetail() {
   const [message, setMessage] = useState("");
   const [showMessageDialog, setShowMessageDialog] = useState(false);
   const [sending, setSending] = useState(false);
+  const [activeImage, setActiveImage] = useState(0);
 
   useEffect(() => {
     loadItem();
@@ -135,9 +136,60 @@ export default function MarketplaceItemDetail() {
       </div>
 
       <div className="max-w-lg mx-auto">
-        <div className="aspect-square bg-gradient-to-br from-primary/10 to-indigo-100 flex items-center justify-center">
-          <ShoppingBag className="w-24 h-24 text-primary/40" />
-        </div>
+        {/* ── Image carousel ───────────────────────────────────── */}
+        {(() => {
+          const imgs = item.images?.length ? item.images : item.image ? [item.image] : [];
+          return imgs.length > 0 ? (
+            <div className="relative aspect-square bg-black">
+              <img
+                src={imgs[activeImage]}
+                alt={item.title}
+                className="w-full h-full object-contain"
+              />
+              {imgs.length > 1 && (
+                <>
+                  <button
+                    onClick={() => setActiveImage((p) => (p - 1 + imgs.length) % imgs.length)}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-1.5 transition-colors"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => setActiveImage((p) => (p + 1) % imgs.length)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-1.5 transition-colors"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                  <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+                    {imgs.map((_, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setActiveImage(i)}
+                        className={`w-2 h-2 rounded-full transition-colors ${i === activeImage ? 'bg-white' : 'bg-white/40'}`}
+                      />
+                    ))}
+                  </div>
+                  {/* Thumbnail strip */}
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent pt-8 pb-10 px-3 flex gap-2 overflow-x-auto">
+                    {imgs.map((src, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setActiveImage(i)}
+                        className={`flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden border-2 transition-colors ${i === activeImage ? 'border-white' : 'border-transparent opacity-60 hover:opacity-90'}`}
+                      >
+                        <img src={src} alt={`thumb ${i + 1}`} className="w-full h-full object-cover" />
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          ) : (
+            <div className="aspect-square bg-gradient-to-br from-primary/10 to-indigo-100 flex items-center justify-center">
+              <ShoppingBag className="w-24 h-24 text-primary/40" />
+            </div>
+          );
+        })()}
 
         <div className="px-4 py-6">
           <div className="flex items-center gap-2 mb-4">

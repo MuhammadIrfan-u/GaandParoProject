@@ -53,6 +53,8 @@ export interface MarketplaceItem {
   condition: 'new' | 'used' | 'like-new';
   category: string;
   image?: string;
+  images?: string[];
+  imageFiles?: File[];   // client-side only, for uploads
   postedDate: string;
   status: 'available' | 'sold' | 'pending';
 }

@@ -399,14 +399,41 @@ export const marketplaceService = {
   createItem: async (item: Omit<MarketplaceItem, 'id' | 'sellerId' | 'seller' | 'sellerAvatar' | 'verified' | 'postedDate' | 'status'>): Promise<MarketplaceItem> => {
     try {
       const user = authService.getCurrentUser();
-      const response = await apiFetch('/api/marketplace', {
+      const authToken = getAuthToken();
+
+      const formData = new FormData();
+      formData.append('sellerId', String(user.id));
+      formData.append('title', item.title);
+      formData.append('description', item.description);
+      formData.append('price', String(item.price));
+      formData.append('condition', item.condition);
+      formData.append('category', item.category);
+      if (user.neighborhoodId) formData.append('neighborhoodId', String(user.neighborhoodId));
+
+      // Append image files so multer picks them up on the backend
+      if (item.imageFiles?.length) {
+        item.imageFiles.slice(0, 3).forEach((file) => {
+          formData.append('images', file);
+        });
+      }
+
+      // Do NOT use apiFetch here — it forces Content-Type: application/json,
+      // which breaks multipart. Let the browser set the correct boundary header.
+      const response = await fetch(`${API_BASE}/api/marketplace`, {
         method: 'POST',
-        body: JSON.stringify({
-          ...item,
-          sellerId: user.id,
-          neighborhoodId: user.neighborhoodId
-        })
+        headers: {
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+          // No Content-Type — browser sets it automatically with the correct boundary
+        },
+        body: formData,
       });
+
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => ({}));
+        const message = errorBody.error || errorBody.message || `Failed to create listing: ${response.status}`;
+        throw new Error(message);
+      }
+
       return response.json();
     } catch (error) {
       console.error('Error creating marketplace item:', error);
@@ -417,13 +444,39 @@ export const marketplaceService = {
   updateItem: async (id: string, updates: Partial<MarketplaceItem>) => {
     try {
       const user = authService.getCurrentUser();
-      const response = await apiFetch(`/api/marketplace/${id}`, {
+      const authToken = getAuthToken();
+
+      const formData = new FormData();
+      formData.append('sellerId', String(user.id));
+      if (updates.title !== undefined) formData.append('title', updates.title);
+      if (updates.description !== undefined) formData.append('description', updates.description);
+      if (updates.price !== undefined) formData.append('price', String(updates.price));
+      if (updates.condition !== undefined) formData.append('condition', updates.condition);
+      if (updates.category !== undefined) formData.append('category', updates.category);
+      if (updates.status !== undefined) formData.append('status', updates.status);
+
+      // Append new image files if provided
+      if (updates.imageFiles?.length) {
+        formData.append('replaceImages', 'true');
+        updates.imageFiles.slice(0, 3).forEach((file) => {
+          formData.append('images', file);
+        });
+      }
+
+      const response = await fetch(`${API_BASE}/api/marketplace/${id}`, {
         method: 'PUT',
-        body: JSON.stringify({
-          ...updates,
-          sellerId: user.id
-        })
+        headers: {
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+        },
+        body: formData,
       });
+
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => ({}));
+        const message = errorBody.error || errorBody.message || `Failed to update listing: ${response.status}`;
+        throw new Error(message);
+      }
+
       return response.json();
     } catch (error) {
       console.error('Error updating marketplace item:', error);

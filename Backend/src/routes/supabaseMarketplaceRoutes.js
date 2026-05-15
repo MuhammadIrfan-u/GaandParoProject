@@ -14,7 +14,8 @@ const transformItem = (data) => {
     price: data.price,
     condition: data.condition,
     category: data.category,
-    image: data.image,
+    images: data.images || [],            // array of public URLs (new)
+    image: (data.images || [])[0] || null, // backwards-compat alias
     postedDate: data.posted_date,
     status: data.status || 'active',
     isFlagged: data.is_flagged || false,
@@ -40,11 +41,23 @@ router.get('/marketplace', async (req, res) => {
 });
 
 // Create marketplace item
+// Expects JSON body: { sellerId, neighborhoodId, title, description, price,
+//                      condition, category, imageUrls?: string[] }
+// Image uploads are handled by the main /api/marketplace route (marketplaceRoutes.js).
+// This lightweight route accepts pre-resolved imageUrls[] from the frontend.
 router.post('/marketplace', async (req, res) => {
   try {
     const item = req.body;
     const numericSellerId = parseInt(String(item.sellerId).replace(/\D/g, ''), 10) || 0;
     const numericPrice = parseFloat(String(item.price).replace(/[^\d.]/g, '')) || 0;
+
+    // Accept up to 3 pre-uploaded image URLs
+    let images = [];
+    if (Array.isArray(item.images)) {
+      images = item.images.slice(0, 3);
+    } else if (Array.isArray(item.imageUrls)) {
+      images = item.imageUrls.slice(0, 3);
+    }
 
     const { data, error } = await supabase
       .from('marketplace_items')
@@ -56,7 +69,7 @@ router.post('/marketplace', async (req, res) => {
         price: numericPrice,
         condition: item.condition,
         category: item.category,
-        image: item.image,
+        images,                            // array column
         posted_date: new Date().toISOString(),
         status: 'active',
         moderation_status: 'active',
@@ -65,13 +78,13 @@ router.post('/marketplace', async (req, res) => {
       .single();
     if (error) throw error;
 
-    // Background Fraud Check (via service layer called by controller pattern)
+    // Background Fraud Check
     marketplaceItemFraudService.check({
       id: data.id,
       title: data.title,
       description: data.description,
       price: data.price,
-      category: data.category
+      category: data.category,
     }).catch(err => console.error('Marketplace item fraud check error:', err));
 
     res.status(201).json(transformItem(data));
