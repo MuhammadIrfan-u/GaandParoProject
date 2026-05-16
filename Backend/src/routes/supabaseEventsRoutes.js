@@ -1,7 +1,7 @@
 import express from 'express';
 import { supabase } from '../supabaseClient.js';
 import * as eventFraudService from '../services/eventFraud.service.js';
-
+import { checkVerification } from '../middleware/checkVerification.js';
 const router = express.Router();
 
 // Helper to transform snake_case to camelCase
@@ -28,7 +28,7 @@ const transformEvent = (data) => {
 };
 
 // Get all events for a neighborhood
-router.get('/events', async (req, res) => {
+router.get('/events', checkVerification, async (req, res) => {
   try {
     const neighborhoodId = req.query.neighborhoodId;
     let query = supabase
@@ -53,7 +53,7 @@ router.get('/events', async (req, res) => {
 });
 
 // Get specific event
-router.get('/events/:id', async (req, res) => {
+router.get('/events/:id', checkVerification, async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('events')
@@ -72,7 +72,7 @@ router.get('/events/:id', async (req, res) => {
 });
 
 // Create event
-router.post('/events', async (req, res) => {
+router.post('/events', checkVerification, async (req, res) => {
   try {
     const {
       title,

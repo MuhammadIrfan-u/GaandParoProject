@@ -1,6 +1,6 @@
 import express from 'express';
 import { supabase } from '../supabaseClient.js';
-
+import { checkVerification } from '../middleware/checkVerification.js';
 const router = express.Router();
 
 // Transform neighborhood data from snake_case to camelCase
@@ -210,7 +210,7 @@ router.get('/neighborhoods', async (req, res) => {
 });
 
 // Get specific neighborhood
-router.get('/neighborhoods/:id', async (req, res) => {
+router.get('/neighborhoods/:id', checkVerification, async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('neighborhoods')
@@ -988,7 +988,7 @@ router.post('/neighborhoods/:id/change-admin', async (req, res) => {
 });
 
 // Get members of a neighborhood
-router.get('/neighborhoods/:id/members', async (req, res) => {
+router.get('/neighborhoods/:id/members', checkVerification, async (req, res) => {
   try {
     const neighborhoodId = parseInt(req.params.id);
 
