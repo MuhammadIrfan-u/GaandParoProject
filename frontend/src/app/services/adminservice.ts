@@ -27,6 +27,17 @@ export const adminService = {
     return await apiFetch(`/dashboard/${neighborhoodId}`);
   },
 
+  getDocuments: async (neighborhoodId: string | number) => {
+    return await apiFetch(`/neighborhoods/${neighborhoodId}/documents`);
+  },
+
+  updateDocumentStatus: async (neighborhoodId: string | number, docId: string | number, status: 'approved' | 'rejected', reviewNotes?: string) => {
+    return await apiFetch(`/neighborhoods/${neighborhoodId}/documents/${docId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status, reviewNotes })
+    });
+  },
+
   deletePost: async (id: string) => {
     return await apiFetch(`/posts/${id}`, { method: 'DELETE' });
   },

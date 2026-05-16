@@ -21,6 +21,7 @@ import supabaseUsersRoutes from "./routes/supabaseUsersRoutes.js";
 import supabaseSuperadminRoutes from "./routes/supabaseSuperadminRoutes.js";
 import adminProviderApplicationsRoutes from "./routes/adminProviderApplicationsRoutes.js";
 import adminServiceManagementRoutes from "./routes/adminServiceManagementRoutes.js";
+import adminDocumentVerificationRoutes from "./routes/adminDocumentVerificationRoutes.js";
 import reportRoutes from "./routes/reportRoutes.js";
 import moderationRoutes from "./routes/moderationRoutes.js";
 import appealRoutes from "./routes/appealRoutes.js";
@@ -56,6 +57,7 @@ app.use('/api', statsRoutes);
 app.use('/api', adminRoutes);
 app.use('/api/admin/provider-applications', adminProviderApplicationsRoutes);
 app.use('/api/admin/services', adminServiceManagementRoutes);
+app.use('/api/admin', adminDocumentVerificationRoutes);
 
 // Home route
 app.get("/", (req, res) => {

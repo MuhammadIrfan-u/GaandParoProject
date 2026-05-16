@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router";
 import {
   ArrowLeft, Shield, Users, AlertTriangle, Calendar,
-  Trash2, Edit, BarChart3, Activity, Store, Settings, Flag
+  Trash2, Edit, BarChart3, Activity, Store, Settings, Flag, FileText, CheckCircle
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { ProviderApplicationReviewCard, type ProviderApplicationRow } from "../components/ProviderApplicationReviewCard";
@@ -22,7 +22,7 @@ import type {
   Post, Event, MarketplaceItem, Alert, User, Neighborhood
 } from "../services/types";
 
-type Tab = 'analytics' | 'settings' | 'users' | 'posts' | 'events' | 'marketplace' | 'alerts' | 'applications' | 'reports';
+type Tab = 'analytics' | 'settings' | 'users' | 'posts' | 'events' | 'marketplace' | 'alerts' | 'applications' | 'reports' | 'documents';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -41,6 +41,8 @@ export default function AdminDashboard() {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [applications, setApplications] = useState<ProviderApplicationRow[]>([]);
   const [reports, setReports] = useState<any[]>([]);
+  const [documents, setDocuments] = useState<any[]>([]);
+  const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
   const [settings, setSettings] = useState<any>({});
 
   // Editing States
@@ -113,6 +115,8 @@ export default function AdminDashboard() {
             enable_services: true,
             require_verification: false
           });
+          // load documents lightly if provided in dashboard payload
+          if (data.documents) setDocuments(data.documents);
         }
       } catch (error) {
         console.error(error);
@@ -165,8 +169,24 @@ export default function AdminDashboard() {
     { id: 'marketplace', label: 'Market', icon: <Store className="w-4 h-4" /> },
     { id: 'alerts', label: 'Alerts', icon: <AlertTriangle className="w-4 h-4" /> },
     { id: 'applications', label: 'Providers', icon: <Shield className="w-4 h-4" /> },
+    { id: 'documents', label: 'Documents', icon: <FileText className="w-4 h-4" /> },
     { id: 'reports', label: 'Reports', icon: <Flag className="w-4 h-4" /> },
   ];
+
+  // Load documents when documents tab is active
+  useEffect(() => {
+    const loadDocuments = async () => {
+      if (activeTab !== 'documents' || !neighborhood?.id) return;
+      try {
+        const docs = await adminService.getDocuments(neighborhood.id);
+        setDocuments(Array.isArray(docs) ? docs : []);
+      } catch (err) {
+        console.error('Failed to load documents:', err);
+        toast.error('Failed to load documents');
+      }
+    };
+    loadDocuments();
+  }, [activeTab, neighborhood]);
 
   const filterFlagged = (items: any[]) => showFlaggedOnly ? items.filter(i => i.is_flagged || i.isFlagged) : items;
 
@@ -325,6 +345,75 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {activeTab === 'documents' && (
+              <div className="space-y-4">
+                {documents.length === 0 ? (
+                  <div className="text-center py-20 bg-white rounded-2xl border shadow-sm">No documents found.</div>
+                ) : (
+                  documents.map(doc => (
+                    <div key={doc.id} className="bg-white p-5 rounded-2xl border shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                      <div className="flex items-center gap-4">
+                        <div className="w-20 h-14 bg-muted/30 rounded overflow-hidden flex items-center justify-center">
+                          <img src={doc.documentUrl} alt="doc" className="object-cover w-full h-full" />
+                        </div>
+                        <div>
+                          <div className="font-medium">{doc.userName || doc.userId}</div>
+                          <div className="text-sm text-muted-foreground">Submitted: {new Date(doc.submittedAt).toLocaleString()}</div>
+                          <div className="text-sm text-muted-foreground">Neighborhood: {doc.neighborhoodName || doc.neighborhoodId}</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={!!actionLoading[doc.id]}
+                          onClick={async () => {
+                            setActionLoading(s => ({ ...s, [doc.id]: true }));
+                            try {
+                              await adminService.updateDocumentStatus(neighborhood?.id || '', doc.id, 'approved', 'Approved via dashboard');
+                              toast.success('Document approved');
+                              // remove approved document from the list
+                              setDocuments(docs => docs.filter(d => d.id !== doc.id));
+                            } catch (err) {
+                              console.error(err);
+                              toast.error('Failed to approve');
+                            } finally {
+                              setActionLoading(s => ({ ...s, [doc.id]: false }));
+                            }
+                          }}
+                        >
+                          <CheckCircle className="w-4 h-4 mr-2" />Approve
+                        </Button>
+
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-red-600"
+                          disabled={!!actionLoading[doc.id]}
+                          onClick={async () => {
+                            setActionLoading(s => ({ ...s, [doc.id]: true }));
+                            try {
+                              await adminService.updateDocumentStatus(neighborhood?.id || '', doc.id, 'rejected', 'Rejected via dashboard');
+                              toast.success('Document rejected');
+                              // remove rejected document from the list
+                              setDocuments(docs => docs.filter(d => d.id !== doc.id));
+                            } catch (err) {
+                              console.error(err);
+                              toast.error('Failed to reject');
+                            } finally {
+                              setActionLoading(s => ({ ...s, [doc.id]: false }));
+                            }
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />Reject
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             )}
 
