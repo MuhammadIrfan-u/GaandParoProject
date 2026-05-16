@@ -1,6 +1,6 @@
 import express from 'express';
 import { supabase } from '../supabaseClient.js';
-
+import { checkVerification } from '../middleware/checkVerification.js';
 const router = express.Router();
 
 // ===================================================================
@@ -510,7 +510,7 @@ router.delete('/neighborhoods/:id/leave', async (req, res) => {
  * Get all members of a neighborhood (admin/public info only)
  * No authentication required
  */
-router.get('/neighborhoods/:id/members', async (req, res) => {
+router.get('/neighborhoods/:id/members', checkVerification, async (req, res) => {
     try {
         const neighborhoodId = req.params.id;
 
